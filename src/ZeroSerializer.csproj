@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -10,7 +11,14 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
 
+  <!-- https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#package-a-generator-as-a-nuget-package -->
+  <ItemGroup Condition=" Exists('$(OutputPath)/$(AssemblyName).dll') ">
+    <!-- Package the generator in the analyzer directory of the nuget package -->
+    <None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0" PrivateAssets="all" />
   </ItemGroup>
+
 </Project>
