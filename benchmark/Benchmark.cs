@@ -112,33 +112,6 @@ namespace ZeroSerializer.Benchmarks
         }
 
         [Benchmark]
-        public uint CreateViewAndHashWithXxHash32()
-        {
-            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
-
-            // Hash the View's complete borrowed byte region to emulate content validation without materializing the model.
-            return XxHash32.HashToUInt32(view);
-        }
-
-        [Benchmark]
-        public ulong CreateViewAndHashWithXxHash3()
-        {
-            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
-
-            // Hash the View's complete borrowed byte region to emulate content validation without materializing the model.
-            return XxHash3.HashToUInt64(view);
-        }
-
-        [Benchmark]
-        public uint CreateViewAndHashWithCrc32C()
-        {
-            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
-
-            // Hash the View's complete borrowed byte region to emulate content validation without materializing the model.
-            return CalculateCrc32C(view);
-        }
-
-        [Benchmark]
         public int ReadAllViewProperties()
         {
             var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
@@ -187,6 +160,89 @@ namespace ZeroSerializer.Benchmarks
             }
         }
 
+        [Benchmark]
+        public uint CreateViewAndHashWithXxHash32()
+        {
+            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
+
+            // Hash the View's complete borrowed byte region to emulate content validation without materializing the model.
+            return XxHash32.HashToUInt32(view);
+        }
+
+        [Benchmark]
+        public ulong CreateViewAndHashWithXxHash3()
+        {
+            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
+
+            // Hash the View's complete borrowed byte region to emulate content validation without materializing the model.
+            return XxHash3.HashToUInt64(view);
+        }
+
+        [Benchmark]
+        public uint CreateViewAndHashWithCrc32()
+        {
+            var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
+
+            // Sse42.Crc32 computes CRC-32C despite its name. That distinction is irrelevant here because this benchmark only emulates whole-buffer corruption detection, so use the faster hardware instruction directly. Vectorized CRC-32C support in System.IO.Hashing starts in .NET 11 Preview 3.
+            ReadOnlySpan<byte> serializedData = view;
+            uint hash = uint.MaxValue;
+            int processedByteCount = 0;
+
+            if (X86Crc32.IsSupported)
+            {
+                if (X86Crc32.X64.IsSupported)
+                {
+                    while (processedByteCount <= serializedData.Length - sizeof(ulong))
+                    {
+                        hash = (uint)X86Crc32.X64.Crc32(hash, BinaryPrimitives.ReadUInt64LittleEndian(serializedData.Slice(processedByteCount)));
+                        processedByteCount += sizeof(ulong);
+                    }
+                }
+
+                while (processedByteCount <= serializedData.Length - sizeof(uint))
+                {
+                    hash = X86Crc32.Crc32(hash, BinaryPrimitives.ReadUInt32LittleEndian(serializedData.Slice(processedByteCount)));
+                    processedByteCount += sizeof(uint);
+                }
+
+                while (processedByteCount < serializedData.Length)
+                {
+                    hash = X86Crc32.Crc32(hash, serializedData[processedByteCount]);
+                    processedByteCount++;
+                }
+
+                return ~hash;
+            }
+
+            if (ArmCrc32.IsSupported)
+            {
+                if (ArmCrc32.Arm64.IsSupported)
+                {
+                    while (processedByteCount <= serializedData.Length - sizeof(ulong))
+                    {
+                        hash = ArmCrc32.Arm64.ComputeCrc32C(hash, BinaryPrimitives.ReadUInt64LittleEndian(serializedData.Slice(processedByteCount)));
+                        processedByteCount += sizeof(ulong);
+                    }
+                }
+
+                while (processedByteCount <= serializedData.Length - sizeof(uint))
+                {
+                    hash = ArmCrc32.ComputeCrc32C(hash, BinaryPrimitives.ReadUInt32LittleEndian(serializedData.Slice(processedByteCount)));
+                    processedByteCount += sizeof(uint);
+                }
+
+                while (processedByteCount < serializedData.Length)
+                {
+                    hash = ArmCrc32.ComputeCrc32C(hash, serializedData[processedByteCount]);
+                    processedByteCount++;
+                }
+
+                return ~hash;
+            }
+
+            return Crc32.HashToUInt32(serializedData);
+        }
+
         private static string CreateRandomString(Random random, int length)
         {
             var characters = new char[length];
@@ -196,100 +252,6 @@ namespace ZeroSerializer.Benchmarks
             }
 
             return new string(characters);
-        }
-
-        private static uint CalculateCrc32C(ReadOnlySpan<byte> serializedData)
-        {
-            // .NET 5 exposes CRC-32C through architecture-specific intrinsics; unsupported CPUs use portable CRC-32.
-            if (X86Crc32.IsSupported)
-            {
-                return CalculateCrc32CWithX86Hardware(serializedData);
-            }
-
-            if (ArmCrc32.IsSupported)
-            {
-                return CalculateCrc32CWithArmHardware(serializedData);
-            }
-
-            return Crc32.HashToUInt32(serializedData);
-        }
-
-        private static uint CalculateCrc32CWithX86Hardware(ReadOnlySpan<byte> serializedData)
-        {
-            uint checksum = uint.MaxValue;
-            int processedByteCount = 0;
-            if (X86Crc32.X64.IsSupported)
-            {
-                while (serializedData.Length - processedByteCount >= sizeof(ulong))
-                {
-                    checksum = (uint)X86Crc32.X64.Crc32(
-                        checksum,
-                        BinaryPrimitives.ReadUInt64LittleEndian(serializedData.Slice(processedByteCount)));
-                    processedByteCount += sizeof(ulong);
-                }
-            }
-
-            while (serializedData.Length - processedByteCount >= sizeof(uint))
-            {
-                checksum = X86Crc32.Crc32(
-                    checksum,
-                    BinaryPrimitives.ReadUInt32LittleEndian(serializedData.Slice(processedByteCount)));
-                processedByteCount += sizeof(uint);
-            }
-
-            if (serializedData.Length - processedByteCount >= sizeof(ushort))
-            {
-                checksum = X86Crc32.Crc32(
-                    checksum,
-                    BinaryPrimitives.ReadUInt16LittleEndian(serializedData.Slice(processedByteCount)));
-                processedByteCount += sizeof(ushort);
-            }
-
-            if (processedByteCount < serializedData.Length)
-            {
-                checksum = X86Crc32.Crc32(checksum, serializedData[processedByteCount]);
-            }
-
-            return ~checksum;
-        }
-
-        private static uint CalculateCrc32CWithArmHardware(ReadOnlySpan<byte> serializedData)
-        {
-            uint checksum = uint.MaxValue;
-            int processedByteCount = 0;
-            if (ArmCrc32.Arm64.IsSupported)
-            {
-                while (serializedData.Length - processedByteCount >= sizeof(ulong))
-                {
-                    checksum = ArmCrc32.Arm64.ComputeCrc32C(
-                        checksum,
-                        BinaryPrimitives.ReadUInt64LittleEndian(serializedData.Slice(processedByteCount)));
-                    processedByteCount += sizeof(ulong);
-                }
-            }
-
-            while (serializedData.Length - processedByteCount >= sizeof(uint))
-            {
-                checksum = ArmCrc32.ComputeCrc32C(
-                    checksum,
-                    BinaryPrimitives.ReadUInt32LittleEndian(serializedData.Slice(processedByteCount)));
-                processedByteCount += sizeof(uint);
-            }
-
-            if (serializedData.Length - processedByteCount >= sizeof(ushort))
-            {
-                checksum = ArmCrc32.ComputeCrc32C(
-                    checksum,
-                    BinaryPrimitives.ReadUInt16LittleEndian(serializedData.Slice(processedByteCount)));
-                processedByteCount += sizeof(ushort);
-            }
-
-            if (processedByteCount < serializedData.Length)
-            {
-                checksum = ArmCrc32.ComputeCrc32C(checksum, serializedData[processedByteCount]);
-            }
-
-            return ~checksum;
         }
 
         private static long CreateRandomInt64(Random random)
