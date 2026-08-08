@@ -37,7 +37,7 @@
     <NuGetPublishReleaseNote>https://github.com/sator-imaging/ZeroSerializer</NuGetPublishReleaseNote>
     <NuGetPublishIconUrl>https://github.com/sator-imaging/ZeroSerializer/raw/main/$(NuGetPublishIconFile)</NuGetPublishIconUrl>
 
-    <NuGetPublishID>$(MSBuildProjectName)</NuGetPublishID>
+    <NuGetPublishID>SatorImaging.$(MSBuildProjectName)</NuGetPublishID>
     <NuGetPublishTitle>$(NuGetPublishID)</NuGetPublishTitle>
     <NuGetPublishProduct>$(NuGetPublishTitle)</NuGetPublishProduct>
     <NuGetPublishCompany>$(NuGetPublishOwner)</NuGetPublishCompany>
@@ -69,7 +69,7 @@
     <PackageVersion>$(NuGetPublishVersion)</PackageVersion>
     <Version>$(NuGetPublishVersion)</Version>
 
-    <AssemblyName>SatorImaging.$(NuGetPublishID)</AssemblyName>
+    <AssemblyName>$(NuGetPublishID)</AssemblyName>
     <PackageId>$(NuGetPublishID)</PackageId>
     <Title>$(NuGetPublishTitle)</Title>
     <Product>$(NuGetPublishProduct)</Product>
