@@ -30,7 +30,9 @@ jobs:
           dotnet-version: |
             10.x.x
 
-      - run: dotnet pack -c Release ./src
+      # NOTE: Both build and pack is required.
+      - run: dotnet build -c Release ./src
+      - run: dotnet pack  -c Release ./src
 
       ################################
       #  NUGET
