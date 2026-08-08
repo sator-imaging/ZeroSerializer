@@ -1,0 +1,48 @@
+name: NuGet Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  push_source: '**/src/bin/Release/*.nupkg'
+
+jobs:
+
+  test:
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  nuget:
+    needs: test
+    if: success()
+
+    permissions:
+      id-token: write  # enable GitHub OIDC token issuance for this job
+      contents: read   # required for private repo
+      
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5      # v4.3.1
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
+        with:
+          dotnet-version: |
+            10.x.x
+
+      - run: dotnet pack -c Release ./src
+
+      ################################
+      #  NUGET
+      - name: Trusted Publishing (id-token permission required)
+        uses: NuGet/login@v1
+        id: login  # --> ${{ steps.login.outputs.NUGET_API_KEY }}
+        with:
+          user: ${{ secrets.NUGET_LOGIN }}
+
+      - name: NuGet push
+        run: |
+          dotnet nuget push "${{ env.push_source  }}"  \
+            -k ${{ steps.login.outputs.NUGET_API_KEY }}  \
+            -s https://api.nuget.org/v3/index.json \
+            --timeout 60
