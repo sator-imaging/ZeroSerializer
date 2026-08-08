@@ -45,4 +45,6 @@ jobs:
       - run: dotnet restore
       - run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
-      - run: dotnet test  -c ${{ matrix.configuration }} --no-restore --no-build > $GITHUB_STEP_SUMMARY
+      - run: |
+          dotnet test -c ${{ matrix.configuration }} --no-restore --no-build \
+            | grep -E " - .*\.dll" >> $GITHUB_STEP_SUMMARY
