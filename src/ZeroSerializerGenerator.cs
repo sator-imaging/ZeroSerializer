@@ -733,8 +733,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         string serializedTypeStartOffsetName = CreateLocalName(localNamePrefix, "StartOffset");
         // The field-offset table begins at the serialized type start, so one local owns header writes and relative payload offsets.
         sourceBuilder.AppendLine($"int {serializedTypeStartOffsetName} = writtenBytes;");
-        sourceBuilder.AppendLine($"writtenBytes += {generationModel.Fields.Count * 4};");
-        for (int propertyIndex = 0; propertyIndex < generationModel.Fields.Count; propertyIndex++)
+        int propertyCount = generationModel.Fields.Count;
+        sourceBuilder.AppendLine($"writtenBytes += {propertyCount * 4};");
+        for (int propertyIndex = 0; propertyIndex < propertyCount; propertyIndex++)
         {
             FieldGenerationModel propertyModel = generationModel.Fields[propertyIndex];
             // Preserve a visible boundary for every property while keeping the generated writes linear.
@@ -881,7 +882,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlySpan<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression}.Span;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlyMemory<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression};");
-        for (int fieldIndex = 0; fieldIndex < generationModel.Fields.Count; fieldIndex++)
+        for (int fieldIndex = 0, fieldCount = generationModel.Fields.Count; fieldIndex < fieldCount; fieldIndex++)
         {
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Fields[fieldIndex], fieldIndex, modelLookup);
