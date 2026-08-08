@@ -54,4 +54,4 @@ jobs:
       auto-bump: ${{ inputs.auto-bump }}
 
       # See above
-      auto-bump-args: csproj=GlobalPackageVersion  ### <-- UPDATE HERE #######
+      auto-bump-args: csproj=NuGetPublishVersion  ### <-- UPDATE HERE #######
