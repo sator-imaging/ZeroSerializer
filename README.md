@@ -1,0 +1,88 @@
+<div align="center">
+
+# ZeroSerializer
+
+Zero-copy, Zero-allocation, Deserialize-on-Read
+
+[![🇺🇸](https://img.shields.io/badge/🇺🇸-English-789)](./README.md)
+[![🇯🇵](https://img.shields.io/badge/🇯🇵-日本語_※詳説-789)](./README.ja.md)
+
+</div>
+
+`ZeroSerializer` is a C# source generator for reading serialized data directly from an existing `byte[]`.
+
+## Why ZeroSerializer?
+
+Receiving data over a network, reading a file, or calling another API often leaves you with an unavoidable `byte[]` allocation. `ZeroSerializer` generates a read-only view that reuses that allocation and provides strongly typed slices without creating another buffer or a deserialized object graph. Each property is read only when accessed, and strings and arrays remain borrowed from the original memory, like `Span<T>` or `Memory<T>`.
+
+
+
+
+
+# Usage
+
+```csharp
+// Some APIs require data to be received into a byte array.
+byte[] receivedBuffer = ReceivePacket();
+
+// Like Span<T> or Memory<T>, a View provides strongly typed access over existing memory without owning it.
+var packetView = new PacketView(receivedBuffer.AsMemory());
+
+// Each property is decoded directly from the original buffer only when accessed.
+int id = packetView.Id;
+ReadOnlySpan<char> name = packetView.Name;
+ReadOnlySpan<int> values = packetView.Values;
+```
+
+View construction does not read every property. Values are decoded directly from the original memory only on access.
+
+The complete serialized region is also available through implicit conversion:
+
+```csharp
+ReadOnlySpan<byte> serializedData = packetView;
+ReadOnlyMemory<byte> retainedData = packetView;
+```
+
+
+
+
+
+# Supported values
+
+- Primitives and enums
+- `string` stored as UTF-16
+- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
+- One-dimensional arrays of Blittable values or structs
+- Nested `[ZeroSerializer]` types
+- Nullable values
+
+
+
+
+
+# Serialized layout
+
+Non-Blittable types store one relative offset per property, followed by payloads in declaration order:
+
+```text
+[ int property offsets... ][ property payloads... ]
+```
+
+Offsets are relative to the start of the containing type. An offset of `0` represents `null`. Strings and arrays store their byte length before their data:
+
+```text
+[ int byte length ][ data... ]
+```
+
+Blittable structs are stored directly as raw struct bytes without an offset table.
+
+
+
+
+
+# Notes
+
+- Keep the original memory alive and unchanged while its View is in use. This is the same rule as for `Span<T>` and `Memory<T>`.
+- `RequiredByteLength` is the exact size unless it is negative. A negative value indicates that the type contains variable-length data, such as strings or arrays. Passing the exact serialized region is recommended, but View access only requires the correct starting position.
+- Validate integrity or authenticity before creating a View when required.
+- The wire format requires a little-endian runtime.

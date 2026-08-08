@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="./src/ZeroSerializer.csproj" />
+  <Project Path="./tests/ZeroSerializer.Tests.csproj" />
+  <Project Path="./sandbox/ZeroSerializer.Sandbox.csproj" />
+  <Project Path="./benchmark/ZeroSerializer.Benchmark.csproj" />
+</Solution>

@@ -1,0 +1,90 @@
+<Project>
+
+  <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props"
+          Condition=" Exists('$(MSBuildThisFileDirectory)../Directory.Build.props') "
+  />
+
+  <PropertyGroup>
+    <!-- Include api comments for nuget packages -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(CI)' == 'true' OR '$(TF_BUILD)' == 'True' "><!-- True for Azure -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGetPublishSettings">
+    <NuGetPublishVersion>1.0.0-rc.1</NuGetPublishVersion>
+    <!-- relative path from .csproj files, without trailing slash -->
+    <NuGetPublishProjectRootRelPath>..</NuGetPublishProjectRootRelPath>
+    <NuGetPublishIconFile>icon-128px.png</NuGetPublishIconFile>
+    <NuGetPublishReadmeFile>README.md</NuGetPublishReadmeFile>
+    <NuGetPublishLicenseFile>LICENSE.md</NuGetPublishLicenseFile>
+
+    <!-- Add namespace if required. e.g., FooBar.$(MSBuildProjectName) -->
+    <NuGetPublishOwner>Sator Imaging</NuGetPublishOwner>
+    <NuGetPublishCopyright>(c) 2026 $(NuGetPublishOwner)</NuGetPublishCopyright>
+    <NuGetPublishLicenseSPDX>Apache-2.0</NuGetPublishLicenseSPDX>
+    <NuGetPublishDescription>Zero-copy, zero-allocation and deserialize-on-read binary serializer for C# / .NET providing strongly typed, Span-like view over existing byte array.</NuGetPublishDescription>
+    <NuGetPublishTags>Zero, Zero-copy, copy, zero-allocation, allocation, deserialize-on-read, binary, serializer, strongly typed, typed, Span, Span-like</NuGetPublishTags>
+    <NuGetPublishWebsite>https://x.com/sator_imaging</NuGetPublishWebsite>
+    <NuGetPublishRepository>https://github.com/sator-imaging/ZeroSerializer</NuGetPublishRepository>
+    <NuGetPublishReleaseNote>https://github.com/sator-imaging/ZeroSerializer</NuGetPublishReleaseNote>
+    <NuGetPublishIconUrl>https://github.com/sator-imaging/ZeroSerializer/raw/main/$(NuGetPublishIconFile)</NuGetPublishIconUrl>
+
+    <NuGetPublishID>$(MSBuildProjectName)</NuGetPublishID>
+    <NuGetPublishTitle>$(NuGetPublishID)</NuGetPublishTitle>
+    <NuGetPublishProduct>$(NuGetPublishTitle)</NuGetPublishProduct>
+    <NuGetPublishCompany>$(NuGetPublishOwner)</NuGetPublishCompany>
+  </PropertyGroup>
+
+
+  <!--                            -->
+  <!-- nuget.org publish settings -->
+  <!--                            -->
+
+  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
+    <None Include="$(NuGetPublishProjectRootRelPath)/$(NuGetPublishIconFile)">
+      <Pack>true</Pack><PackagePath>/</PackagePath>
+    </None>
+    <None Include="$(NuGetPublishProjectRootRelPath)/$(NuGetPublishReadmeFile)">
+      <Pack>true</Pack><PackagePath>/</PackagePath>
+    </None>
+    <None Include="$(NuGetPublishProjectRootRelPath)/$(NuGetPublishLicenseFile)">
+      <Pack>true</Pack><PackagePath>/</PackagePath>
+    </None>
+  </ItemGroup>
+  <PropertyGroup>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+    <PackageIcon>$(NuGetPublishIconFile)</PackageIcon>
+    <PackageReadmeFile>$(NuGetPublishReadmeFile)</PackageReadmeFile>
+    <AssemblyVersion>$([System.String]::Copy('$(NuGetPublishVersion)').Split('-')[0]).0</AssemblyVersion>
+    <FileVersion>$([System.String]::Copy('$(NuGetPublishVersion)').Split('-')[0]).0</FileVersion>
+    <PackageVersion>$(NuGetPublishVersion)</PackageVersion>
+    <Version>$(NuGetPublishVersion)</Version>
+
+    <AssemblyName>SatorImaging.$(NuGetPublishID)</AssemblyName>
+    <PackageId>$(NuGetPublishID)</PackageId>
+    <Title>$(NuGetPublishTitle)</Title>
+    <Product>$(NuGetPublishProduct)</Product>
+    <Authors>$(NuGetPublishOwner)</Authors>
+    <Company>$(NuGetPublishCompany)</Company>
+    <Copyright>$(NuGetPublishCopyright)</Copyright>
+    <PackageLicenseExpression>$(NuGetPublishLicenseSPDX)</PackageLicenseExpression>
+    <Description>$(NuGetPublishDescription)</Description>
+    <PackageTags>$(NuGetPublishTags)</PackageTags>
+    <PackageProjectUrl>$(NuGetPublishWebsite)</PackageProjectUrl>
+    <RepositoryUrl>$(NuGetPublishRepository)</RepositoryUrl>
+    <PackageReleaseNotes>$(NuGetPublishReleaseNote)</PackageReleaseNotes>
+    <!--
+    <PackageIconUrl>$(NuGetPublishIconUrl)</PackageIconUrl>
+    -->
+  </PropertyGroup>
+
+</Project>
