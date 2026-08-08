@@ -733,8 +733,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         string serializedTypeStartOffsetName = CreateLocalName(localNamePrefix, "StartOffset");
         // The field-offset table begins at the serialized type start, so one local owns header writes and relative payload offsets.
         sourceBuilder.AppendLine($"int {serializedTypeStartOffsetName} = writtenBytes;");
-        sourceBuilder.AppendLine($"writtenBytes += {generationModel.Fields.Count * 4};");
-        for (int propertyIndex = 0, propertyCount = generationModel.Fields.Count; propertyIndex < propertyCount; propertyIndex++)
+        int propertyCount = generationModel.Fields.Count;
+        sourceBuilder.AppendLine($"writtenBytes += {propertyCount * 4};");
+        for (int propertyIndex = 0; propertyIndex < propertyCount; propertyIndex++)
         {
             FieldGenerationModel propertyModel = generationModel.Fields[propertyIndex];
             // Preserve a visible boundary for every property while keeping the generated writes linear.
