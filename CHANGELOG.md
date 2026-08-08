@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.0-rc.3](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.0.0-rc.3) (2026-08-08)
+
+
+
+
 ## [1.0.0-rc.2](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.0.0-rc.2) (2026-08-08)
 
 
