@@ -30,7 +30,7 @@ jobs:
           dotnet-version: |
             10.x.x
 
-      # NOTE: Both build and pack is required.
+      # NOTE: Packing project checks .dll file existence so both build and pack are required.
       - run: dotnet build -c Release ./src
       - run: dotnet pack  -c Release ./src
 
