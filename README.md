@@ -4,6 +4,8 @@
 
 Zero-copy, Zero-allocation, Deserialize-on-Read
 
+[![NuGet](https://img.shields.io/nuget/vpre/SatorImaging.ZeroSerializer)](https://www.nuget.org/packages/SatorImaging.ZeroSerializer)
+&nbsp;
 [![🇺🇸](https://img.shields.io/badge/🇺🇸-English-789)](./README.md)
 [![🇯🇵](https://img.shields.io/badge/🇯🇵-日本語_※詳説-789)](./README.ja.md)
 
