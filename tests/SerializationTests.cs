@@ -10,6 +10,7 @@ using Xunit;
 using ZeroSerializer.Tests.Models;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
+#pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
 
 namespace ZeroSerializer.Tests;
 
@@ -569,7 +570,13 @@ public sealed class SerializationTests
         TestAssert.Equal(typeof(Span<byte>), classSerialize.GetParameters()[1].ParameterType, "Serialize buffer type");
         TestAssert.True(!classSerialize.GetParameters()[0].ParameterType.IsByRef, "Class receiver by value");
         TestAssert.True(!smallStructSerialize.GetParameters()[0].ParameterType.IsByRef, "Small struct receiver by value");
+#if NET8_0_OR_GREATER
+        // MemoryMarshal.Write accepts a readonly input from .NET 8, allowing large struct receivers to remain readonly references.
         TestAssert.True(largeStructSerialize.GetParameters()[0].ParameterType.IsByRef, "Large struct receiver by readonly reference");
+#else
+        // MemoryMarshal.Write requires a writable ref through .NET 7, so the generated method must receive the struct by value.
+        TestAssert.True(!largeStructSerialize.GetParameters()[0].ParameterType.IsByRef, "Large struct receiver by value");
+#endif
     }
 
     [Fact]

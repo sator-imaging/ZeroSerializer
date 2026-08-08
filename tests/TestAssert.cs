@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
+#pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
+
 namespace ZeroSerializer.Tests;
 
 internal static class TestAssert

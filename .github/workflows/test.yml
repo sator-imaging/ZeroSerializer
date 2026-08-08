@@ -25,6 +25,7 @@ jobs:
   test:
     strategy:
       matrix:
+        framework: [net10.0, netcoreapp3.0]
         configuration: [Release, Debug]
 
     runs-on: ubuntu-latest   # tip: runs-on can use ${{ matrix.<name> }}
@@ -32,10 +33,13 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5      # v4.3.1
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
         with:
-          dotnet-version: 10.x.x
+          dotnet-version: |
+            10.x.x
+            3.x.x
 
       # !!! MUST NOT REMOVE THIS !!!
-      # Sandbox project uses netstandard 2.1 for Unity compatibility
-      - run: dotnet build -c ${{ matrix.configuration }}
+      # As test project cannot use netstandard2.1,
+      # sandbox project uses it instead for Unity compatibility test.
+      - run: dotnet build -c ${{ matrix.configuration }} -f ${{ matrix.framework }}
 
-      - run: dotnet test  -c ${{ matrix.configuration }} --verbosity minimal
+      - run: dotnet test  -c ${{ matrix.configuration }} -f ${{ matrix.framework }}

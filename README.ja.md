@@ -128,6 +128,6 @@ Blittable Struct は field offset table を持たないため、`RequiredByteLen
 
 `RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも field offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
 
-`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。読み取り専用参照を受け取れる新しい `MemoryMarshal.Write` がある環境では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` だけを受け取る .NET 5 などの環境では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
+`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
 
 string と Blittable payload は native memory image を利用するため、Serializer と View はリトルエンディアン環境だけを受け付けます。

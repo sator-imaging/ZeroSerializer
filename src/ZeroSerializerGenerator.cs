@@ -173,16 +173,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         var allSerializableTypes = new HashSet<INamedTypeSymbol>(uniqueTypes, SymbolEqualityComparer.Default);
         var generationModels = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
-        bool binaryPrimitivesSupportsFloatingPoint = DoesBinaryPrimitivesSupportFloatingPoint(
-            executionContext.Compilation);
 
         foreach (INamedTypeSymbol serializableType in uniqueTypes)
         {
             TypeGenerationModel generationModel = CreateGenerationModel(
                 executionContext,
                 serializableType,
-                allSerializableTypes,
-                binaryPrimitivesSupportsFloatingPoint);
+                allSerializableTypes);
             generationModels.Add(serializableType, generationModel);
         }
 
@@ -253,14 +250,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             modelLookup.Add(validModel.Symbol, validModel);
         }
 
-        bool memoryMarshalWriteRequiresRefModifier = DoesMemoryMarshalWriteRequireRefModifier(
-            executionContext.Compilation);
         foreach (TypeGenerationModel validModel in validModels)
         {
             string generatedSource = EmitGeneratedSource(
                 validModel,
-                modelLookup,
-                memoryMarshalWriteRequiresRefModifier);
+                modelLookup);
             executionContext.AddSource(
                 validModel.Symbol.ToDisplayString() + "." + SerializerName + ".g.cs",
                 SourceText.From(generatedSource, Encoding.UTF8));
@@ -270,8 +264,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static TypeGenerationModel CreateGenerationModel(
         GeneratorExecutionContext executionContext,
         INamedTypeSymbol serializableType,
-        HashSet<INamedTypeSymbol> allSerializableTypes,
-        bool binaryPrimitivesSupportsFloatingPoint)
+        HashSet<INamedTypeSymbol> allSerializableTypes)
     {
         string qualifiedSourceTypeName = serializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         int blittableStructByteCount = 0;
@@ -286,8 +279,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             serializableType.Name + "View",
             IsEffectivelyPublic(serializableType),
             isBlittableStruct,
-            isBlittableStruct ? blittableStructByteCount : 0,
-            binaryPrimitivesSupportsFloatingPoint);
+            isBlittableStruct ? blittableStructByteCount : 0);
 
         bool hasUnsupportedShape = serializableType.Arity != 0
             || serializableType.ContainingType is not null
@@ -682,8 +674,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static string EmitGeneratedSource(
         TypeGenerationModel generationModel,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup,
-        bool memoryMarshalWriteRequiresRefModifier)
+        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         var sourceBuilder = new GeneratedSourceBuilder();
         AppendGeneratedFileHeader(sourceBuilder);
@@ -698,8 +689,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         EmitExtensionClass(
             sourceBuilder,
             generationModel,
-            modelLookup,
-            memoryMarshalWriteRequiresRefModifier);
+            modelLookup);
         sourceBuilder.CloseBlock();
 
         return sourceBuilder.ToString();
@@ -738,8 +728,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         TypeGenerationModel generationModel,
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup,
         string sourceExpression,
-        string localNamePrefix,
-        bool memoryMarshalWriteRequiresRefModifier)
+        string localNamePrefix)
     {
         string serializedTypeStartOffsetName = CreateLocalName(localNamePrefix, "StartOffset");
         // The field-offset table begins at the serialized type start, so one local owns header writes and relative payload offsets.
@@ -770,9 +759,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     propertyModel,
                     propertyValueName,
                     propertyLocalNamePrefix,
-                    modelLookup,
-                    memoryMarshalWriteRequiresRefModifier,
-                    generationModel.BinaryPrimitivesSupportsFloatingPoint);
+                    modelLookup);
                 sourceBuilder.CloseBlock();
             }
             else
@@ -783,9 +770,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     propertyModel,
                     propertyValueName,
                     propertyLocalNamePrefix,
-                    modelLookup,
-                    memoryMarshalWriteRequiresRefModifier,
-                    generationModel.BinaryPrimitivesSupportsFloatingPoint);
+                    modelLookup);
             }
         }
     }
@@ -795,9 +780,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         FieldGenerationModel field,
         string propertyValueName,
         string localNamePrefix,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup,
-        bool memoryMarshalWriteRequiresRefModifier,
-        bool binaryPrimitivesSupportsFloatingPoint)
+        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         string fieldAccess = propertyValueName;
         string serializationValueExpression = GetSerializationValueExpression(field, fieldAccess);
@@ -810,17 +793,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     serializedPropertyType,
                     serializationValueExpression,
                     "destination",
-                    "writtenBytes",
-                    binaryPrimitivesSupportsFloatingPoint);
+                    "writtenBytes");
                 break;
             case FieldSerializationKind.BlittableStruct:
                 string blittableValueName = CreateLocalName(localNamePrefix, "Value");
                 sourceBuilder.AppendLine($"{serializedPropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {blittableValueName} = {serializationValueExpression};");
-                // .NET 5 requires ref at the call site; newer readonly-reference overloads use normal argument syntax.
-                string blittableValueArgument = memoryMarshalWriteRequiresRefModifier
-                    ? "ref " + blittableValueName
-                    : blittableValueName;
-                sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {field.ElementByteCount}), {blittableValueArgument});");
+                // MemoryMarshal.Write changed its value parameter from ref to in in .NET 8; generated source follows the target framework directly.
+                sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {field.ElementByteCount}), {blittableValueName});");
+                sourceBuilder.AppendLine("#else");
+                sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {field.ElementByteCount}), ref {blittableValueName});");
+                sourceBuilder.AppendLine("#endif");
                 sourceBuilder.AppendLine($"writtenBytes += {field.ElementByteCount};");
                 break;
             case FieldSerializationKind.String:
@@ -857,8 +840,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     modelLookup[field.NestedSerializableType],
                     modelLookup,
                     nestedSourceExpression,
-                    localNamePrefix,
-                    memoryMarshalWriteRequiresRefModifier);
+                    localNamePrefix);
                 break;
         }
 
@@ -1062,8 +1044,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     sourceBuilder,
                     GetSerializedPropertyType(field),
                     "serializedData",
-                    "fieldDataOffset",
-                    containingModel.BinaryPrimitivesSupportsFloatingPoint);
+                    "fieldDataOffset");
                 break;
             case FieldSerializationKind.BlittableStruct:
                 sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
@@ -1099,41 +1080,42 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static void EmitExtensionClass(
         GeneratedSourceBuilder sourceBuilder,
         TypeGenerationModel generationModel,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup,
-        bool memoryMarshalWriteRequiresRefModifier)
+        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         sourceBuilder.AppendLine($"public static partial class {SerializerExtensionsName}");
         sourceBuilder.OpenBlock();
         string methodAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
-        int receiverRequiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
-        // .NET 5 requires a writable ref receiver; newer runtimes retain this in for structs larger than 16 bytes.
-        bool passReceiverByReadonlyReference = generationModel.Symbol.TypeKind == TypeKind.Struct
-            && !memoryMarshalWriteRequiresRefModifier
-            && Math.Abs((long)receiverRequiredByteLength) > 16;
-        string extensionParameter = passReceiverByReadonlyReference
-            ? $"this in {generationModel.QualifiedSourceTypeName} source"
-            : $"this {generationModel.QualifiedSourceTypeName} source";
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Serializes <paramref name=\"source\"/> into the wire format read by <see cref=\"{GetQualifiedViewName(generationModel)}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
         sourceBuilder.AppendLine("/// <returns>The number of bytes written to <paramref name=\"destination\"/>.</returns>");
         // The Span parameter is named destination so the emitted write body uses it directly without a conversion local.
-        sourceBuilder.AppendLine($"{methodAccessibility} static int Serialize({extensionParameter}, Span<byte> destination)");
+        if (generationModel.Symbol.TypeKind == TypeKind.Struct
+            && Math.Abs((long)CalculateRequiredByteLength(generationModel, modelLookup)) > 16)
+        {
+            // MemoryMarshal.Write changed from ref through .NET 7 to in in .NET 8, so only newer targets can keep a large receiver readonly.
+            sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+            sourceBuilder.AppendLine($"{methodAccessibility} static int Serialize(this in {generationModel.QualifiedSourceTypeName} source, Span<byte> destination)");
+            sourceBuilder.AppendLine("#else");
+            sourceBuilder.AppendLine($"{methodAccessibility} static int Serialize(this {generationModel.QualifiedSourceTypeName} source, Span<byte> destination)");
+            sourceBuilder.AppendLine("#endif");
+        }
+        else
+        {
+            sourceBuilder.AppendLine($"{methodAccessibility} static int Serialize(this {generationModel.QualifiedSourceTypeName} source, Span<byte> destination)");
+        }
         sourceBuilder.OpenBlock();
         EmitEndianGuard(sourceBuilder);
         sourceBuilder.AppendLine();
         // Never preflight the destination: emitted Span operations provide the native bounds failure at the write site.
         if (generationModel.IsBlittableStruct)
         {
-            // .NET 5 receives source by value and can pass it directly by ref without another struct copy.
-            if (memoryMarshalWriteRequiresRefModifier)
-            {
-                sourceBuilder.AppendLine("MemoryMarshal.Write(destination, ref source);");
-            }
-            else
-            {
-                sourceBuilder.AppendLine("MemoryMarshal.Write(destination, source);");
-            }
+            // Keep the Write argument aligned with the framework signature selected for the receiver above.
+            sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+            sourceBuilder.AppendLine("MemoryMarshal.Write(destination, source);");
+            sourceBuilder.AppendLine("#else");
+            sourceBuilder.AppendLine("MemoryMarshal.Write(destination, ref source);");
+            sourceBuilder.AppendLine("#endif");
             sourceBuilder.AppendLine($"return {GetQualifiedViewName(generationModel)}.RequiredByteLength;");
         }
         else
@@ -1144,62 +1126,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 generationModel,
                 modelLookup,
                 "source",
-                generationModel.Symbol.Name,
-                memoryMarshalWriteRequiresRefModifier);
+                generationModel.Symbol.Name);
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("return writtenBytes;");
         }
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
-    }
-
-    private static bool DoesMemoryMarshalWriteRequireRefModifier(Compilation compilation)
-    {
-        INamedTypeSymbol? memoryMarshalType = compilation.GetTypeByMetadataName(
-            "System.Runtime.InteropServices.MemoryMarshal");
-        if (memoryMarshalType is null)
-        {
-            return false;
-        }
-
-        bool hasWritableReferenceOverload = false;
-        foreach (ISymbol declaredMember in memoryMarshalType.GetMembers("Write"))
-        {
-            if (declaredMember is not IMethodSymbol writeOverload
-                || !writeOverload.IsGenericMethod
-                || writeOverload.Parameters.Length != 2)
-            {
-                continue;
-            }
-
-            if (writeOverload.Parameters[1].RefKind == RefKind.In)
-            {
-                return false;
-            }
-
-            if (writeOverload.Parameters[1].RefKind == RefKind.Ref)
-            {
-                hasWritableReferenceOverload = true;
-            }
-        }
-
-        return hasWritableReferenceOverload;
-    }
-
-    private static bool DoesBinaryPrimitivesSupportFloatingPoint(Compilation compilation)
-    {
-        INamedTypeSymbol? binaryPrimitivesType = compilation.GetTypeByMetadataName(
-            "System.Buffers.Binary.BinaryPrimitives");
-        if (binaryPrimitivesType is null)
-        {
-            return false;
-        }
-
-        // Require the complete float/double little-endian API before emitting any of its framework-specific methods.
-        return binaryPrimitivesType.GetMembers("ReadSingleLittleEndian").Length != 0
-            && binaryPrimitivesType.GetMembers("WriteSingleLittleEndian").Length != 0
-            && binaryPrimitivesType.GetMembers("ReadDoubleLittleEndian").Length != 0
-            && binaryPrimitivesType.GetMembers("WriteDoubleLittleEndian").Length != 0;
     }
 
     private static void EmitEndianGuard(GeneratedSourceBuilder sourceBuilder)
@@ -1239,8 +1171,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         ITypeSymbol primitiveOrEnumType,
         string valueExpression,
         string destinationName,
-        string destinationOffsetName,
-        bool binaryPrimitivesSupportsFloatingPoint)
+        string destinationOffsetName)
     {
         ITypeSymbol primitiveType = primitiveOrEnumType;
         string convertedValueExpression = valueExpression;
@@ -1284,26 +1215,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"BinaryPrimitives.WriteUInt64LittleEndian({destinationSlice}, {convertedValueExpression});");
                 break;
             case SpecialType.System_Single:
-                if (binaryPrimitivesSupportsFloatingPoint)
-                {
-                    sourceBuilder.AppendLine($"BinaryPrimitives.WriteSingleLittleEndian({destinationSlice}, {convertedValueExpression});");
-                }
-                else
-                {
-                    // Older targets preserve the same float wire bits through their available Int32 API.
-                    sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian({destinationSlice}, BitConverter.SingleToInt32Bits({convertedValueExpression}));");
-                }
+                // Floating-point BinaryPrimitives APIs were added in .NET 8; earlier targets preserve the same bits through integral APIs.
+                sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"BinaryPrimitives.WriteSingleLittleEndian({destinationSlice}, {convertedValueExpression});");
+                sourceBuilder.AppendLine("#else");
+                sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian({destinationSlice}, BitConverter.SingleToInt32Bits({convertedValueExpression}));");
+                sourceBuilder.AppendLine("#endif");
                 break;
             case SpecialType.System_Double:
-                if (binaryPrimitivesSupportsFloatingPoint)
-                {
-                    sourceBuilder.AppendLine($"BinaryPrimitives.WriteDoubleLittleEndian({destinationSlice}, {convertedValueExpression});");
-                }
-                else
-                {
-                    // Older targets preserve the same double wire bits through their available Int64 API.
-                    sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt64LittleEndian({destinationSlice}, BitConverter.DoubleToInt64Bits({convertedValueExpression}));");
-                }
+                // Floating-point BinaryPrimitives APIs were added in .NET 8; earlier targets preserve the same bits through integral APIs.
+                sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"BinaryPrimitives.WriteDoubleLittleEndian({destinationSlice}, {convertedValueExpression});");
+                sourceBuilder.AppendLine("#else");
+                sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt64LittleEndian({destinationSlice}, BitConverter.DoubleToInt64Bits({convertedValueExpression}));");
+                sourceBuilder.AppendLine("#endif");
                 break;
         }
 
@@ -1315,8 +1240,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         GeneratedSourceBuilder sourceBuilder,
         ITypeSymbol primitiveOrEnumType,
         string serializedDataName,
-        string serializedDataOffsetName,
-        bool binaryPrimitivesSupportsFloatingPoint)
+        string serializedDataOffsetName)
     {
         ITypeSymbol primitiveType = primitiveOrEnumType;
         string returnConversionPrefix = string.Empty;
@@ -1361,17 +1285,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 readExpression = $"BinaryPrimitives.ReadUInt64LittleEndian({serializedDataSlice})";
                 break;
             case SpecialType.System_Single:
-                // Older targets reconstruct the same float value through their available Int32 API.
-                readExpression = binaryPrimitivesSupportsFloatingPoint
-                    ? $"BinaryPrimitives.ReadSingleLittleEndian({serializedDataSlice})"
-                    : $"BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian({serializedDataSlice}))";
-                break;
+                // Floating-point BinaryPrimitives APIs were added in .NET 8; earlier targets reconstruct the same bits through integral APIs.
+                sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"return BinaryPrimitives.ReadSingleLittleEndian({serializedDataSlice});");
+                sourceBuilder.AppendLine("#else");
+                sourceBuilder.AppendLine($"return BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian({serializedDataSlice}));");
+                sourceBuilder.AppendLine("#endif");
+                return;
             case SpecialType.System_Double:
-                // Older targets reconstruct the same double value through their available Int64 API.
-                readExpression = binaryPrimitivesSupportsFloatingPoint
-                    ? $"BinaryPrimitives.ReadDoubleLittleEndian({serializedDataSlice})"
-                    : $"BitConverter.Int64BitsToDouble(BinaryPrimitives.ReadInt64LittleEndian({serializedDataSlice}))";
-                break;
+                // Floating-point BinaryPrimitives APIs were added in .NET 8; earlier targets reconstruct the same bits through integral APIs.
+                sourceBuilder.AppendLine("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"return BinaryPrimitives.ReadDoubleLittleEndian({serializedDataSlice});");
+                sourceBuilder.AppendLine("#else");
+                sourceBuilder.AppendLine($"return BitConverter.Int64BitsToDouble(BinaryPrimitives.ReadInt64LittleEndian({serializedDataSlice}));");
+                sourceBuilder.AppendLine("#endif");
+                return;
             default:
                 throw new InvalidOperationException("Unsupported primitive type reached source emission.");
         }
@@ -1450,8 +1378,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             string viewTypeName,
             bool isEffectivelyPublic,
             bool isBlittableStruct,
-            int blittableStructByteCount,
-            bool binaryPrimitivesSupportsFloatingPoint)
+            int blittableStructByteCount)
         {
             Symbol = symbol;
             QualifiedSourceTypeName = qualifiedSourceTypeName;
@@ -1459,7 +1386,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             IsEffectivelyPublic = isEffectivelyPublic;
             IsBlittableStruct = isBlittableStruct;
             BlittableStructByteCount = blittableStructByteCount;
-            BinaryPrimitivesSupportsFloatingPoint = binaryPrimitivesSupportsFloatingPoint;
         }
 
         internal INamedTypeSymbol Symbol { get; }
@@ -1473,8 +1399,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         internal bool IsBlittableStruct { get; }
 
         internal int BlittableStructByteCount { get; }
-
-        internal bool BinaryPrimitivesSupportsFloatingPoint { get; }
 
         internal List<FieldGenerationModel> Fields { get; } = new();
 
