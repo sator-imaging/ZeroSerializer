@@ -25,7 +25,6 @@ jobs:
   test:
     strategy:
       matrix:
-        framework: [net10.0, netcoreapp3.0]
         configuration: [Release, Debug]
 
     runs-on: ubuntu-latest   # tip: runs-on can use ${{ matrix.<name> }}
@@ -35,12 +34,13 @@ jobs:
         with:
           dotnet-version: |
             10.x.x
-            3.x.x
+            8.x.x
+            6.x.x
+            5.x.x
 
       # !!! MUST NOT REMOVE THIS !!!
       # As test project cannot use netstandard2.1,
       # sandbox project uses it instead for Unity compatibility test.
-      - if: matrix.framework == 'net10.0'
-        run: dotnet build -c ${{ matrix.configuration }}
+      - run: dotnet build -c ${{ matrix.configuration }}
 
-      - run: dotnet test  -c ${{ matrix.configuration }} -f ${{ matrix.framework }}
+      - run: dotnet test  -c ${{ matrix.configuration }}
