@@ -27,13 +27,23 @@ Receiving data over a network, reading a file, or calling another API often leav
 // Some APIs require data to be received into a byte array.
 byte[] receivedBuffer = ReceivePacket();
 
-// Like Span<T> or Memory<T>, a View provides strongly typed access over existing memory without owning it.
+// Like ReadOnlySpan<T> or ReadOnlyMemory<T>,
+// a view provides strongly typed access over existing memory without owning it.
 var packetView = new PacketView(receivedBuffer.AsMemory());
 
 // Each property is decoded directly from the original buffer only when accessed.
 int id = packetView.Id;
 ReadOnlySpan<char> name = packetView.Name;
 ReadOnlySpan<int> values = packetView.Values;
+
+// Adding attribute to generate readonly struct 'PacketView'.
+[ZeroSerializer]
+public class Packet
+{
+    public int Id { get; }
+    public string Name { get; }
+    public int[] Values { get; }
+}
 ```
 
 View construction does not read every property. Values are decoded directly from the original memory only on access.
