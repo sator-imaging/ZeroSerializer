@@ -2,63 +2,209 @@
 // https://github.com/sator-imaging/ZeroSerializer
 
 using System;
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
+using SandboxModels;
 using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable CEK001  // Collection expressions are not allowed
+#pragma warning disable CEK003  // Collection expression text length must be 12 or fewer characters
 #pragma warning disable CEK005  // Collection expressions must be empty
 
+// The sandbox compiles every successful public wire shape against netstandard2.1; diagnostic failures remain test-project cases because they intentionally prevent compilation.
 var fixedPacket = new FixedPacket
 {
-    FloatValue = 1.5f,
-    IntegerValue = 42,
+    BooleanValue = true,
+    ByteValue = 0xAB,
+    SignedByteValue = -12,
+    CharacterValue = '界',
+    Int16Value = -1234,
+    UInt16Value = 54321,
+    Int32Value = -12345678,
+    UInt32Value = 3456789012,
+    Int64Value = -123456789012345,
+    UInt64Value = 12345678901234567890,
+    SingleValue = 1.5f,
+    DoubleValue = -123.5,
     State = PacketState.Ready,
     Position = new PackedPosition { X = 10, Y = 20 },
 };
 var fixedBuffer = new byte[FixedPacketView.RequiredByteLength];
-fixedPacket.Serialize(fixedBuffer);
-
+int fixedWrittenByteCount = fixedPacket.Serialize(fixedBuffer);
 var fixedView = new FixedPacketView(fixedBuffer);
-if (fixedView.FloatValue != fixedPacket.FloatValue
-    || fixedView.IntegerValue != fixedPacket.IntegerValue
-    || fixedView.State != fixedPacket.State
-    || fixedView.Position.X != fixedPacket.Position.X
-    || fixedView.Position.Y != fixedPacket.Position.Y)
+
+RequireSandboxCondition(
+    fixedWrittenByteCount == FixedPacketView.RequiredByteLength
+    && fixedView.BooleanValue == fixedPacket.BooleanValue
+    && fixedView.ByteValue == fixedPacket.ByteValue
+    && fixedView.SignedByteValue == fixedPacket.SignedByteValue
+    && fixedView.CharacterValue == fixedPacket.CharacterValue
+    && fixedView.Int16Value == fixedPacket.Int16Value
+    && fixedView.UInt16Value == fixedPacket.UInt16Value
+    && fixedView.Int32Value == fixedPacket.Int32Value
+    && fixedView.UInt32Value == fixedPacket.UInt32Value
+    && fixedView.Int64Value == fixedPacket.Int64Value
+    && fixedView.UInt64Value == fixedPacket.UInt64Value
+    && fixedView.SingleValue == fixedPacket.SingleValue
+    && fixedView.DoubleValue == fixedPacket.DoubleValue
+    && fixedView.State == fixedPacket.State
+    && fixedView.Position.X == fixedPacket.Position.X
+    && fixedView.Position.Y == fixedPacket.Position.Y,
+    "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
+
+ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
+ReadOnlyMemory<byte> fixedSerializedMemory = fixedView;
+RequireSandboxCondition(
+    fixedSerializedSpan.Length == FixedPacketView.RequiredByteLength
+    && fixedSerializedMemory.Length == FixedPacketView.RequiredByteLength,
+    "Fixed-size View conversion did not expose its exact serialized region.");
+
+var packedPacket = new PackedPacket
 {
-    throw new InvalidOperationException("Fixed-size View did not match its source.");
-}
+    Identifier = 42,
+    Position = new PackedPosition { X = -10, Y = 20 },
+};
+var packedBuffer = new byte[PackedPacketView.RequiredByteLength];
+int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
+var packedView = new PackedPacketView(packedBuffer);
+RequireSandboxCondition(
+    packedWrittenByteCount == PackedPacketView.RequiredByteLength
+    && packedView.Identifier == packedPacket.Identifier
+    && packedView.Position.X == packedPacket.Position.X
+    && packedView.Position.Y == packedPacket.Position.Y,
+    "Root Blittable Struct did not match its source.");
 
 var variablePacket = new VariablePacket
 {
     Name = "sandbox",
+    EmptyName = string.Empty,
+    MissingName = null,
     Values = [10, 20, 30],
-    OptionalValue = null,
+    States = [PacketState.None, PacketState.Ready],
+    Positions = [new PackedPosition { X = 1, Y = 2 }, new PackedPosition { X = 3, Y = 4 }],
+    EmptyValues = Array.Empty<int>(),
+    MissingValues = null,
+    OptionalValue = 17,
+    MissingOptionalValue = null,
+    OptionalState = PacketState.Ready,
+    OptionalPosition = new PackedPosition { X = 30, Y = 40 },
+    MissingOptionalPosition = null,
     Child = new ChildPacket { Identifier = 99 },
+    MissingChild = null,
+    StructChild = new StructChildPacket { Identifier = 100, Name = "struct" },
+    OptionalStructChild = new StructChildPacket { Identifier = 101, Name = "optional struct" },
+    MissingOptionalStructChild = null,
 };
-var variableBuffer = new byte[256];
-variablePacket.Serialize(variableBuffer);
+var variableBuffer = new byte[1024];
+int variableWrittenByteCount = variablePacket.Serialize(variableBuffer);
+var variableView = new VariablePacketView(variableBuffer.AsMemory(0, variableWrittenByteCount));
 
-var variableView = new VariablePacketView(variableBuffer);
-if (VariablePacketView.RequiredByteLength != -1
-    || !variableView.Name.SequenceEqual(variablePacket.Name)
-    || variableView.Values.Length != variablePacket.Values.Length
-    || variableView.Values[2] != variablePacket.Values[2]
-    || variableView.OptionalValue is not null
-    || variableView.Child.Identifier != variablePacket.Child.Identifier)
-{
-    throw new InvalidOperationException("Runtime-sized View did not match its source.");
-}
+RequireSandboxCondition(
+    VariablePacketView.RequiredByteLength < 0
+    && variableView.Name.SequenceEqual("sandbox".AsSpan())
+    && variableView.EmptyName.IsEmpty
+    && variableView.MissingName.IsEmpty
+    && variableView.Values.Length == 3
+    && variableView.Values[2] == 30
+    && variableView.States.Length == 2
+    && variableView.States[1] == PacketState.Ready
+    && variableView.Positions.Length == 2
+    && variableView.Positions[1].Y == 4
+    && variableView.EmptyValues.IsEmpty
+    && variableView.MissingValues.IsEmpty
+    && variableView.OptionalValue == 17
+    && variableView.MissingOptionalValue is null
+    && variableView.OptionalState == PacketState.Ready
+    && variableView.OptionalPosition!.Value.X == 30
+    && variableView.MissingOptionalPosition is null
+    && variableView.Child.Identifier == 99
+    && variableView.StructChild.Identifier == 100
+    && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
+    && variableView.OptionalStructChild.Identifier == 101
+    && variableView.OptionalStructChild.Name.SequenceEqual("optional struct".AsSpan()),
+    "Runtime-sized, nullable, array, string, or nested View value did not match its source.");
 
-// Keeping these cases together catches wire-offset regressions when a null payload is followed by another property.
+ReadOnlySpan<byte> variableSerializedSpan = variableView;
+ReadOnlyMemory<byte> variableSerializedMemory = variableView;
+RequireSandboxCondition(
+    variableSerializedSpan.Length == variableWrittenByteCount
+    && variableSerializedMemory.Length == variableWrittenByteCount,
+    "Runtime-sized View conversion did not retain its supplied serialized region.");
+
+ReadOnlySpan<byte> variableSerializedData = variableView;
+RequireSandboxCondition(
+    BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(2 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(7 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(9 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(12 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(14 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(17 * sizeof(int), sizeof(int))) == 0,
+    "Null payloads were not represented by zero field offsets.");
+
+var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
+var ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
+ignoredMembersPacket.Serialize(ignoredMembersBuffer);
+var ignoredMembersView = new IgnoredMembersPacketView(ignoredMembersBuffer);
+RequireSandboxCondition(
+    ignoredMembersView.Included == 7
+    && ignoredMembersView.PrivateSetter == 8
+    && typeof(IgnoredMembersPacketView).GetProperties().Length == 2
+    && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.Included)) is not null
+    && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.PrivateSetter)) is not null,
+    "Ignored fields, indexers, setters, or non-public getters changed the generated View.");
+
+var namespacedPacket = new SandboxModels.NamespacedPacket { Identifier = 11 };
+var namespacedBuffer = new byte[SandboxModels.NamespacedPacketView.RequiredByteLength];
+namespacedPacket.Serialize(namespacedBuffer);
+var namespacedView = new SandboxModels.NamespacedPacketView(namespacedBuffer);
+RequireSandboxCondition(namespacedView.Identifier == namespacedPacket.Identifier, "Namespace-local generation failed.");
+
+var emptyClassBuffer = Span<byte>.Empty;
+var emptyStructBuffer = Span<byte>.Empty;
+RequireSandboxCondition(
+    new EmptyClassPacket().Serialize(emptyClassBuffer) == 0
+    && new EmptyStructPacket().Serialize(emptyStructBuffer) == 0
+    && EmptyClassPacketView.RequiredByteLength == 0
+    && EmptyStructPacketView.RequiredByteLength == 0,
+    "Empty serializable types did not remain zero length.");
+
 Console.WriteLine("ZeroSerializer sandbox passed.");
+
+static void RequireSandboxCondition(bool condition, string failureMessage)
+{
+    if (!condition)
+    {
+        throw new InvalidOperationException(failureMessage);
+    }
+}
 
 [ZeroSerializer]
 public struct FixedPacket
 {
-    public float FloatValue { get; init; }
+    public bool BooleanValue { get; init; }
 
-    public int IntegerValue { get; init; }
+    public byte ByteValue { get; init; }
+
+    public sbyte SignedByteValue { get; init; }
+
+    public char CharacterValue { get; init; }
+
+    public short Int16Value { get; init; }
+
+    public ushort UInt16Value { get; init; }
+
+    public int Int32Value { get; init; }
+
+    public uint UInt32Value { get; init; }
+
+    public long Int64Value { get; init; }
+
+    public ulong UInt64Value { get; init; }
+
+    public float SingleValue { get; init; }
+
+    public double DoubleValue { get; init; }
 
     public PacketState State { get; init; }
 
@@ -80,21 +226,106 @@ public struct PackedPosition
 }
 
 [ZeroSerializer]
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PackedPacket
+{
+    public int Identifier { get; init; }
+
+    public PackedPosition Position { get; init; }
+}
+
+[ZeroSerializer]
 public sealed class VariablePacket
 {
     public string? Name { get; init; }
 
+    public string? EmptyName { get; init; }
+
+    public string? MissingName { get; init; }
+
     public int[]? Values { get; init; }
+
+    public PacketState[]? States { get; init; }
+
+    public PackedPosition[]? Positions { get; init; }
+
+    public int[]? EmptyValues { get; init; }
+
+    public int[]? MissingValues { get; init; }
 
     public int? OptionalValue { get; init; }
 
+    public int? MissingOptionalValue { get; init; }
+
+    public PacketState? OptionalState { get; init; }
+
+    public PackedPosition? OptionalPosition { get; init; }
+
+    public PackedPosition? MissingOptionalPosition { get; init; }
+
     public ChildPacket? Child { get; init; }
+
+    public ChildPacket? MissingChild { get; init; }
+
+    public StructChildPacket StructChild { get; init; }
+
+    public StructChildPacket? OptionalStructChild { get; init; }
+
+    public StructChildPacket? MissingOptionalStructChild { get; init; }
 }
 
 [ZeroSerializer]
 public sealed class ChildPacket
 {
     public int Identifier { get; init; }
+}
+
+[ZeroSerializer]
+public struct StructChildPacket
+{
+    public int Identifier { get; init; }
+
+    public string? Name { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class IgnoredMembersPacket
+{
+    public IgnoredMembersPacket(int included, int privateSetter, int privateGetter)
+    {
+        Included = included;
+        PrivateSetter = privateSetter;
+        PrivateGetter = privateGetter;
+    }
+
+    public int Included { get; }
+
+    public int PrivateSetter { get; private set; }
+
+    public int PrivateGetter { private get; set; }
+
+    public int this[int index] => index;
+
+    public int IgnoredField;
+}
+
+[ZeroSerializer]
+public sealed class EmptyClassPacket
+{
+}
+
+[ZeroSerializer]
+public struct EmptyStructPacket
+{
+}
+
+namespace SandboxModels
+{
+    [ZeroSerializer]
+    public sealed class NamespacedPacket
+    {
+        public int Identifier { get; init; }
+    }
 }
 
 // Polyfill
