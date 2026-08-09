@@ -333,3 +333,11 @@ namespace System.Runtime.CompilerServices
 {
     struct IsExternalInit { }
 }
+
+public static class SandboxHelper
+{
+    public static void AlwaysFail()
+    {
+        throw new InvalidOperationException("Intentional sandbox failure.");
+    }
+}

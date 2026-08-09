@@ -35,5 +35,26 @@ namespace ZeroSerializer.Tests
 
             entryPoint.Invoke(null, invokeArgs);
         }
+
+        [Fact]
+        public void VerifyAlwaysFailThrowsException()
+        {
+            // Verify that calling SandboxHelper.AlwaysFail() throws the expected exception
+            var exception = Assert.Throws<InvalidOperationException>(() => Sandbox::SandboxHelper.AlwaysFail());
+            Assert.Equal("Intentional sandbox failure.", exception.Message);
+        }
+
+        [Fact]
+        public void VerifySandboxAssemblyTargetFrameworkIsNetStandard21()
+        {
+            // Retrieve the Sandbox assembly
+            Assembly sandboxAssembly = typeof(Sandbox::FixedPacket).Assembly;
+
+            // Retrieve TargetFrameworkAttribute
+            var targetFrameworkAttr = sandboxAssembly.GetCustomAttribute<System.Runtime.Versioning.TargetFrameworkAttribute>();
+
+            Assert.NotNull(targetFrameworkAttr);
+            Assert.Equal(".NETStandard,Version=v2.1", targetFrameworkAttr.FrameworkName);
+        }
     }
 }
