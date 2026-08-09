@@ -1,4 +1,4 @@
-name: Sandbox generated source summary
+name: Generated Source Preview
 
 on:
   workflow_call:
