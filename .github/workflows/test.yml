@@ -42,6 +42,7 @@ jobs:
       # !!! MUST NOT REMOVE THIS !!!
       # As test project cannot use netstandard2.1,
       # sandbox project uses it instead for Unity compatibility test.
+      - run: dotnet pack -c Release ./src -o ./local_packages
       - run: dotnet restore
       - run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
