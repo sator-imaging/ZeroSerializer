@@ -589,6 +589,33 @@ public sealed class SerializationTests
         TestAssert.Equal(typeof(ReadOnlyMemory<byte>), parameters[0].ParameterType, "View constructor memory type");
     }
 
+    [Fact]
+    public void Utf8PayloadRoundTrip()
+    {
+        // 1. Create string
+        string originalString = "Hello, UTF-8 World! 世界";
+
+        // 2. Use Utf8Encoding to make it byte array
+        byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(originalString);
+
+        // 3. Set byte array to payload
+        var source = new Utf8Payload(utf8Bytes);
+
+        // 4. Serialize
+        var buffer = new byte[256];
+        int writtenBytes = source.Serialize(buffer);
+
+        // 5. Deserialize
+        var view = new Utf8PayloadView(buffer.AsMemory(0, writtenBytes));
+
+        // 6. Decode deserialized byte[] as string
+        ReadOnlySpan<byte> decodedBytes = view.Utf8;
+        string decodedString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+
+        // 7. Verify the result
+        TestAssert.Equal(originalString, decodedString, "Decoded UTF-8 string matches original");
+    }
+
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {
         return typeof(ZeroSerializerExtensions)
