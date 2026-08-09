@@ -9,12 +9,8 @@ obj
 !src
 !tests
 !integration
-!local_packages
-local_packages/*.nupkg
 
 !.gitignore
-!integration/nuget.config
-!local_packages/.gitkeep
 !Directory.Build.props
 !icon-128px.png
 !*.slnx
