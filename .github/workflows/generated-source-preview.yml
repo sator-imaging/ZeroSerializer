@@ -49,7 +49,7 @@ jobs:
           {
             for generated_file in "${generated_files[@]}"; do
               file_name="$(basename "$generated_file")"
-              echo "### $file_name"
+              echo "## $file_name"
               echo
               echo "<details>"
               echo
