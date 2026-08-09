@@ -146,12 +146,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             foreach (AttributeSyntax attribute in attributeList.Attributes)
             {
                 string attributeName = attribute.Name.ToString();
+                if (attributeName.EndsWith("Attribute", StringComparison.Ordinal))
+                {
+                    attributeName = attributeName.Substring(0, attributeName.Length - "Attribute".Length);
+                }
+
                 if (attributeName == SerializerName
-                    || attributeName == SerializerAttributeName
                     || attributeName == SerializerNamespace + "." + SerializerName
-                    || attributeName == SerializerNamespace + "." + SerializerAttributeName
-                    || attributeName == "global::" + SerializerNamespace + "." + SerializerName
-                    || attributeName == "global::" + SerializerNamespace + "." + SerializerAttributeName)
+                    || attributeName == "global::" + SerializerNamespace + "." + SerializerName)
                 {
                     return true;
                 }
