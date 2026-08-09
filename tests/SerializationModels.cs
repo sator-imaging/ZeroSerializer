@@ -203,6 +203,12 @@ public sealed class PropertyVariants
 }
 
 [ZeroSerializer]
+public sealed class ByteArrayRecord
+{
+    public byte[]? Payload { get; init; }
+}
+
+[ZeroSerializer]
 public struct Utf8Payload
 {
     public Utf8Payload(byte[] utf8)
