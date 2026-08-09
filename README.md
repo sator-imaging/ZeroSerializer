@@ -11,7 +11,9 @@ Zero-copy, Zero-allocation, Deserialize-on-Read
 
 </div>
 
+
 `ZeroSerializer` is a C# source generator for reading serialized data directly from an existing `byte[]`.
+
 
 ## Why ZeroSerializer?
 
@@ -62,11 +64,11 @@ ReadOnlyMemory<byte> retainedData = packetView;
 # Supported values
 
 - Primitives and enums
-- `string` stored as UTF-16
-- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
-- One-dimensional arrays of Blittable values or structs
-- Nested `[ZeroSerializer]` types
 - Nullable values
+- `string` stored as UTF-16 (UTF-8 can be stored as byte[] by hand)
+- Nested `[ZeroSerializer]` types
+- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
+- One-dimensional arrays of blittable values or structs
 
 
 
