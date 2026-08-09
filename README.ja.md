@@ -11,7 +11,7 @@ Zero-copy, Zero-allocation, Deserialize-on-Read
 
 </div>
 
-`ZeroSerializer` は、宣言順の固定ワイヤーフォーマットとゼロコピー View を生成する Unity 向け C# Roslyn 3.8 ソースジェネレーターです。
+`ZeroSerializer` は、宣言順の固定ワイヤーフォーマットとゼロコピー View を生成する Unity 対応の C# Roslyn 3.8 ソースジェネレーターです。
 
 ```csharp
 using ZeroSerializer;
@@ -30,7 +30,7 @@ int writtenBytes = source.Serialize(buffer);
 var view = new FooView(buffer);
 ```
 
-生成される View 構造体と `ZeroSerializerExtensions` は対象型と同じ namespace に定義されます。対象型がグローバル namespace にある場合だけ、生成先は `ZeroSerializer` namespace です。`ZeroSerializerAttribute` と `ZeroSerializerHelper` は常に `ZeroSerializer` namespace に定義されます。属性と Helper は `internal`、extension class は `public` です。属性と Helper は `- ` で始まる個別ファイル、View・extension method は対象型ごとのファイルに生成され、同じ namespace の extension class は各ファイルから `partial` で構成されます。
+生成される View 構造体は対象型と同じ namespace に定義されます（対象型がグローバル namespace にある場合だけ、生成先は `ZeroSerializer` namespace です）。一方で、拡張メソッドを含む `ZeroSerializerExtensions` は常に `ZeroSerializer` namespace に定義されるため、拡張メソッドを使用する際には `ZeroSerializer` namespace のインポートが必要です。`ZeroSerializerAttribute` と `ZeroSerializerHelper` は常に `ZeroSerializer` namespace に定義されます。属性と Helper は `internal`、extension class は `public` です。属性と Helper は `- ` で始まる個別ファイル、View・extension method は対象型ごとのファイルに生成され、`ZeroSerializer` namespace の extension class は各ファイルから `partial` で構成されます。
 
 全生成ファイルは次の共通ヘッダーを持ちます。
 
@@ -77,7 +77,7 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 `[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の field offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
 
-全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `VIEW006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `VIEW007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `VIEW003` error が発生し、`VIEW007` は生成エラーが解消されるまで出ません。
+全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `ZEROS003` error が発生し、`ZEROS007` は生成エラーが解消されるまで出ません。
 
 ## null と可変長データ
 
@@ -130,6 +130,6 @@ Blittable Struct は field offset table を持たないため、`RequiredByteLen
 
 `RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも field offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
 
-`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
+`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数（offset table を含む）を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
 
 string と Blittable payload は native memory image を利用するため、Serializer と View はリトルエンディアン環境だけを受け付けます。

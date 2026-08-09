@@ -11,7 +11,9 @@ Zero-copy, Zero-allocation, Deserialize-on-Read
 
 </div>
 
+
 `ZeroSerializer` is a C# source generator for reading serialized data directly from an existing `byte[]`.
+
 
 ## Why ZeroSerializer?
 
@@ -62,11 +64,11 @@ ReadOnlyMemory<byte> retainedData = packetView;
 # Supported values
 
 - Primitives and enums
-- `string` stored as UTF-16
-- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
-- One-dimensional arrays of Blittable values or structs
-- Nested `[ZeroSerializer]` types
 - Nullable values
+- `string` stored as UTF-16 (UTF-8 can be stored as byte[] by hand)
+- Nested `[ZeroSerializer]` types
+- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
+- One-dimensional arrays of blittable values or structs
 
 
 
@@ -95,6 +97,6 @@ Blittable structs are stored directly as raw struct bytes without an offset tabl
 # Notes
 
 - Keep the original memory alive and unchanged while its View is in use. This is the same rule as for `Span<T>` and `Memory<T>`.
-- `RequiredByteLength` is the exact size unless it is negative. A negative value indicates that the type contains variable-length data, such as strings or arrays. Passing the exact serialized region is recommended, but View access only requires the correct starting position.
+- `RequiredByteLength` is the exact size (including the offset table) unless it is negative. A negative value indicates that the type contains variable-length data, such as strings or arrays. Passing the exact serialized region is recommended, but View access only requires the correct starting position.
 - Validate integrity or authenticity before creating a View when required.
 - The wire format requires a little-endian runtime.

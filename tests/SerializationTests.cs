@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Xunit;
 using ZeroSerializer.Tests.Models;
+using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
@@ -113,9 +114,11 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RandomLength1024BlittableArraysAndStringsRoundTrip()
+    public void RandomLength1013BlittableArraysAndStringsRoundTrip()
     {
-        const int elementCount = 1024;
+        // Avoid power-of-two values, which **might** accidentally satisfy test conditions.
+        const int elementCount = 1013;
+
         // A fixed seed keeps failures reproducible while every serialized element still receives a random value.
         var random = new Random(0x51A7C0DE);
         var firstCharacters = new char[elementCount];
@@ -602,6 +605,33 @@ public sealed class SerializationTests
 
         TestAssert.Equal(1, parameters.Length, "View constructor parameter count");
         TestAssert.Equal(typeof(ReadOnlyMemory<byte>), parameters[0].ParameterType, "View constructor memory type");
+    }
+
+    [Fact]
+    public void Utf8PayloadRoundTrip()
+    {
+        // 1. Create string
+        string originalString = "Hello, UTF-8 World! 世界";
+
+        // 2. Use Utf8Encoding to make it byte array
+        byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(originalString);
+
+        // 3. Set byte array to payload
+        var source = new Utf8Payload(utf8Bytes);
+
+        // 4. Serialize
+        var buffer = new byte[256];
+        int writtenBytes = source.Serialize(buffer);
+
+        // 5. Deserialize
+        var view = new Utf8PayloadView(buffer.AsMemory(0, writtenBytes));
+
+        // 6. Decode deserialized byte[] as string
+        ReadOnlySpan<byte> decodedBytes = view.Utf8;
+        string decodedString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+
+        // 7. Verify the result
+        TestAssert.Equal(originalString, decodedString, "Decoded UTF-8 string matches original");
     }
 
     private static MethodInfo GetSerializeMethod(Type sourceType)

@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
 
+  generated-source-preview:
+    uses: ./.github/workflows/generated-source-preview.yml
+
   test:
     strategy:
       matrix:
