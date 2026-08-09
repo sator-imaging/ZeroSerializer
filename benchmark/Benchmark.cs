@@ -107,12 +107,12 @@ namespace ZeroSerializer.Benchmarks
         [Benchmark]
         public BenchmarkPayloadView CreateView()
         {
-            // Keep this benchmark constructor-only; property access belongs to ReadAllViewProperties.
+            // Keep this benchmark constructor-only; property access belongs to DeserializeAllProperties.
             return new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
         }
 
         [Benchmark]
-        public int ReadAllViewProperties()
+        public int DeserializeAllProperties()
         {
             var view = new BenchmarkPayloadView(buffer.AsMemory(0, writtenBytes));
             int sequence = view.Sequence;
