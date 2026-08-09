@@ -3,4 +3,5 @@
   <Project Path="./tests/ZeroSerializer.Tests.csproj" />
   <Project Path="./sandbox/ZeroSerializer.Sandbox.csproj" />
   <Project Path="./benchmark/ZeroSerializer.Benchmark.csproj" />
+  <Project Path="./integration/ZeroSerializer.IntegrationTests.csproj" />
 </Solution>

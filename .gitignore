@@ -8,8 +8,10 @@ obj
 !sandbox
 !src
 !tests
+!integration
 
 !.gitignore
+!nuget.config
 !Directory.Build.props
 !icon-128px.png
 !*.slnx
