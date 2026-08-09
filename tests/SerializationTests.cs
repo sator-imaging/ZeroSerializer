@@ -114,9 +114,11 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RandomLength1024BlittableArraysAndStringsRoundTrip()
+    public void RandomLength1013BlittableArraysAndStringsRoundTrip()
     {
-        const int elementCount = 1024;
+        // Avoid power-of-two values, which **might** accidentally satisfy test conditions.
+        const int elementCount = 1013;
+
         // A fixed seed keeps failures reproducible while every serialized element still receives a random value.
         var random = new Random(0x51A7C0DE);
         var firstCharacters = new char[elementCount];
