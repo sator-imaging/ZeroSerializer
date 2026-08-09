@@ -175,6 +175,8 @@ RequireSandboxCondition(
     && EmptyStructPacketView.RequiredByteLength == 0,
     "Empty serializable types did not remain zero length.");
 
+throw new System.Exception("Unity compat test must fail");
+
 Console.WriteLine("ZeroSerializer sandbox passed.");
 
 static void RequireSandboxCondition(bool condition, string failureMessage)
