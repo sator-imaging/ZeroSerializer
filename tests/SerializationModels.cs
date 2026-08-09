@@ -227,7 +227,7 @@ public struct SequentialPackOneWithCharSetStruct
     public int Value { get; init; }
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 6)]
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 7)]
 [ZeroSerializer]
 public struct SequentialPackOneWithSizeStruct
 {
