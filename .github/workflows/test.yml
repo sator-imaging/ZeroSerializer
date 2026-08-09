@@ -22,8 +22,8 @@ concurrency:
 
 jobs:
 
-  sandbox-generated-source-summary:
-    uses: ./.github/workflows/sandbox-generated-source-summary.yml
+  generated-source-preview:
+    uses: ./.github/workflows/generated-source-preview.yml
 
   test:
     strategy:

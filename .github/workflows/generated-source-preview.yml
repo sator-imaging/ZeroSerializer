@@ -47,11 +47,9 @@ jobs:
           fi
 
           {
-            echo "# ${{ matrix.configuration }}"
-            echo
             for generated_file in "${generated_files[@]}"; do
-              file_name="${generated_file#"$generated_source_dir"/}"
-              echo "## $file_name"
+              file_name="$(basename $generated_file)"
+              echo "**$file_name**"
               echo
               echo "<details>"
               echo
