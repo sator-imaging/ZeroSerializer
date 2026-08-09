@@ -51,4 +51,6 @@ jobs:
 
   sandbox-generated-source-summary:
     needs: test
+    permissions:
+      contents: read
     uses: ./.github/workflows/sandbox-generated-source-summary.yml
