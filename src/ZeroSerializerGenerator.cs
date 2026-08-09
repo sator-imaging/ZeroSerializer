@@ -543,16 +543,22 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         AttributeData? structLayoutAttribute = null;
         foreach (AttributeData candidateAttribute in structType.GetAttributes())
         {
-            if (candidateAttribute.AttributeClass is { Name: "StructLayoutAttribute" } attributeClass
-                && attributeClass.ContainingNamespace is INamespaceSymbol
+            if (candidateAttribute.AttributeClass is
                 {
-                    Name: "InteropServices", ContainingNamespace: INamespaceSymbol
+                    Name: "StructLayoutAttribute",
+                    ContainingNamespace: INamespaceSymbol
                     {
-                        Name: "Runtime", ContainingNamespace: INamespaceSymbol
+                        Name: "InteropServices",
+                        ContainingNamespace: INamespaceSymbol
                         {
-                            Name: "System", ContainingNamespace: INamespaceSymbol
+                            Name: "Runtime",
+                            ContainingNamespace: INamespaceSymbol
                             {
-                                IsGlobalNamespace: true
+                                Name: "System",
+                                ContainingNamespace: INamespaceSymbol
+                                {
+                                    IsGlobalNamespace: true
+                                }
                             }
                         }
                     }
