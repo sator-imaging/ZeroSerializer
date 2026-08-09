@@ -48,3 +48,7 @@ jobs:
       - run: |
           dotnet test -c ${{ matrix.configuration }} --no-restore --no-build \
             | grep -E " - .*\.dll" >> $GITHUB_STEP_SUMMARY
+
+  sandbox-generated-source-summary:
+    needs: test
+    uses: ./.github/workflows/sandbox-generated-source-summary.yml
