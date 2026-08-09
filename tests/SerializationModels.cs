@@ -212,3 +212,24 @@ public struct Utf8Payload
 
     public byte[] Utf8 { get; }
 }
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct StrictBlittableStruct
+{
+    public int Value { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
+[ZeroSerializer]
+public struct SequentialPackOneWithCharSetStruct
+{
+    public int Value { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 8)]
+[ZeroSerializer]
+public struct SequentialPackOneWithSizeStruct
+{
+    public int Value { get; init; }
+}

@@ -558,14 +558,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return false;
         }
 
-        foreach (KeyValuePair<string, TypedConstant> namedArgument in structLayoutAttribute.NamedArguments)
+        if (structLayoutAttribute.NamedArguments.Length != 1)
         {
-            if (namedArgument.Key == "Pack"
-                && namedArgument.Value.Value is int pack
-                && pack == 1)
-            {
-                return true;
-            }
+            return false;
+        }
+
+        var namedArgument = structLayoutAttribute.NamedArguments[0];
+        if (namedArgument.Key == "Pack"
+            && namedArgument.Value.Value is int pack
+            && pack == 1)
+        {
+            return true;
         }
 
         return false;
