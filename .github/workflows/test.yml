@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
 
+  sandbox-generated-source-summary:
+    uses: ./.github/workflows/sandbox-generated-source-summary.yml
+
   test:
     strategy:
       matrix:

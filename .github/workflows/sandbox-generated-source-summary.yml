@@ -1,0 +1,66 @@
+name: Generated Source Preview
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox-generated-source:
+    strategy:
+      matrix:
+        configuration: [Release, Debug]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5      # v4.3.1
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
+        with:
+          dotnet-version: |
+            10.x.x
+
+      - run: dotnet restore ${{ github.workspace }}/sandbox
+
+      - name: Build sandbox project with generated source output
+        run: |
+          generated_source_dir="${{ runner.temp }}/generated/${{ matrix.configuration }}"
+          rm -rf "$generated_source_dir"
+
+          dotnet build ${{ github.workspace }}/sandbox \
+            -c ${{ matrix.configuration }} \
+            -t:Rebuild \
+            --no-restore \
+            -p:EmitCompilerGeneratedFiles=true \
+            -p:CompilerGeneratedFilesOutputPath="$generated_source_dir"
+
+      - name: Write generated source summary
+        shell: bash
+        run: |
+          generated_source_dir="${{ runner.temp }}/generated/${{ matrix.configuration }}"
+          mapfile -t generated_files < <(find "$generated_source_dir" -type f -name '*.cs' | sort)
+
+          if [ "${#generated_files[@]}" -eq 0 ]; then
+            echo "No generated C# files were found in $generated_source_dir." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          {
+            echo "# ${{ matrix.configuration }}"
+            echo
+            for generated_file in "${generated_files[@]}"; do
+              file_name="${generated_file#"$generated_source_dir"/}"
+              echo "## $file_name"
+              echo
+              echo "<details>"
+              echo
+              echo '```cs'
+              cat "$generated_file"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
