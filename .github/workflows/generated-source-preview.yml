@@ -8,6 +8,7 @@ permissions:
   contents: read
 
 jobs:
+
   sandbox-generated-source:
     strategy:
       matrix:
@@ -49,9 +50,8 @@ jobs:
           {
             for generated_file in "${generated_files[@]}"; do
               file_name="$(basename "$generated_file")"
-              echo "## $file_name"
-              echo
               echo "<details>"
+              echo "<summary>$file_name</summary>"
               echo
               echo '```cs'
               cat "$generated_file"

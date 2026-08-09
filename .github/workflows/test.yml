@@ -49,5 +49,6 @@ jobs:
           dotnet test -c ${{ matrix.configuration }} --no-restore --no-build \
             | grep -E " - .*\.dll" >> $GITHUB_STEP_SUMMARY
 
+  # Place job after test to make step summary order better (test -> code preview)
   generated-source-preview:
     uses: ./.github/workflows/generated-source-preview.yml
