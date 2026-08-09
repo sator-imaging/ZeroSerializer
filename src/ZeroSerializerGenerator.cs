@@ -863,7 +863,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine($"/// The fixed byte count plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
+        sourceBuilder.AppendLine($"/// The fixed byte count (including the offset table) plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
         sourceBuilder.AppendLine("/// </summary>");
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
@@ -1091,9 +1091,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         string methodAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine($"/// Serializes <paramref name=\"source\"/> into the wire format read by <see cref=\"{GetQualifiedViewName(generationModel)}\"/>.");
+        sourceBuilder.AppendLine($"/// Serializes <paramref name=\"source\"/> into the wire format (including the offset table) read by <see cref=\"{GetQualifiedViewName(generationModel)}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
-        sourceBuilder.AppendLine("/// <returns>The number of bytes written to <paramref name=\"destination\"/>.</returns>");
+        sourceBuilder.AppendLine("/// <returns>The number of bytes written to <paramref name=\"destination\"/> (including the offset table).</returns>");
         // The Span parameter is named destination so the emitted write body uses it directly without a conversion local.
         if (generationModel.Symbol.TypeKind == TypeKind.Struct
             && Math.Abs((long)CalculateRequiredByteLength(generationModel, modelLookup)) > 16)
