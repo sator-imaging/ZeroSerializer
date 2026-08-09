@@ -16,9 +16,6 @@
 
   <ItemGroup>
     <PackageReference Include="$(NuGetPublishID)" Version="*-*" />
-    <ProjectReference Include="../sandbox/ZeroSerializer.Sandbox.csproj">
-      <Aliases>Sandbox</Aliases>
-    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="../tests/**/*.cs" Exclude="../tests/obj/**/*.cs;../tests/bin/**/*.cs" />
+    <Compile Include="../tests/**/*.cs" Exclude="../tests/obj/**/*.cs;../tests/bin/**/*.cs;../tests/UnityCompatibilityTests.cs" />
   </ItemGroup>
 </Project>
