@@ -638,7 +638,7 @@ public sealed class SerializationTests
         TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
         TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(4, 4)), "Value field at offset 4");
 
-        // SequentialPackOneWithSizeStruct has Sequential, Pack=1, AND Size=4.
+        // SequentialPackOneWithSizeStruct has Sequential, Pack=1, AND Size=6.
         // It must have an offset table.
         var sizeObj = new SequentialPackOneWithSizeStruct { Value = 42 };
         var sizeBuffer = new byte[16];
