@@ -543,7 +543,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         AttributeData? structLayoutAttribute = null;
         foreach (AttributeData candidateAttribute in structType.GetAttributes())
         {
-            if (candidateAttribute.AttributeClass is
+            if (candidateAttribute.AttributeClass is INamedTypeSymbol
                 {
                     Name: "StructLayoutAttribute",
                     ContainingNamespace: INamespaceSymbol
