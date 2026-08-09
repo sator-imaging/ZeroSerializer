@@ -21,13 +21,14 @@ jobs:
           dotnet-version: |
             10.x.x
 
-      - run: dotnet restore ${{ github.workspace }}/sandbox/ZeroSerializer.Sandbox.csproj
+      - run: dotnet restore ${{ github.workspace }}/sandbox
 
       - name: Build sandbox project with generated source output
         run: |
           generated_source_dir="${{ runner.temp }}/generated/${{ matrix.configuration }}"
           rm -rf "$generated_source_dir"
-          dotnet build ${{ github.workspace }}/sandbox/ZeroSerializer.Sandbox.csproj \
+
+          dotnet build ${{ github.workspace }}/sandbox \
             -c ${{ matrix.configuration }} \
             -t:Rebuild \
             --no-restore \
