@@ -95,6 +95,8 @@ var variablePacket = new VariablePacket
     StructChild = new StructChildPacket { Identifier = 100, Name = "struct" },
     OptionalStructChild = new StructChildPacket { Identifier = 101, Name = "optional struct" },
     MissingOptionalStructChild = null,
+    FloatValues = [1.5f, 2.5f, 3.5f],
+    DoubleValues = [1.25, 2.25, 3.25],
 };
 var variableBuffer = new byte[1024];
 int variableWrittenByteCount = variablePacket.Serialize(variableBuffer);
@@ -122,7 +124,11 @@ RequireSandboxCondition(
     && variableView.StructChild.Identifier == 100
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
     && variableView.OptionalStructChild.Identifier == 101
-    && variableView.OptionalStructChild.Name.SequenceEqual("optional struct".AsSpan()),
+    && variableView.OptionalStructChild.Name.SequenceEqual("optional struct".AsSpan())
+    && variableView.FloatValues.Length == 3
+    && variableView.FloatValues[1] == 2.5f
+    && variableView.DoubleValues.Length == 3
+    && variableView.DoubleValues[2] == 3.25,
     "Runtime-sized, nullable, array, string, or nested View value did not match its source.");
 
 ReadOnlySpan<byte> variableSerializedSpan = variableView;
@@ -272,6 +278,10 @@ public sealed class VariablePacket
     public StructChildPacket? OptionalStructChild { get; init; }
 
     public StructChildPacket? MissingOptionalStructChild { get; init; }
+
+    public float[]? FloatValues { get; init; }
+
+    public double[]? DoubleValues { get; init; }
 }
 
 [ZeroSerializer]
