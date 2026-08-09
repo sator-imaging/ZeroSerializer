@@ -616,6 +616,107 @@ public sealed class SerializationTests
         TestAssert.Equal(originalString, decodedString, "Decoded UTF-8 string matches original");
     }
 
+    [Fact]
+    public void ArrayRoundTripTest()
+    {
+        const int length = 42;
+        var random = new Random(42);
+
+        var booleans = new bool[length];
+        var bytes = new byte[length];
+        var signedBytes = new sbyte[length];
+        var characters = new char[length];
+        var int16s = new short[length];
+        var uint16s = new ushort[length];
+        var int32s = new int[length];
+        var uint32s = new uint[length];
+        var int64s = new long[length];
+        var uint64s = new ulong[length];
+        var singles = new float[length];
+        var doubles = new double[length];
+        var byteStates = new ByteState[length];
+        var signedStates = new SignedState[length];
+        var packedRecords = new PackedRecord[length];
+
+        for (int i = 0; i < length; i++)
+        {
+            booleans[i] = random.Next(2) == 1;
+            bytes[i] = (byte)random.Next(256);
+            signedBytes[i] = (sbyte)random.Next(sbyte.MinValue, sbyte.MaxValue + 1);
+            characters[i] = (char)random.Next(char.MinValue, char.MaxValue + 1);
+            int16s[i] = (short)random.Next(short.MinValue, short.MaxValue + 1);
+            uint16s[i] = (ushort)random.Next(ushort.MinValue, ushort.MaxValue + 1);
+            int32s[i] = random.Next();
+            uint32s[i] = (uint)random.Next();
+            int64s[i] = ((long)random.Next() << 32) | (uint)random.Next();
+            uint64s[i] = (ulong)(((long)random.Next() << 32) | (uint)random.Next());
+            singles[i] = (float)random.NextDouble();
+            doubles[i] = random.NextDouble();
+            byteStates[i] = random.Next(2) == 0 ? ByteState.None : ByteState.Ready;
+            signedStates[i] = random.Next(2) == 0 ? SignedState.Negative : SignedState.Positive;
+            packedRecords[i] = new PackedRecord
+            {
+                Number = random.Next(),
+                State = random.Next(2) == 0 ? SignedState.Negative : SignedState.Positive
+            };
+        }
+
+        var source = new ArrayRoundTripRecord
+        {
+            Booleans = booleans,
+            Bytes = bytes,
+            SignedBytes = signedBytes,
+            Characters = characters,
+            Int16s = int16s,
+            UInt16s = uint16s,
+            Int32s = int32s,
+            UInt32s = uint32s,
+            Int64s = int64s,
+            UInt64s = uint64s,
+            Singles = singles,
+            Doubles = doubles,
+            ByteStates = byteStates,
+            SignedStates = signedStates,
+            PackedRecords = packedRecords,
+        };
+
+        var buffer = new byte[100 * 1024];
+        int writtenBytes = source.Serialize(buffer);
+
+        var view = new ArrayRoundTripRecordView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.SequenceEqual<bool>(source.Booleans, view.Booleans, nameof(view.Booleans));
+        TestAssert.SequenceEqual<byte>(source.Bytes, view.Bytes, nameof(view.Bytes));
+        TestAssert.SequenceEqual<sbyte>(source.SignedBytes, view.SignedBytes, nameof(view.SignedBytes));
+        TestAssert.SequenceEqual<char>(source.Characters, view.Characters, nameof(view.Characters));
+        TestAssert.SequenceEqual<short>(source.Int16s, view.Int16s, nameof(view.Int16s));
+        TestAssert.SequenceEqual<ushort>(source.UInt16s, view.UInt16s, nameof(view.UInt16s));
+        TestAssert.SequenceEqual<int>(source.Int32s, view.Int32s, nameof(view.Int32s));
+        TestAssert.SequenceEqual<uint>(source.UInt32s, view.UInt32s, nameof(view.UInt32s));
+        TestAssert.SequenceEqual<long>(source.Int64s, view.Int64s, nameof(view.Int64s));
+        TestAssert.SequenceEqual<ulong>(source.UInt64s, view.UInt64s, nameof(view.UInt64s));
+        TestAssert.SequenceEqual<float>(source.Singles, view.Singles, nameof(view.Singles));
+        TestAssert.SequenceEqual<double>(source.Doubles, view.Doubles, nameof(view.Doubles));
+        TestAssert.Equal(length, view.ByteStates.Length, nameof(view.ByteStates.Length));
+        for (int i = 0; i < length; i++)
+        {
+            TestAssert.Equal(source.ByteStates[i], view.ByteStates[i], $"ByteStates[{i}]");
+        }
+
+        TestAssert.Equal(length, view.SignedStates.Length, nameof(view.SignedStates.Length));
+        for (int i = 0; i < length; i++)
+        {
+            TestAssert.Equal(source.SignedStates[i], view.SignedStates[i], $"SignedStates[{i}]");
+        }
+
+        TestAssert.Equal(length, view.PackedRecords.Length, nameof(view.PackedRecords.Length));
+        for (int i = 0; i < length; i++)
+        {
+            TestAssert.Equal(source.PackedRecords[i].Number, view.PackedRecords[i].Number, $"PackedRecords[{i}].Number");
+            TestAssert.Equal(source.PackedRecords[i].State, view.PackedRecords[i].State, $"PackedRecords[{i}].State");
+        }
+    }
+
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {
         return typeof(ZeroSerializerExtensions)
