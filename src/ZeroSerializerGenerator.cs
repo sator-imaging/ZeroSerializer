@@ -678,14 +678,18 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         var sourceBuilder = new GeneratedSourceBuilder();
         AppendGeneratedFileHeader(sourceBuilder);
-        // View and extension declarations stay beside the source type; the global namespace falls back to ZeroSerializer.
+        // View declarations stay beside the source type; the global namespace falls back to ZeroSerializer.
         string generatedNamespaceName = generationModel.Symbol.ContainingNamespace.IsGlobalNamespace
             ? SerializerNamespace
             : generationModel.Symbol.ContainingNamespace.ToDisplayString();
         sourceBuilder.AppendLine($"namespace {generatedNamespaceName}");
         sourceBuilder.OpenBlock();
         EmitView(sourceBuilder, generationModel, modelLookup);
+        sourceBuilder.CloseBlock();
+
         sourceBuilder.AppendLine();
+        sourceBuilder.AppendLine($"namespace {SerializerNamespace}");
+        sourceBuilder.OpenBlock();
         EmitExtensionClass(
             sourceBuilder,
             generationModel,
