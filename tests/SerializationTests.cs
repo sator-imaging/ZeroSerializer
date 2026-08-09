@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Xunit;
 using ZeroSerializer.Tests.Models;
+using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
@@ -113,9 +114,11 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RandomLength1024BlittableArraysAndStringsRoundTrip()
+    public void RandomLength1013BlittableArraysAndStringsRoundTrip()
     {
-        const int elementCount = 1024;
+        // Avoid power-of-two values, which **might** accidentally satisfy test conditions.
+        const int elementCount = 1013;
+
         // A fixed seed keeps failures reproducible while every serialized element still receives a random value.
         var random = new Random(0x51A7C0DE);
         var firstCharacters = new char[elementCount];
@@ -580,6 +583,21 @@ public sealed class SerializationTests
     }
 
     [Fact]
+    public void ByteArrayRoundTrip()
+    {
+        var source = new ByteArrayRecord
+        {
+            Payload = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }
+        };
+        var buffer = new byte[256];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new ByteArrayRecordView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(source.Payload.Length, view.Payload.Length, "Payload length");
+        TestAssert.SequenceEqual<byte>(source.Payload, view.Payload, "Payload content");
+    }
+
+    [Fact]
     public void ViewConstructorHasNoOffset()
     {
         ConstructorInfo constructor = typeof(FixedClassView).GetConstructors().Single();
@@ -716,6 +734,38 @@ public sealed class SerializationTests
             TestAssert.Equal(source.PackedRecords[i].Number, view.PackedRecords[i].Number, $"PackedRecords[{i}].Number");
             TestAssert.Equal(source.PackedRecords[i].State, view.PackedRecords[i].State, $"PackedRecords[{i}].State");
         }
+    }
+
+    public void StrictBlittableStructTests()
+    {
+        // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
+        // It must have NO offset table (is serialized directly as raw bytes, checking the serialized size).
+        var strictObj = new StrictBlittableStruct { Value = 42 };
+        var strictBuffer = new byte[16];
+        int strictWrittenBytes = strictObj.Serialize(strictBuffer);
+        // Size should be exactly 4 bytes (sizeof(int)) because it has no offset table.
+        TestAssert.Equal(4, strictWrittenBytes, nameof(strictWrittenBytes));
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(strictBuffer.AsSpan(0, 4)), "Value field at offset 0");
+
+        // SequentialPackOneWithCharSetStruct has Sequential, Pack=1, AND CharSet=CharSet.Ansi.
+        // It must have an offset table (is serialized with property offset table, checking that its serialized size is larger).
+        var charSetObj = new SequentialPackOneWithCharSetStruct { Value = 42 };
+        var charSetBuffer = new byte[16];
+        int charSetWrittenBytes = charSetObj.Serialize(charSetBuffer);
+        // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
+        TestAssert.Equal(8, charSetWrittenBytes, nameof(charSetWrittenBytes));
+        TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(4, 4)), "Value field at offset 4");
+
+        // SequentialPackOneWithSizeStruct has Sequential, Pack=1, AND Size=7.
+        // It must have an offset table.
+        var sizeObj = new SequentialPackOneWithSizeStruct { Value = 42 };
+        var sizeBuffer = new byte[16];
+        int sizeWrittenBytes = sizeObj.Serialize(sizeBuffer);
+        // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
+        TestAssert.Equal(8, sizeWrittenBytes, nameof(sizeWrittenBytes));
+        TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(4, 4)), "Value field at offset 4");
     }
 
     private static MethodInfo GetSerializeMethod(Type sourceType)

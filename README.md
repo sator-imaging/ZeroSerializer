@@ -97,6 +97,6 @@ Blittable structs are stored directly as raw struct bytes without an offset tabl
 # Notes
 
 - Keep the original memory alive and unchanged while its View is in use. This is the same rule as for `Span<T>` and `Memory<T>`.
-- `RequiredByteLength` is the exact size unless it is negative. A negative value indicates that the type contains variable-length data, such as strings or arrays. Passing the exact serialized region is recommended, but View access only requires the correct starting position.
+- `RequiredByteLength` is the exact size (including the offset table) unless it is negative. A negative value indicates that the type contains variable-length data, such as strings or arrays. Passing the exact serialized region is recommended, but View access only requires the correct starting position.
 - Validate integrity or authenticity before creating a View when required.
 - The wire format requires a little-endian runtime.

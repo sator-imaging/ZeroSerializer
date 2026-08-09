@@ -203,6 +203,12 @@ public sealed class PropertyVariants
 }
 
 [ZeroSerializer]
+public sealed class ByteArrayRecord
+{
+    public byte[]? Payload { get; init; }
+}
+
+[ZeroSerializer]
 public struct Utf8Payload
 {
     public Utf8Payload(byte[] utf8)
@@ -245,4 +251,25 @@ public sealed class ArrayRoundTripRecord
     public SignedState[] SignedStates { get; init; } = Array.Empty<SignedState>();
 
     public PackedRecord[] PackedRecords { get; init; } = Array.Empty<PackedRecord>();
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct StrictBlittableStruct
+{
+    public int Value { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
+[ZeroSerializer]
+public struct SequentialPackOneWithCharSetStruct
+{
+    public int Value { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 7)]
+[ZeroSerializer]
+public struct SequentialPackOneWithSizeStruct
+{
+    public int Value { get; init; }
 }

@@ -12,6 +12,9 @@
     <ProjectReference Include="../src/ZeroSerializer.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../sandbox/ZeroSerializer.Sandbox.csproj">
+      <Aliases>Sandbox</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
