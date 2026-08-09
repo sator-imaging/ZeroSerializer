@@ -219,6 +219,40 @@ public struct Utf8Payload
     public byte[] Utf8 { get; }
 }
 
+[ZeroSerializer]
+public sealed class ArrayRoundTripRecord
+{
+    public bool[] Booleans { get; init; } = Array.Empty<bool>();
+
+    public byte[] Bytes { get; init; } = Array.Empty<byte>();
+
+    public sbyte[] SignedBytes { get; init; } = Array.Empty<sbyte>();
+
+    public char[] Characters { get; init; } = Array.Empty<char>();
+
+    public short[] Int16s { get; init; } = Array.Empty<short>();
+
+    public ushort[] UInt16s { get; init; } = Array.Empty<ushort>();
+
+    public int[] Int32s { get; init; } = Array.Empty<int>();
+
+    public uint[] UInt32s { get; init; } = Array.Empty<uint>();
+
+    public long[] Int64s { get; init; } = Array.Empty<long>();
+
+    public ulong[] UInt64s { get; init; } = Array.Empty<ulong>();
+
+    public float[] Singles { get; init; } = Array.Empty<float>();
+
+    public double[] Doubles { get; init; } = Array.Empty<double>();
+
+    public ByteState[] ByteStates { get; init; } = Array.Empty<ByteState>();
+
+    public SignedState[] SignedStates { get; init; } = Array.Empty<SignedState>();
+
+    public PackedRecord[] PackedRecords { get; init; } = Array.Empty<PackedRecord>();
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
 public struct StrictBlittableStruct
