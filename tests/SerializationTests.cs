@@ -619,7 +619,8 @@ public sealed class SerializationTests
     [Fact]
     public void ArrayRoundTripTest()
     {
-        const int length = 42;
+        // Avoid computer-loving number for the size that **might** accidentally satisfy the test condition.
+        const int length = 31;
         var random = new Random(42);
 
         var booleans = new bool[length];
