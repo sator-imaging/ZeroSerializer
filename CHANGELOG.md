@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.1](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.0.1) (2026-08-09)
+
+### 📣 Breaking Changes ⚠
+* Change export namespace to SerializerNamespace by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#12](https://github.com/sator-imaging/ZeroSerializer/pull/12)
+### 📚 Other Changes
+* Add UTF-8 in byte[] serialization tests by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#9](https://github.com/sator-imaging/ZeroSerializer/pull/9)
+
+### 🎉 New Contributors
+* [@google-labs-jules](https://github.com/google-labs-jules)[bot] made their first contribution in [#9](https://github.com/sator-imaging/ZeroSerializer/pull/9)
+
+**Full Changelog**: https://github.com/sator-imaging/ZeroSerializer/compare/v1.0.0...v1.0.1
+
+
 ## [1.0.0](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.0.0) (2026-08-08)
 
 ### 🚀 Features
