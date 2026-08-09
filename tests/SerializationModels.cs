@@ -201,3 +201,14 @@ public sealed class PropertyVariants
 
     public int PrivateGetter { private get; set; }
 }
+
+[ZeroSerializer]
+public struct Utf8Payload
+{
+    public Utf8Payload(byte[] utf8)
+    {
+        Utf8 = utf8;
+    }
+
+    public byte[] Utf8 { get; }
+}
