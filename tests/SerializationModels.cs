@@ -201,3 +201,9 @@ public sealed class PropertyVariants
 
     public int PrivateGetter { private get; set; }
 }
+
+[ZeroSerializer]
+public sealed class ByteArrayRecord
+{
+    public byte[]? Payload { get; init; }
+}

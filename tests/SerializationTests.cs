@@ -580,6 +580,21 @@ public sealed class SerializationTests
     }
 
     [Fact]
+    public void ByteArrayRoundTrip()
+    {
+        var source = new ByteArrayRecord
+        {
+            Payload = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }
+        };
+        var buffer = new byte[256];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new ByteArrayRecordView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(source.Payload.Length, view.Payload.Length, "Payload length");
+        TestAssert.SequenceEqual<byte>(source.Payload, view.Payload, "Payload content");
+    }
+
+    [Fact]
     public void ViewConstructorHasNoOffset()
     {
         ConstructorInfo constructor = typeof(FixedClassView).GetConstructors().Single();

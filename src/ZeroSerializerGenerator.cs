@@ -1057,7 +1057,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 break;
             case FieldSerializationKind.Array:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "fieldDataOffset");
-                sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {field.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount));");
+                if (field.ArrayElementType!.SpecialType == SpecialType.System_Byte)
+                {
+                    sourceBuilder.AppendLine("return serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount);");
+                }
+                else
+                {
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {field.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount));");
+                }
                 break;
             case FieldSerializationKind.Nested:
                 // Nested views receive an already-positioned memory region; their constructor has no offset semantics.
