@@ -1101,7 +1101,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         string methodAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine($"/// Serializes <paramref name=\"source\"/> into the wire format (including the offset table) read by <see cref=\"{GetQualifiedViewName(generationModel)}\"/>.");
+        sourceBuilder.AppendLine($"/// Serializes <paramref name=\"source\"/> into the wire format read by <see cref=\"{GetQualifiedViewName(generationModel)}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
         sourceBuilder.AppendLine("/// <returns>The number of bytes written to <paramref name=\"destination\"/> (including the offset table).</returns>");
         // The Span parameter is named destination so the emitted write body uses it directly without a conversion local.
