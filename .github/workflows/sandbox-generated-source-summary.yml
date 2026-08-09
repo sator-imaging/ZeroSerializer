@@ -20,12 +20,8 @@ jobs:
         with:
           dotnet-version: |
             10.x.x
-            8.x.x
-            6.x.x
-            5.x.x
 
-      - name: Restore sandbox project
-        run: dotnet restore ${{ github.workspace }}/sandbox/ZeroSerializer.Sandbox.csproj
+      - run: dotnet restore ${{ github.workspace }}/sandbox/ZeroSerializer.Sandbox.csproj
 
       - name: Build sandbox project with generated source output
         run: |
