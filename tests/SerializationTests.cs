@@ -844,6 +844,48 @@ public sealed class SerializationTests
         }
     }
 
+    [Fact]
+    public void ViewUpdateFeaturesTest()
+    {
+        // 1. Check IsBlittable constants
+        TestAssert.True(PackedRecordView.IsBlittable, "PackedRecordView is blittable");
+        TestAssert.True(StrictBlittableStructView.IsBlittable, "StrictBlittableStructView is blittable");
+        TestAssert.True(!VariableRecordView.IsBlittable, "VariableRecordView is NOT blittable");
+        TestAssert.True(!PrimitiveRecordView.IsBlittable, "PrimitiveRecordView is NOT blittable");
+
+        // Verify distinction between length >= 0 and isBlittable (non-blittable but with positive RequiredByteLength)
+        TestAssert.True(!FixedClassView.IsBlittable, "FixedClassView is NOT blittable");
+        TestAssert.True(FixedClassView.RequiredByteLength >= 0, "FixedClassView has RequiredByteLength >= 0");
+        TestAssert.True(!SmallFixedStructView.IsBlittable, "SmallFixedStructView is NOT blittable");
+        TestAssert.True(SmallFixedStructView.RequiredByteLength >= 0, "SmallFixedStructView has RequiredByteLength >= 0");
+
+        // 2. Check AsMemory() extension method (syntactic sugar)
+        var source = new PackedRecord { Number = 999, State = SignedState.Positive };
+        var buffer = new byte[PackedRecordView.RequiredByteLength];
+        source.Serialize(buffer);
+        var view = new PackedRecordView(buffer);
+
+        ReadOnlyMemory<byte> memory = view.AsMemory();
+        TestAssert.Equal(PackedRecordView.RequiredByteLength, memory.Length, "AsMemory returns correct memory length");
+
+        // 3. Check Materialize() extension method
+        PackedRecord materialized = view.Materialize();
+        TestAssert.Equal(source.Number, materialized.Number, "Materialized Number matches source");
+        TestAssert.Equal(source.State, materialized.State, "Materialized State matches source");
+
+        // Check non-blittable views do not have a Materialize extension method
+        // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
+        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
+        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name == "Materialize")
+            .ToList();
+
+        // Materialize should only be defined for blittable views, e.g., PackedRecordView, etc.
+        // It shouldn't be defined for VariableRecordView, etc.
+        bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
+        TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
+    }
+
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {
         return typeof(ZeroSerializerExtensions)

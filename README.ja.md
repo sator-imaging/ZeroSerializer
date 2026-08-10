@@ -115,6 +115,19 @@ var view = new FooView(buffer.AsMemory(0, writtenBytes));
 ReadOnlySpan<byte> serializedSpan = view;
 ReadOnlyMemory<byte> serializedMemory = view;
 
+// Blittable Struct の View を元の構造体に復元
+Foo original = view.Materialize();
+```
+
+さらに、View 構造体には `IsBlittable` 定数と `AsMemory` 拡張メソッドが定義されています。
+
+```csharp
+bool isBlittable = FooView.IsBlittable;
+
+// .AsMemory() を使って内部バッファーを取得
+ReadOnlyMemory<byte> directMemory = view.AsMemory();
+```
+
 // .NET 5 では System.IO.Hashing package を参照します。
 uint xxHash32 = System.IO.Hashing.XxHash32.HashToUInt32(view);
 ulong xxHash3 = System.IO.Hashing.XxHash3.HashToUInt64(view);

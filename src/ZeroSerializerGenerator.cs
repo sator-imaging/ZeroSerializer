@@ -890,6 +890,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// </summary>");
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
+        sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
@@ -1181,6 +1182,18 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             sourceBuilder.AppendLine("return writtenBytes;");
         }
         sourceBuilder.CloseBlock();
+
+        sourceBuilder.AppendLine();
+        sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+        sourceBuilder.AppendLine($"{methodAccessibility} static ReadOnlyMemory<byte> AsMemory(this {GetQualifiedViewName(generationModel)} view) => view;");
+
+        if (generationModel.IsBlittableStruct)
+        {
+            sourceBuilder.AppendLine();
+            sourceBuilder.AppendLine($"{methodAccessibility} static {generationModel.QualifiedSourceTypeName} Materialize(this {GetQualifiedViewName(generationModel)} view) =>");
+            sourceBuilder.AppendLine($"    MemoryMarshal.Read<{generationModel.QualifiedSourceTypeName}>(view);");
+        }
+
         sourceBuilder.CloseBlock();
     }
 
