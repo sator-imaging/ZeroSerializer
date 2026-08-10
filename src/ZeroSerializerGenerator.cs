@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
@@ -294,7 +295,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     continue;
                 }
 
-                if (nestedStructType is null || !knownTypes.Add(nestedStructType))
+                if (!knownTypes.Add(nestedStructType))
                 {
                     continue;
                 }
@@ -309,7 +310,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool TryGetNestedStructViewTypeCandidate(
         ITypeSymbol propertyType,
-        out INamedTypeSymbol? nestedStructType)
+        [NotNullWhen(true)] out INamedTypeSymbol? nestedStructType)
     {
         nestedStructType = null;
         if (propertyType is IArrayTypeSymbol)
