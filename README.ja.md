@@ -63,17 +63,18 @@ field offset は型の先頭からの相対位置で、`0` は null を表しま
 - `[StructLayout(LayoutKind.Sequential, Pack = 1)]` を再帰的に満たす Blittable Struct。
 - `string`。
 - 一次元配列。要素は Blittable primitive、enum、または Blittable Struct に限定されます。
-- `[ZeroSerializer]` を付けたネスト型。非 Blittable Struct はネストした View として公開されます。
+- `[ZeroSerializer]` を付けたネスト型。ネストした View として公開されます。
+- ネストした Blittable Struct。`[ZeroSerializer]` の有無にかかわらず、親が非 Blittable 型のときはネスト View として公開されます（top-level の Blittable Struct に限り View を自動生成）。親自身が Blittable Struct のときは `MemoryMarshal.Read` した親値のメンバーをそのまま返します。
 
 Blittable Struct は全ケースで offset table を持たない raw payload として扱います。
 
-- 単体とネストプロパティーは `MemoryMarshal.Write/Read`。
-- 配列は `MemoryMarshal.AsBytes/Cast`。
+- 単体の Serialize と Blittable 親 View からのメンバー読み出しは `MemoryMarshal.Write/Read`。
+- 配列は `MemoryMarshal.AsBytes/Cast`（要素型そのものの `ReadOnlySpan<T>`）。
 - nullable は field offset `0` で null を表し、非 null の場合だけ raw payload。
 
-`[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の field offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
+親が非 Blittable 型なら親の field offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。ネスト View は raw payload 領域を `Slice` して参照します。
 
-全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `ZEROS003` error が発生し、`ZEROS007` は生成エラーが解消されるまで出ません。
+全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。
 
 ## null と可変長データ
 
@@ -106,7 +107,7 @@ null は field offset `0` で表し、length header と payload を格納しま�
 
 ## View と長さ
 
-生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、ネストした非 Blittable 型も field offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
+生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、ネストした非 Blittable 型およびネストした Blittable Struct も field offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
 
 View は `ReadOnlySpan<byte>` と `ReadOnlyMemory<byte>` へ暗黙変換でき、どちらもコピーや再シリアライズを行いません。`RequiredByteLength >= 0` の固定長 View は先頭から `RequiredByteLength` までを返します。負値になる可変長 View は総バイト長を wire format から復元できないため、コンストラクターへ渡した借用領域全体を返します。可変長データのハッシュや検証では、未使用のバッファ末尾を含めないよう `writtenBytes` で Memory を切り詰めてから View を作成します。
 

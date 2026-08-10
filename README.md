@@ -66,8 +66,8 @@ ReadOnlyMemory<byte> retainedData = packetView;
 - Primitives and enums
 - Nullable values
 - `string` stored as UTF-16 (UTF-8 can be stored as byte[] by hand)
-- Nested `[ZeroSerializer]` types
-- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
+- Nested `[ZeroSerializer]` types (exposed as nested Views)
+- Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]` (nested properties on non-blittable parents return generated Views, including plain layout structs without `[ZeroSerializer]`)
 - One-dimensional arrays of blittable values or structs
 
 

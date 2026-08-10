@@ -752,6 +752,31 @@ public sealed class SerializationTests
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
         Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
+
+        // 3. Plain Blittable Structs without [ZeroSerializer] still return generated Views (no MemoryMarshal fallback).
+        PropertyInfo? plainPositionProperty = typeof(PlainPackedPositionContainerView).GetProperty(nameof(PlainPackedPositionContainerView.Position));
+        Assert.NotNull(plainPositionProperty);
+        Assert.Equal(typeof(PlainPackedPositionView), plainPositionProperty!.PropertyType);
+
+        PropertyInfo? plainOptionalPositionProperty = typeof(PlainPackedPositionContainerView).GetProperty(nameof(PlainPackedPositionContainerView.OptionalPosition));
+        Assert.NotNull(plainOptionalPositionProperty);
+        Assert.Equal(typeof(Nullable<PlainPackedPositionView>), plainOptionalPositionProperty!.PropertyType);
+
+        var plainSource = new PlainPackedPositionContainer
+        {
+            Position = new PlainPackedPosition { X = 11, Y = 22 },
+            OptionalPosition = new PlainPackedPosition { X = 33, Y = 44 },
+        };
+        var plainBuffer = new byte[64];
+        int plainWrittenBytes = plainSource.Serialize(plainBuffer);
+        var plainView = new PlainPackedPositionContainerView(plainBuffer.AsMemory(0, plainWrittenBytes));
+        TestAssert.Equal(11, plainView.Position.X, nameof(plainView.Position.X));
+        TestAssert.Equal(22, plainView.Position.Y, nameof(plainView.Position.Y));
+        TestAssert.Equal(33, plainView.OptionalPosition!.Value.X, nameof(plainView.OptionalPosition));
+        TestAssert.Equal(44, plainView.OptionalPosition!.Value.Y, "OptionalPosition.Y");
+        PlainPackedPosition materialized = plainView.Position.Materialize();
+        TestAssert.Equal(11, materialized.X, "Materialize.X");
+        TestAssert.Equal(22, materialized.Y, "Materialize.Y");
     }
 
     public void StrictBlittableStructTests()

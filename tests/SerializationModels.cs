@@ -90,6 +90,23 @@ public sealed class PackedContainer
     public PackedRecord[]? Values { get; init; }
 }
 
+// Plain Blittable Struct without [ZeroSerializer]; nested properties must still return a generated View.
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PlainPackedPosition
+{
+    public int X;
+
+    public int Y;
+}
+
+[ZeroSerializer]
+public sealed class PlainPackedPositionContainer
+{
+    public PlainPackedPosition Position { get; init; }
+
+    public PlainPackedPosition? OptionalPosition { get; init; }
+}
+
 [ZeroSerializer]
 public sealed class LargeRandomRecord
 {

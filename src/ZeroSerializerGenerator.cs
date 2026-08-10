@@ -167,6 +167,16 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             uniqueTypes.Add(collectedType);
         }
 
+        // Nested Blittable Struct properties must return Views, so discover plain layout structs
+        // referenced by attributed types and generate Views for them as well.
+        CollectNestedBlittableStructs(uniqueTypes);
+
+        var explicitlyAttributedTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (INamedTypeSymbol collectedType in collectedTypes)
+        {
+            explicitlyAttributedTypes.Add(collectedType);
+        }
+
         var allSerializableTypes = new HashSet<INamedTypeSymbol>(uniqueTypes, SymbolEqualityComparer.Default);
         var generationModels = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
 
@@ -175,7 +185,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             TypeGenerationModel generationModel = CreateGenerationModel(
                 executionContext,
                 serializableType,
-                allSerializableTypes);
+                allSerializableTypes,
+                isExplicitlyAttributed: explicitlyAttributedTypes.Contains(serializableType));
             generationModels.Add(serializableType, generationModel);
         }
 
@@ -257,10 +268,74 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
     }
 
+    private static void CollectNestedBlittableStructs(HashSet<INamedTypeSymbol> collectedTypes)
+    {
+        var pendingTypes = new List<INamedTypeSymbol>();
+        foreach (INamedTypeSymbol collectedType in collectedTypes)
+        {
+            pendingTypes.Add(collectedType);
+        }
+
+        for (int pendingIndex = 0; pendingIndex < pendingTypes.Count; pendingIndex++)
+        {
+            INamedTypeSymbol currentType = pendingTypes[pendingIndex];
+            foreach (ISymbol declaredMember in currentType.GetMembers())
+            {
+                ITypeSymbol? candidateType = null;
+                if (declaredMember is IPropertySymbol property
+                    && !property.IsStatic
+                    && !property.IsIndexer
+                    && property.DeclaredAccessibility == Accessibility.Public
+                    && property.GetMethod?.DeclaredAccessibility == Accessibility.Public)
+                {
+                    candidateType = property.Type;
+                }
+                else if (declaredMember is IFieldSymbol field
+                    && !field.IsStatic
+                    && !field.IsImplicitlyDeclared
+                    && field.DeclaredAccessibility == Accessibility.Public)
+                {
+                    candidateType = field.Type;
+                }
+
+                if (candidateType is null)
+                {
+                    continue;
+                }
+
+                if (candidateType is INamedTypeSymbol nullableType
+                    && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+                {
+                    candidateType = nullableType.TypeArguments[0];
+                }
+
+                // Only top-level non-generic user Blittable Structs can host a generated View name without collisions.
+                // Primitives and enums are fixed-size but never receive their own Views.
+                if (candidateType is not INamedTypeSymbol namedStruct
+                    || namedStruct.TypeKind != TypeKind.Struct
+                    || namedStruct.SpecialType != SpecialType.None
+                    || namedStruct.Arity != 0
+                    || namedStruct.ContainingType is not null
+                    || TryGetPrimitiveByteCount(namedStruct, out _)
+                    || !TryGetFixedTypeByteCount(
+                        namedStruct,
+                        new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
+                        out _)
+                    || !collectedTypes.Add(namedStruct))
+                {
+                    continue;
+                }
+
+                pendingTypes.Add(namedStruct);
+            }
+        }
+    }
+
     private static TypeGenerationModel CreateGenerationModel(
         GeneratorExecutionContext executionContext,
         INamedTypeSymbol serializableType,
-        HashSet<INamedTypeSymbol> allSerializableTypes)
+        HashSet<INamedTypeSymbol> allSerializableTypes,
+        bool isExplicitlyAttributed)
     {
         string qualifiedSourceTypeName = serializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         int blittableStructByteCount = 0;
@@ -285,15 +360,25 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && serializableType.BaseType.SpecialType != SpecialType.System_Object);
         if (hasUnsupportedShape)
         {
-            generationModel.IsValid = false;
-            executionContext.ReportDiagnostic(Diagnostic.Create(
-                UnsupportedSerializableType,
-                serializableType.Locations.IsDefaultOrEmpty ? null : serializableType.Locations[0],
-                serializableType.ToDisplayString()));
+            // Auto-discovered Blittable dependencies are filtered before collection; only attributed types report ZEROS001.
+            if (isExplicitlyAttributed)
+            {
+                generationModel.IsValid = false;
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    UnsupportedSerializableType,
+                    serializableType.Locations.IsDefaultOrEmpty ? null : serializableType.Locations[0],
+                    serializableType.ToDisplayString()));
+            }
+            else
+            {
+                generationModel.IsValid = false;
+            }
+
             return generationModel;
         }
 
-        if (serializableType.TypeKind == TypeKind.Struct
+        if (isExplicitlyAttributed
+            && serializableType.TypeKind == TypeKind.Struct
             && !isBlittableStruct
             && HasBlittableCompatibleFieldShape(serializableType))
         {
@@ -307,56 +392,90 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
         foreach (ISymbol declaredMember in serializableType.GetMembers())
         {
-            // Only public getter properties define the wire contract; fields, setters, and indexers must never leak into it.
-            if (declaredMember is not IPropertySymbol serializableProperty
-                || serializableProperty.IsStatic
-                || serializableProperty.IsIndexer
-                || serializableProperty.DeclaredAccessibility != Accessibility.Public
-                || serializableProperty.GetMethod?.DeclaredAccessibility != Accessibility.Public)
+            // Public getter properties define the wire contract for non-Blittable types.
+            // Blittable Views also expose public instance fields so field-only layout structs remain readable.
+            if (declaredMember is IPropertySymbol serializableProperty
+                && !serializableProperty.IsStatic
+                && !serializableProperty.IsIndexer
+                && serializableProperty.DeclaredAccessibility == Accessibility.Public
+                && serializableProperty.GetMethod?.DeclaredAccessibility == Accessibility.Public)
+            {
+                FieldGenerationModel? propertyModel = CreateMemberGenerationModel(
+                    serializableProperty,
+                    serializableProperty.Type,
+                    allSerializableTypes);
+                if (propertyModel is null)
+                {
+                    generationModel.IsValid = false;
+                    if (isExplicitlyAttributed)
+                    {
+                        executionContext.ReportDiagnostic(Diagnostic.Create(
+                            UnsupportedSerializableField,
+                            serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
+                            serializableProperty.Name,
+                            serializableProperty.Type.ToDisplayString()));
+                    }
+
+                    continue;
+                }
+
+                if (propertyModel.Kind == FieldSerializationKind.InvalidArray)
+                {
+                    generationModel.IsValid = false;
+                    if (isExplicitlyAttributed)
+                    {
+                        executionContext.ReportDiagnostic(Diagnostic.Create(
+                            InvalidBlittableArrayElement,
+                            serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
+                            serializableProperty.Name));
+                    }
+
+                    continue;
+                }
+
+                generationModel.Fields.Add(propertyModel);
+                continue;
+            }
+
+            if (!isBlittableStruct
+                || declaredMember is not IFieldSymbol instanceField
+                || instanceField.IsStatic
+                || instanceField.IsImplicitlyDeclared
+                || instanceField.DeclaredAccessibility != Accessibility.Public)
             {
                 continue;
             }
 
-            FieldGenerationModel? propertyModel = CreatePropertyGenerationModel(serializableProperty, allSerializableTypes);
-            if (propertyModel is null)
+            FieldGenerationModel? fieldModel = CreateMemberGenerationModel(
+                instanceField,
+                instanceField.Type,
+                allSerializableTypes);
+            if (fieldModel is null || fieldModel.Kind == FieldSerializationKind.InvalidArray)
             {
-                generationModel.IsValid = false;
-                executionContext.ReportDiagnostic(Diagnostic.Create(
-                    UnsupportedSerializableField,
-                    serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
-                    serializableProperty.Name,
-                    serializableProperty.Type.ToDisplayString()));
+                // Public fields on a Blittable Struct are already constrained by TryGetFixedTypeByteCount.
                 continue;
             }
 
-            if (propertyModel.Kind == FieldSerializationKind.InvalidArray)
-            {
-                generationModel.IsValid = false;
-                executionContext.ReportDiagnostic(Diagnostic.Create(
-                    InvalidBlittableArrayElement,
-                    serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
-                    serializableProperty.Name));
-                continue;
-            }
-
-            generationModel.Fields.Add(propertyModel);
+            generationModel.Fields.Add(fieldModel);
         }
 
         return generationModel;
     }
 
-    private static FieldGenerationModel? CreatePropertyGenerationModel(
-        IPropertySymbol serializableProperty,
+    private static FieldGenerationModel? CreateMemberGenerationModel(
+        ISymbol serializableMember,
+        ITypeSymbol memberType,
         HashSet<INamedTypeSymbol> allSerializableTypes)
     {
-        if (serializableProperty.Type is INamedTypeSymbol nullableType
+        if (memberType is INamedTypeSymbol nullableType
             && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
         {
             ITypeSymbol nullableUnderlyingType = nullableType.TypeArguments[0];
             if (TryGetPrimitiveByteCount(nullableUnderlyingType, out int nullablePrimitiveByteCount))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    memberType,
                     FieldSerializationKind.Primitive,
                     nullablePrimitiveByteCount,
                     null,
@@ -371,7 +490,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && TryGetPrimitiveByteCount(nullableEnumType.EnumUnderlyingType, out int nullableEnumByteCount))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    memberType,
                     FieldSerializationKind.Primitive,
                     nullableEnumByteCount,
                     null,
@@ -386,13 +506,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     out int nullableStructByteCount))
             {
                 INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying, allSerializableTypes))
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying
+                    && IsSerializableType(namedUnderlying, allSerializableTypes))
                 {
                     nestedSerializableType = namedUnderlying;
                 }
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    memberType,
                     FieldSerializationKind.BlittableStruct,
                     nullableStructByteCount,
                     null,
@@ -405,7 +527,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    memberType,
                     FieldSerializationKind.Nested,
                     0,
                     null,
@@ -417,25 +540,26 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return null;
         }
 
-        if (serializableProperty.Type.SpecialType == SpecialType.System_String)
+        if (memberType.SpecialType == SpecialType.System_String)
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.String, 2, null, null);
+            return new FieldGenerationModel(serializableMember, memberType, FieldSerializationKind.String, 2, null, null);
         }
 
-        if (serializableProperty.Type is IArrayTypeSymbol arrayType)
+        if (memberType is IArrayTypeSymbol arrayType)
         {
             if (!arrayType.IsSZArray || arrayType.Rank != 1)
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new FieldGenerationModel(serializableMember, memberType, FieldSerializationKind.InvalidArray, 0, null, null);
             }
 
             if (!TryGetFixedTypeByteCount(arrayType.ElementType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int elementByteCount))
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new FieldGenerationModel(serializableMember, memberType, FieldSerializationKind.InvalidArray, 0, null, null);
             }
 
             return new FieldGenerationModel(
-                serializableProperty,
+                serializableMember,
+                memberType,
                 FieldSerializationKind.Array,
                 elementByteCount,
                 arrayType.ElementType,
@@ -444,34 +568,41 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 isNullableType: true);
         }
 
-        if (TryGetPrimitiveByteCount(serializableProperty.Type, out int primitiveByteCount))
+        if (TryGetPrimitiveByteCount(memberType, out int primitiveByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, primitiveByteCount, null, null);
+            return new FieldGenerationModel(serializableMember, memberType, FieldSerializationKind.Primitive, primitiveByteCount, null, null);
         }
 
-        if (serializableProperty.Type.TypeKind == TypeKind.Enum
-            && serializableProperty.Type is INamedTypeSymbol enumType
+        if (memberType.TypeKind == TypeKind.Enum
+            && memberType is INamedTypeSymbol enumType
             && enumType.EnumUnderlyingType is not null
             && TryGetPrimitiveByteCount(enumType.EnumUnderlyingType, out int enumByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, enumByteCount, null, null);
+            return new FieldGenerationModel(serializableMember, memberType, FieldSerializationKind.Primitive, enumByteCount, null, null);
         }
 
-        if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
+        if (TryGetFixedTypeByteCount(memberType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
+            if (memberType is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
             {
                 nestedSerializableType = namedType;
             }
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
+            return new FieldGenerationModel(
+                serializableMember,
+                memberType,
+                FieldSerializationKind.BlittableStruct,
+                fixedStructByteCount,
+                null,
+                nestedSerializableType);
         }
 
-        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
+        if (memberType is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
         {
             return new FieldGenerationModel(
-                serializableProperty,
+                serializableMember,
+                memberType,
                 FieldSerializationKind.Nested,
                 0,
                 null,
@@ -1016,7 +1147,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int fieldIndex,
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
-        string propertyAccessibility = IsEffectivelyPublic(field.Symbol.Type) ? "public" : "internal";
+        string propertyAccessibility = IsEffectivelyPublic(field.Type) ? "public" : "internal";
         string propertyType;
         if (field.Kind == FieldSerializationKind.String)
         {
@@ -1039,7 +1170,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         else
         {
-            propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            propertyType = field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(field.Symbol.Name)}");
@@ -1089,7 +1220,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 else
                 {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
+                    // Nested type declarations and other Blittable Structs that cannot host a generated View are materialized directly.
                     sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
                 }
                 break;
@@ -1208,7 +1339,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static ITypeSymbol GetSerializedPropertyType(FieldGenerationModel propertyModel)
     {
-        return propertyModel.NullableUnderlyingType ?? propertyModel.Symbol.Type;
+        return propertyModel.NullableUnderlyingType ?? propertyModel.Type;
     }
 
     private static bool IsNullRepresentedByZeroFieldOffset(FieldGenerationModel propertyModel)
@@ -1511,7 +1642,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private sealed class FieldGenerationModel
     {
         internal FieldGenerationModel(
-            IPropertySymbol symbol,
+            ISymbol symbol,
+            ITypeSymbol type,
             FieldSerializationKind kind,
             int elementByteCount,
             ITypeSymbol? arrayElementType,
@@ -1520,6 +1652,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             bool isNullableType = false)
         {
             Symbol = symbol;
+            Type = type;
             Kind = kind;
             ElementByteCount = elementByteCount;
             ArrayElementType = arrayElementType;
@@ -1528,7 +1661,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             IsNullableType = isNullableType;
         }
 
-        internal IPropertySymbol Symbol { get; }
+        internal ISymbol Symbol { get; }
+
+        internal ITypeSymbol Type { get; }
 
         internal FieldSerializationKind Kind { get; }
 
