@@ -139,15 +139,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         ExecuteCore(executionContext, collectedTypes.ToImmutable());
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static bool IsZeroSerializerAttribute(string attributeName)
+    {
+        return attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
+            || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal);
+    }
+
     private static bool HasSerializableAttribute(TypeDeclarationSyntax candidateDeclaration)
     {
         foreach (AttributeListSyntax attributeList in candidateDeclaration.AttributeLists)
         {
             foreach (AttributeSyntax attribute in attributeList.Attributes)
             {
-                string attributeName = attribute.Name.ToString();
-                if (attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
-                    || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
+                if (IsZeroSerializerAttribute(attribute.Name.ToString()))
                 {
                     return true;
                 }
@@ -386,7 +391,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     out int nullableStructByteCount))
             {
                 INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && allSerializableTypes.Contains(namedUnderlying))
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying, allSerializableTypes))
                 {
                     nestedSerializableType = namedUnderlying;
                 }
@@ -402,7 +407,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             if (nullableUnderlyingType is INamedTypeSymbol namedNullableUnderlyingType
-                && allSerializableTypes.Contains(namedNullableUnderlyingType))
+                && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
             {
                 return new FieldGenerationModel(
                     serializableProperty,
@@ -460,7 +465,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && allSerializableTypes.Contains(namedType))
+            if (serializableProperty.Type is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
             {
                 nestedSerializableType = namedType;
             }
@@ -468,7 +473,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
-        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && allSerializableTypes.Contains(namedPropertyType))
+        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
         {
             return new FieldGenerationModel(
                 serializableProperty,
@@ -1028,14 +1033,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         else if (field.Kind == FieldSerializationKind.Nested)
         {
-            propertyType = GetQualifiedViewName(modelLookup[field.NestedSerializableType!]);
+            propertyType = GetQualifiedViewName(field.NestedSerializableType!);
         }
         else if (field.Kind == FieldSerializationKind.BlittableStruct
                  && !containingModel.IsBlittableStruct
-                 && field.NestedSerializableType is not null
-                 && modelLookup.ContainsKey(field.NestedSerializableType))
+                 && field.NestedSerializableType is not null)
         {
-            string viewName = GetQualifiedViewName(modelLookup[field.NestedSerializableType]);
+            string viewName = GetQualifiedViewName(field.NestedSerializableType);
             propertyType = field.IsNullableType ? viewName + "?" : viewName;
         }
         else
@@ -1084,12 +1088,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "fieldDataOffset");
                 break;
             case FieldSerializationKind.BlittableStruct:
-                if (field.NestedSerializableType is not null && modelLookup.TryGetValue(field.NestedSerializableType, out TypeGenerationModel? nestedModel))
+                if (field.NestedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(nestedModel)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
                 }
                 else
                 {
+                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
                     sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
                 }
                 break;
@@ -1111,7 +1116,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 break;
             case FieldSerializationKind.Nested:
                 // Nested views receive an already-positioned memory region; their constructor has no offset semantics.
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(modelLookup[field.NestedSerializableType!])}(serializedMemory.Slice(fieldDataOffset));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType!)}(serializedMemory.Slice(fieldDataOffset));");
                 break;
         }
 
@@ -1395,12 +1400,52 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return true;
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(TypeGenerationModel generationModel)
     {
-        string generatedNamespaceName = generationModel.Symbol.ContainingNamespace.IsGlobalNamespace
+        return GetQualifiedViewName(generationModel.Symbol);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static string GetQualifiedViewName(INamedTypeSymbol symbol)
+    {
+        string generatedNamespaceName = symbol.ContainingNamespace.IsGlobalNamespace
             ? SerializerNamespace
-            : generationModel.Symbol.ContainingNamespace.ToDisplayString();
-        return "global::" + generatedNamespaceName + "." + generationModel.ViewTypeName;
+            : symbol.ContainingNamespace.ToDisplayString();
+        return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
+    {
+        if (typeSymbol is INamedTypeSymbol namedType)
+        {
+            return allSerializableTypes.Contains(namedType) || IsDecoratedWithZeroSerializer(namedType);
+        }
+        return false;
+    }
+
+    private static bool IsDecoratedWithZeroSerializer(ITypeSymbol typeSymbol)
+    {
+        foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
+        {
+            if (attribute.AttributeClass is INamedTypeSymbol attributeClass &&
+                (attributeClass.Name is SerializerName or SerializerAttributeName))
+            {
+                if (attributeClass.ContainingNamespace is INamespaceSymbol ns)
+                {
+                    if (ns.IsGlobalNamespace)
+                    {
+                        return true;
+                    }
+                    if (ns.Name == SerializerNamespace && ns.ContainingNamespace is INamespaceSymbol { IsGlobalNamespace: true })
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private static string CreateLocalName(string fieldName, string suffix)
