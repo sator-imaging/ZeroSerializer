@@ -2,6 +2,9 @@
 // https://github.com/sator-imaging/ZeroSerializer
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Testing;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 using ZeroSerializer.Generator;
 using ZeroSerializer.Tests.Verifiers;
@@ -13,28 +16,28 @@ namespace ZeroSerializer.Tests;
 public class DiagnosticTests
 {
     [Fact]
-    public void TestGenericTypeDiagnostic()
+    public async Task TestGenericTypeDiagnostic()
     {
         string source = @"
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class [|MyGenericClass|]<T>
+public class {|#0:MyGenericClass|}<T>
 {
     public int Value { get; set; }
 }
 ";
 
-        CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.Verify(
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source,
-            "ZEROS008",
-            DiagnosticSeverity.Error,
-            "MyGenericClass"
+            new DiagnosticResult("ZEROS008", DiagnosticSeverity.Error)
+                .WithLocation(0)
+                .WithMessage("Generic type 'MyGenericClass<T>' is not allowed for ZeroSerializer")
         );
     }
 
     [Fact]
-    public void TestNonGenericTypeNoDiagnostic()
+    public async Task TestNonGenericTypeNoDiagnostic()
     {
         string source = @"
 using ZeroSerializer;
@@ -46,7 +49,7 @@ public class MyNonGenericClass
 }
 ";
 
-        CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifyNoDiagnostics(
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source
         );
     }
