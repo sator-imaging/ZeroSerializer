@@ -1,4 +1,4 @@
-name: 'Test Phase 2: Published Package'
+name: 'Test: Published Package Testing'
 
 on:
   workflow_dispatch:
