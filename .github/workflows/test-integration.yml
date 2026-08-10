@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
 
-  test:
+  test-integration:
     strategy:
       matrix:
         configuration: [Release, Debug]
