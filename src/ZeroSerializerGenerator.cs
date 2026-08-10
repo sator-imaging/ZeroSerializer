@@ -1412,10 +1412,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
         {
-            if (attribute.AttributeClass is not null
-                && IsZeroSerializerAttribute(attribute.AttributeClass.ToDisplayString()))
+            if (attribute.AttributeClass is INamedTypeSymbol attributeClass &&
+                (attributeClass.Name == SerializerName || attributeClass.Name == SerializerAttributeName))
             {
-                return true;
+                if (attributeClass.ContainingNamespace is INamespaceSymbol ns)
+                {
+                    if (ns.IsGlobalNamespace)
+                    {
+                        return true;
+                    }
+                    if (ns.Name == SerializerNamespace && ns.ContainingNamespace is { IsGlobalNamespace: true })
+                    {
+                        return true;
+                    }
+                }
             }
         }
         return false;
