@@ -768,6 +768,64 @@ public sealed class SerializationTests
         TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(4, 4)), "Value field at offset 4");
     }
 
+    [Fact]
+    public void AttributeSyntaxVariationsRoundTrip()
+    {
+        // 1. [ZeroSerializer]
+        {
+            var source = new AttributeSyntaxType1 { Value = 101 };
+            var buffer = new byte[AttributeSyntaxType1View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType1View(buffer);
+            TestAssert.Equal(101, view.Value, "AttributeSyntaxType1");
+        }
+
+        // 2. [ZeroSerializerAttribute]
+        {
+            var source = new AttributeSyntaxType2 { Value = 102 };
+            var buffer = new byte[AttributeSyntaxType2View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType2View(buffer);
+            TestAssert.Equal(102, view.Value, "AttributeSyntaxType2");
+        }
+
+        // 3. [ZeroSerializer.ZeroSerializer]
+        {
+            var source = new AttributeSyntaxType3 { Value = 103 };
+            var buffer = new byte[AttributeSyntaxType3View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType3View(buffer);
+            TestAssert.Equal(103, view.Value, "AttributeSyntaxType3");
+        }
+
+        // 4. [ZeroSerializer.ZeroSerializerAttribute]
+        {
+            var source = new AttributeSyntaxType4 { Value = 104 };
+            var buffer = new byte[AttributeSyntaxType4View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType4View(buffer);
+            TestAssert.Equal(104, view.Value, "AttributeSyntaxType4");
+        }
+
+        // 5. [global::ZeroSerializer.ZeroSerializer]
+        {
+            var source = new AttributeSyntaxType5 { Value = 105 };
+            var buffer = new byte[AttributeSyntaxType5View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType5View(buffer);
+            TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
+        }
+
+        // 6. [global::ZeroSerializer.ZeroSerializerAttribute]
+        {
+            var source = new AttributeSyntaxType6 { Value = 106 };
+            var buffer = new byte[AttributeSyntaxType6View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType6View(buffer);
+            TestAssert.Equal(106, view.Value, "AttributeSyntaxType6");
+        }
+    }
+
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {
         return typeof(ZeroSerializerExtensions)

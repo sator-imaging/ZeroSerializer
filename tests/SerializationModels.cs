@@ -260,6 +260,42 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[ZeroSerializer]
+public sealed class AttributeSyntaxType1
+{
+    public int Value { get; init; }
+}
+
+[ZeroSerializerAttribute]
+public sealed class AttributeSyntaxType2
+{
+    public int Value { get; init; }
+}
+
+[ZeroSerializer.ZeroSerializer]
+public sealed class AttributeSyntaxType3
+{
+    public int Value { get; init; }
+}
+
+[ZeroSerializer.ZeroSerializerAttribute]
+public sealed class AttributeSyntaxType4
+{
+    public int Value { get; init; }
+}
+
+[global::ZeroSerializer.ZeroSerializer]
+public sealed class AttributeSyntaxType5
+{
+    public int Value { get; init; }
+}
+
+[global::ZeroSerializer.ZeroSerializerAttribute]
+public sealed class AttributeSyntaxType6
+{
+    public int Value { get; init; }
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 [ZeroSerializer]
 public struct SequentialPackOneWithCharSetStruct
