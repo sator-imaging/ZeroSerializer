@@ -173,15 +173,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         List<INamedTypeSymbol> allSerializableTypes = CollectSerializableTypeClosure(uniqueTypes);
-        var allSerializableTypeSet = new HashSet<INamedTypeSymbol>(allSerializableTypes, SymbolEqualityComparer.Default);
         var generationModels = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
 
         foreach (INamedTypeSymbol serializableType in allSerializableTypes)
         {
             TypeGenerationModel generationModel = CreateGenerationModel(
                 executionContext,
-                serializableType,
-                allSerializableTypeSet);
+                serializableType);
             generationModels.Add(serializableType, generationModel);
         }
 
@@ -349,8 +347,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static TypeGenerationModel CreateGenerationModel(
         GeneratorExecutionContext executionContext,
-        INamedTypeSymbol serializableType,
-        HashSet<INamedTypeSymbol> allSerializableTypes)
+        INamedTypeSymbol serializableType)
     {
         bool isExplicitSerializableType = IsDecoratedWithZeroSerializer(serializableType);
         string qualifiedSourceTypeName = serializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -407,7 +404,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     continue;
                 }
 
-                FieldGenerationModel? fieldModel = CreateFieldGenerationModel(serializableField, allSerializableTypes);
+                FieldGenerationModel? fieldModel = CreateFieldGenerationModel(serializableField);
                 if (fieldModel is null)
                 {
                     generationModel.IsValid = false;
@@ -450,8 +447,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
             FieldGenerationModel? propertyModel = CreateFieldGenerationModel(
                 serializableProperty,
-                serializableProperty.Type,
-                allSerializableTypes);
+                serializableProperty.Type);
             if (propertyModel is null)
             {
                 generationModel.IsValid = false;
@@ -479,17 +475,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return generationModel;
     }
 
-    private static FieldGenerationModel? CreateFieldGenerationModel(
-        IFieldSymbol serializableField,
-        HashSet<INamedTypeSymbol> allSerializableTypes)
+    private static FieldGenerationModel? CreateFieldGenerationModel(IFieldSymbol serializableField)
     {
-        return CreateFieldGenerationModel(serializableField, serializableField.Type, allSerializableTypes);
+        return CreateFieldGenerationModel(serializableField, serializableField.Type);
     }
 
     private static FieldGenerationModel? CreateFieldGenerationModel(
         ISymbol serializableMember,
-        ITypeSymbol serializableMemberType,
-        HashSet<INamedTypeSymbol> allSerializableTypes)
+        ITypeSymbol serializableMemberType)
     {
         if (serializableMemberType is INamedTypeSymbol nullableType
             && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
@@ -530,7 +523,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     out int nullableStructByteCount))
             {
                 INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying, allSerializableTypes))
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying))
                 {
                     nestedSerializableType = namedUnderlying;
                 }
@@ -547,7 +540,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             if (nullableUnderlyingType is INamedTypeSymbol namedNullableUnderlyingType
-                && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
+                && IsSerializableType(namedNullableUnderlyingType))
             {
                 return new FieldGenerationModel(
                     serializableMember,
@@ -607,7 +600,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (TryGetFixedTypeByteCount(serializableMemberType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableMemberType is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
+            if (serializableMemberType is INamedTypeSymbol namedType && IsSerializableType(namedType))
             {
                 nestedSerializableType = namedType;
             }
@@ -615,7 +608,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
-        if (serializableMemberType is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
+        if (serializableMemberType is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType))
         {
             return new FieldGenerationModel(
                 serializableMember,
@@ -1575,13 +1568,16 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
+    private static bool IsSerializableType(ITypeSymbol typeSymbol)
     {
-        if (typeSymbol is INamedTypeSymbol namedType)
+        if (typeSymbol is not INamedTypeSymbol)
         {
-            return allSerializableTypes.Contains(namedType) || IsDecoratedWithZeroSerializer(namedType);
+            return false;
         }
-        return false;
+        // Types not in the System namespace are assumed to be ZeroSerializer types.
+        string ns = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+        return ns.Length == 0
+            || (ns != "System" && !ns.StartsWith("System.", StringComparison.Ordinal));
     }
 
     private static bool IsDecoratedWithZeroSerializer(ITypeSymbol typeSymbol)
