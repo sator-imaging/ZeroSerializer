@@ -209,78 +209,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     }
                 }
 
-                private static List<INamedTypeSymbol> CollectSerializableTypeClosure(
-                    IReadOnlyList<INamedTypeSymbol> rootTypes)
-                {
-                    var discoveredTypes = new List<INamedTypeSymbol>(rootTypes.Count);
-                    var knownTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-                    var pendingTypes = new Queue<INamedTypeSymbol>();
-                    for (int typeIndex = 0; typeIndex < rootTypes.Count; typeIndex++)
-                    {
-                        INamedTypeSymbol rootType = rootTypes[typeIndex];
-                        if (knownTypes.Add(rootType))
-                        {
-                            discoveredTypes.Add(rootType);
-                            pendingTypes.Enqueue(rootType);
-                        }
-                    }
-
-                    while (pendingTypes.Count != 0)
-                    {
-                        INamedTypeSymbol currentType = pendingTypes.Dequeue();
-                        foreach (ISymbol declaredMember in currentType.GetMembers())
-                        {
-                            if (declaredMember is not IPropertySymbol serializableProperty
-                                || serializableProperty.IsStatic
-                                || serializableProperty.IsIndexer
-                                || serializableProperty.DeclaredAccessibility != Accessibility.Public
-                                || serializableProperty.GetMethod?.DeclaredAccessibility != Accessibility.Public
-                                || !TryGetNestedStructViewTypeCandidate(serializableProperty.Type, out INamedTypeSymbol? nestedStructType)
-                                || !knownTypes.Add(nestedStructType))
-                            {
-                                continue;
-                            }
-
-                            discoveredTypes.Add(nestedStructType);
-                            pendingTypes.Enqueue(nestedStructType);
-                        }
-                    }
-
-                    return discoveredTypes;
-                }
-
-                private static bool TryGetNestedStructViewTypeCandidate(
-                    ITypeSymbol propertyType,
-                    out INamedTypeSymbol? nestedStructType)
-                {
-                    nestedStructType = null;
-                    if (propertyType is IArrayTypeSymbol)
-                    {
-                        return false;
-                    }
-
-                    ITypeSymbol candidateType = propertyType;
-                    if (propertyType is INamedTypeSymbol nullableType
-                        && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
-                    {
-                        candidateType = nullableType.TypeArguments[0];
-                    }
-
-                    if (candidateType is not INamedTypeSymbol namedCandidateType
-                        || namedCandidateType.TypeKind != TypeKind.Struct
-                        || namedCandidateType.Arity != 0
-                        || namedCandidateType.ContainingType is not null
-                        || !TryGetFixedTypeByteCount(
-                            namedCandidateType,
-                            new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
-                            out _))
-                    {
-                        return false;
-                    }
-
-                    nestedStructType = namedCandidateType;
-                    return true;
-                }
                 if (invalidNestedField is null)
                 {
                     continue;
@@ -335,11 +263,89 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
     }
 
+    private static List<INamedTypeSymbol> CollectSerializableTypeClosure(
+        IReadOnlyList<INamedTypeSymbol> rootTypes)
+    {
+        var discoveredTypes = new List<INamedTypeSymbol>(rootTypes.Count);
+        var knownTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var pendingTypes = new Queue<INamedTypeSymbol>();
+        for (int typeIndex = 0; typeIndex < rootTypes.Count; typeIndex++)
+        {
+            INamedTypeSymbol rootType = rootTypes[typeIndex];
+            if (knownTypes.Add(rootType))
+            {
+                discoveredTypes.Add(rootType);
+                pendingTypes.Enqueue(rootType);
+            }
+        }
+
+        while (pendingTypes.Count != 0)
+        {
+            INamedTypeSymbol currentType = pendingTypes.Dequeue();
+            foreach (ISymbol declaredMember in currentType.GetMembers())
+            {
+                if (declaredMember is not IPropertySymbol serializableProperty
+                    || serializableProperty.IsStatic
+                    || serializableProperty.IsIndexer
+                    || serializableProperty.DeclaredAccessibility != Accessibility.Public
+                    || serializableProperty.GetMethod?.DeclaredAccessibility != Accessibility.Public
+                    || !TryGetNestedStructViewTypeCandidate(serializableProperty.Type, out INamedTypeSymbol? nestedStructType))
+                {
+                    continue;
+                }
+
+                if (nestedStructType is null || !knownTypes.Add(nestedStructType))
+                {
+                    continue;
+                }
+
+                discoveredTypes.Add(nestedStructType);
+                pendingTypes.Enqueue(nestedStructType);
+            }
+        }
+
+        return discoveredTypes;
+    }
+
+    private static bool TryGetNestedStructViewTypeCandidate(
+        ITypeSymbol propertyType,
+        out INamedTypeSymbol? nestedStructType)
+    {
+        nestedStructType = null;
+        if (propertyType is IArrayTypeSymbol)
+        {
+            return false;
+        }
+
+        ITypeSymbol candidateType = propertyType;
+        if (propertyType is INamedTypeSymbol nullableType
+            && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            candidateType = nullableType.TypeArguments[0];
+        }
+
+        if (candidateType is not INamedTypeSymbol namedCandidateType
+            || namedCandidateType.TypeKind != TypeKind.Struct
+            || namedCandidateType.Arity != 0
+            || namedCandidateType.ContainingType is not null
+            || !TryGetFixedTypeByteCount(
+                namedCandidateType,
+                new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
+                out _))
+        {
+            return false;
+        }
+
+        nestedStructType = namedCandidateType;
+        return true;
+    }
+
     private static TypeGenerationModel CreateGenerationModel(
         GeneratorExecutionContext executionContext,
         INamedTypeSymbol serializableType,
         HashSet<INamedTypeSymbol> allSerializableTypes)
     {
+        bool isExplicitSerializableType = IsDecoratedWithZeroSerializer(serializableType);
         string qualifiedSourceTypeName = serializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         int blittableStructByteCount = 0;
         bool isBlittableStruct = serializableType.TypeKind == TypeKind.Struct
@@ -382,6 +388,46 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 serializableType.Name));
         }
 
+        if (!isExplicitSerializableType)
+        {
+            // Implicitly discovered Blittable structs mirror their actual memory layout, so only declared instance fields participate.
+            foreach (ISymbol declaredMember in serializableType.GetMembers())
+            {
+                if (declaredMember is not IFieldSymbol serializableField
+                    || serializableField.IsStatic
+                    || serializableField.DeclaredAccessibility != Accessibility.Public)
+                {
+                    continue;
+                }
+
+                FieldGenerationModel? fieldModel = CreateFieldGenerationModel(serializableField, allSerializableTypes);
+                if (fieldModel is null)
+                {
+                    generationModel.IsValid = false;
+                    executionContext.ReportDiagnostic(Diagnostic.Create(
+                        UnsupportedSerializableField,
+                        serializableField.Locations.IsDefaultOrEmpty ? null : serializableField.Locations[0],
+                        serializableField.Name,
+                        serializableField.Type.ToDisplayString()));
+                    continue;
+                }
+
+                if (fieldModel.Kind == FieldSerializationKind.InvalidArray)
+                {
+                    generationModel.IsValid = false;
+                    executionContext.ReportDiagnostic(Diagnostic.Create(
+                        InvalidBlittableArrayElement,
+                        serializableField.Locations.IsDefaultOrEmpty ? null : serializableField.Locations[0],
+                        serializableField.Name));
+                    continue;
+                }
+
+                generationModel.Fields.Add(fieldModel);
+            }
+
+            return generationModel;
+        }
+
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
         foreach (ISymbol declaredMember in serializableType.GetMembers())
         {
@@ -395,7 +441,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 continue;
             }
 
-            FieldGenerationModel? propertyModel = CreatePropertyGenerationModel(serializableProperty, allSerializableTypes);
+            FieldGenerationModel? propertyModel = CreateFieldGenerationModel(
+                serializableProperty,
+                serializableProperty.Type,
+                allSerializableTypes);
             if (propertyModel is null)
             {
                 generationModel.IsValid = false;
@@ -423,18 +472,27 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return generationModel;
     }
 
-    private static FieldGenerationModel? CreatePropertyGenerationModel(
-        IPropertySymbol serializableProperty,
+    private static FieldGenerationModel? CreateFieldGenerationModel(
+        IFieldSymbol serializableField,
         HashSet<INamedTypeSymbol> allSerializableTypes)
     {
-        if (serializableProperty.Type is INamedTypeSymbol nullableType
+        return CreateFieldGenerationModel(serializableField, serializableField.Type, allSerializableTypes);
+    }
+
+    private static FieldGenerationModel? CreateFieldGenerationModel(
+        ISymbol serializableMember,
+        ITypeSymbol serializableMemberType,
+        HashSet<INamedTypeSymbol> allSerializableTypes)
+    {
+        if (serializableMemberType is INamedTypeSymbol nullableType
             && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
         {
             ITypeSymbol nullableUnderlyingType = nullableType.TypeArguments[0];
             if (TryGetPrimitiveByteCount(nullableUnderlyingType, out int nullablePrimitiveByteCount))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    serializableMemberType,
                     FieldSerializationKind.Primitive,
                     nullablePrimitiveByteCount,
                     null,
@@ -449,7 +507,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && TryGetPrimitiveByteCount(nullableEnumType.EnumUnderlyingType, out int nullableEnumByteCount))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    serializableMemberType,
                     FieldSerializationKind.Primitive,
                     nullableEnumByteCount,
                     null,
@@ -470,7 +529,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    serializableMemberType,
                     FieldSerializationKind.BlittableStruct,
                     nullableStructByteCount,
                     null,
@@ -483,7 +543,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
             {
                 return new FieldGenerationModel(
-                    serializableProperty,
+                    serializableMember,
+                    serializableMemberType,
                     FieldSerializationKind.Nested,
                     0,
                     null,
@@ -495,25 +556,26 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return null;
         }
 
-        if (serializableProperty.Type.SpecialType == SpecialType.System_String)
+        if (serializableMemberType.SpecialType == SpecialType.System_String)
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.String, 2, null, null);
+            return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.String, 2, null, null);
         }
 
-        if (serializableProperty.Type is IArrayTypeSymbol arrayType)
+        if (serializableMemberType is IArrayTypeSymbol arrayType)
         {
             if (!arrayType.IsSZArray || arrayType.Rank != 1)
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.InvalidArray, 0, null, null);
             }
 
             if (!TryGetFixedTypeByteCount(arrayType.ElementType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int elementByteCount))
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.InvalidArray, 0, null, null);
             }
 
             return new FieldGenerationModel(
-                serializableProperty,
+                serializableMember,
+                serializableMemberType,
                 FieldSerializationKind.Array,
                 elementByteCount,
                 arrayType.ElementType,
@@ -522,34 +584,35 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 isNullableType: true);
         }
 
-        if (TryGetPrimitiveByteCount(serializableProperty.Type, out int primitiveByteCount))
+        if (TryGetPrimitiveByteCount(serializableMemberType, out int primitiveByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, primitiveByteCount, null, null);
+            return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.Primitive, primitiveByteCount, null, null);
         }
 
-        if (serializableProperty.Type.TypeKind == TypeKind.Enum
-            && serializableProperty.Type is INamedTypeSymbol enumType
+        if (serializableMemberType.TypeKind == TypeKind.Enum
+            && serializableMemberType is INamedTypeSymbol enumType
             && enumType.EnumUnderlyingType is not null
             && TryGetPrimitiveByteCount(enumType.EnumUnderlyingType, out int enumByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, enumByteCount, null, null);
+            return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.Primitive, enumByteCount, null, null);
         }
 
-        if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
+        if (TryGetFixedTypeByteCount(serializableMemberType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
+            if (serializableMemberType is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
             {
                 nestedSerializableType = namedType;
             }
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
+            return new FieldGenerationModel(serializableMember, serializableMemberType, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
-        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
+        if (serializableMemberType is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
         {
             return new FieldGenerationModel(
-                serializableProperty,
+                serializableMember,
+                serializableMemberType,
                 FieldSerializationKind.Nested,
                 0,
                 null,
@@ -1102,7 +1165,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int fieldIndex,
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
-        string propertyAccessibility = IsEffectivelyPublic(field.Symbol.Type) ? "public" : "internal";
+        string propertyAccessibility = IsEffectivelyPublic(field.DeclaredType) ? "public" : "internal";
         string propertyType;
         if (field.Kind == FieldSerializationKind.String)
         {
@@ -1124,7 +1187,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         else
         {
-            propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            propertyType = field.DeclaredType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(field.Symbol.Name)}");
@@ -1313,7 +1376,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static ITypeSymbol GetSerializedPropertyType(FieldGenerationModel propertyModel)
     {
-        return propertyModel.NullableUnderlyingType ?? propertyModel.Symbol.Type;
+        return propertyModel.NullableUnderlyingType ?? propertyModel.DeclaredType;
     }
 
     private static bool IsNullRepresentedByZeroFieldOffset(FieldGenerationModel propertyModel)
@@ -1616,7 +1679,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private sealed class FieldGenerationModel
     {
         internal FieldGenerationModel(
-            IPropertySymbol symbol,
+            ISymbol symbol,
+            ITypeSymbol declaredType,
             FieldSerializationKind kind,
             int elementByteCount,
             ITypeSymbol? arrayElementType,
@@ -1625,6 +1689,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             bool isNullableType = false)
         {
             Symbol = symbol;
+            DeclaredType = declaredType;
             Kind = kind;
             ElementByteCount = elementByteCount;
             ArrayElementType = arrayElementType;
@@ -1633,7 +1698,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             IsNullableType = isNullableType;
         }
 
-        internal IPropertySymbol Symbol { get; }
+        internal ISymbol Symbol { get; }
+
+        internal ITypeSymbol DeclaredType { get; }
 
         internal FieldSerializationKind Kind { get; }
 
