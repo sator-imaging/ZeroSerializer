@@ -2,11 +2,9 @@
 // https://github.com/sator-imaging/ZeroSerializer
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using System.Collections.Immutable;
-using System.Linq;
 using Xunit;
 using ZeroSerializer.Generator;
+using ZeroSerializer.Tests.Verifiers;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 
@@ -27,38 +25,13 @@ public class MyGenericClass<T>
 }
 ";
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(source);
-        var references = new[]
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(ZeroSerializerAttribute).Assembly.Location),
-        };
-
-        var compilation = CSharpCompilation.Create(
-            "TestAssembly",
-            new[] { syntaxTree },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var generator = new ZeroSerializerGenerator();
-        var driver = CSharpGeneratorDriver.Create(ImmutableArray.Create<ISourceGenerator>(generator));
-
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
-
-        // Check that ZEROS008 was reported!
-        var genericDiagnostics = diagnostics.Where(d => d.Id == "ZEROS008").ToList();
-        Assert.Single(genericDiagnostics);
-
-        var diagnostic = genericDiagnostics[0];
-        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
-        Assert.Contains("MyGenericClass", diagnostic.GetMessage());
-        Assert.Equal("Generic type not supported", diagnostic.Descriptor.Title);
-
-        // Ensure the location is on the identifier
-        var lineSpan = diagnostic.Location.GetLineSpan();
-        Assert.True(lineSpan.IsValid);
-        var locationText = source.Substring(diagnostic.Location.SourceSpan.Start, diagnostic.Location.SourceSpan.Length);
-        Assert.Equal("MyGenericClass", locationText);
+        CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.Verify(
+            source,
+            "ZEROS008",
+            DiagnosticSeverity.Error,
+            "MyGenericClass",
+            "MyGenericClass"
+        );
     }
 
     [Fact]
@@ -74,26 +47,8 @@ public class MyNonGenericClass
 }
 ";
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(source);
-        var references = new[]
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(ZeroSerializerAttribute).Assembly.Location),
-        };
-
-        var compilation = CSharpCompilation.Create(
-            "TestAssembly",
-            new[] { syntaxTree },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var generator = new ZeroSerializerGenerator();
-        var driver = CSharpGeneratorDriver.Create(ImmutableArray.Create<ISourceGenerator>(generator));
-
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
-
-        // Check that ZEROS008 was NOT reported!
-        var genericDiagnostics = diagnostics.Where(d => d.Id == "ZEROS008").ToList();
-        Assert.Empty(genericDiagnostics);
+        CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifyNoDiagnostics(
+            source
+        );
     }
 }
