@@ -83,7 +83,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static readonly DiagnosticDescriptor UnsupportedGenericSerializableType = new(
         "ZEROS008",
-        "Generic serializable type",
+        "Generic type not supported",
         "Generic type '{0}' is not allowed for ZeroSerializer",
         SerializerName,
         DiagnosticSeverity.Error,

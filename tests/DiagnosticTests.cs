@@ -52,7 +52,7 @@ public class MyGenericClass<T>
         var diagnostic = genericDiagnostics[0];
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("MyGenericClass", diagnostic.GetMessage());
-        Assert.Equal("Generic serializable type", diagnostic.Descriptor.Title);
+        Assert.Equal("Generic type not supported", diagnostic.Descriptor.Title);
 
         // Ensure the location is on the identifier
         var lineSpan = diagnostic.Location.GetLineSpan();
