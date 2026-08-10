@@ -16,12 +16,13 @@ public static class CSharpSourceGeneratorVerifier<TGenerator>
     where TGenerator : ISourceGenerator, new()
 {
     public static void Verify(
-        string source,
+        string sourceWithMarkup,
         string expectedDiagnosticId,
         DiagnosticSeverity expectedSeverity,
-        string expectedMessage,
-        string expectedLocationText)
+        string expectedMessage)
     {
+        var (source, expectedStart, expectedLength) = ParseMarkup(sourceWithMarkup);
+
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var references = new[]
         {
@@ -47,12 +48,10 @@ public static class CSharpSourceGeneratorVerifier<TGenerator>
         Assert.Equal(expectedSeverity, diagnostic.Severity);
         Assert.Contains(expectedMessage, diagnostic.GetMessage());
 
-        if (expectedLocationText != null)
+        if (expectedStart != -1)
         {
-            var lineSpan = diagnostic.Location.GetLineSpan();
-            Assert.True(lineSpan.IsValid);
-            var locationText = source.Substring(diagnostic.Location.SourceSpan.Start, diagnostic.Location.SourceSpan.Length);
-            Assert.Equal(expectedLocationText, locationText);
+            Assert.Equal(expectedStart, diagnostic.Location.SourceSpan.Start);
+            Assert.Equal(expectedLength, diagnostic.Location.SourceSpan.Length);
         }
     }
 
@@ -77,5 +76,29 @@ public static class CSharpSourceGeneratorVerifier<TGenerator>
         driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
 
         Assert.Empty(diagnostics.Where(d => d.Id.StartsWith("ZEROS")));
+    }
+
+    private static (string cleanedSource, int start, int length) ParseMarkup(string sourceWithMarkup)
+    {
+        int startTagIndex = sourceWithMarkup.IndexOf("[|");
+        if (startTagIndex == -1)
+        {
+            return (sourceWithMarkup, -1, -1);
+        }
+
+        int endTagIndex = sourceWithMarkup.IndexOf("|]", startTagIndex);
+        if (endTagIndex == -1)
+        {
+            throw new ArgumentException("Markup start tag '[|' found but end tag '|]' is missing.");
+        }
+
+        string cleanedSource = sourceWithMarkup.Substring(0, startTagIndex) +
+                               sourceWithMarkup.Substring(startTagIndex + 2, endTagIndex - startTagIndex - 2) +
+                               sourceWithMarkup.Substring(endTagIndex + 2);
+
+        int start = startTagIndex;
+        int length = endTagIndex - startTagIndex - 2;
+
+        return (cleanedSource, start, length);
     }
 }

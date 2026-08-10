@@ -19,7 +19,7 @@ public class DiagnosticTests
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class MyGenericClass<T>
+public class [|MyGenericClass|]<T>
 {
     public int Value { get; set; }
 }
@@ -29,7 +29,6 @@ public class MyGenericClass<T>
             source,
             "ZEROS008",
             DiagnosticSeverity.Error,
-            "MyGenericClass",
             "MyGenericClass"
         );
     }
