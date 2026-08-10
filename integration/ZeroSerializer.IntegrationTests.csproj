@@ -17,6 +17,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <!--
+    - reference nuget package instead of ./src
+    - mirror full test suite from ./tests by including sources except for unity compat test
+  -->
   <ItemGroup>
     <PackageReference Include="$(NuGetPublishID)" Version="*-*" />
   </ItemGroup>
