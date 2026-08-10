@@ -139,15 +139,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         ExecuteCore(executionContext, collectedTypes.ToImmutable());
     }
 
+    private static bool IsZeroSerializerAttribute(string attributeName)
+    {
+        return attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
+            || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal);
+    }
+
     private static bool HasSerializableAttribute(TypeDeclarationSyntax candidateDeclaration)
     {
         foreach (AttributeListSyntax attributeList in candidateDeclaration.AttributeLists)
         {
             foreach (AttributeSyntax attribute in attributeList.Attributes)
             {
-                string attributeName = attribute.Name.ToString();
-                if (attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
-                    || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
+                if (IsZeroSerializerAttribute(attribute.Name.ToString()))
                 {
                     return true;
                 }
@@ -386,7 +390,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     out int nullableStructByteCount))
             {
                 INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsDecoratedWithZeroSerializer(namedUnderlying))
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying, allSerializableTypes))
                 {
                     nestedSerializableType = namedUnderlying;
                 }
@@ -402,7 +406,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             if (nullableUnderlyingType is INamedTypeSymbol namedNullableUnderlyingType
-                && IsDecoratedWithZeroSerializer(namedNullableUnderlyingType))
+                && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
             {
                 return new FieldGenerationModel(
                     serializableProperty,
@@ -460,7 +464,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && IsDecoratedWithZeroSerializer(namedType))
+            if (serializableProperty.Type is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
             {
                 nestedSerializableType = namedType;
             }
@@ -468,7 +472,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
-        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsDecoratedWithZeroSerializer(namedPropertyType))
+        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
         {
             return new FieldGenerationModel(
                 serializableProperty,
@@ -1395,12 +1399,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
     }
 
+    private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
+    {
+        if (typeSymbol is INamedTypeSymbol namedType)
+        {
+            return allSerializableTypes.Contains(namedType) || IsDecoratedWithZeroSerializer(namedType);
+        }
+        return false;
+    }
+
     private static bool IsDecoratedWithZeroSerializer(ITypeSymbol typeSymbol)
     {
         foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
         {
-            if (attribute.AttributeClass is not null &&
-                (attribute.AttributeClass.Name == SerializerName || attribute.AttributeClass.Name == SerializerAttributeName))
+            if (attribute.AttributeClass is not null
+                && IsZeroSerializerAttribute(attribute.AttributeClass.ToDisplayString()))
             {
                 return true;
             }
