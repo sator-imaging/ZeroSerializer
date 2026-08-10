@@ -853,6 +853,12 @@ public sealed class SerializationTests
         TestAssert.True(!VariableRecordView.IsBlittable, "VariableRecordView is NOT blittable");
         TestAssert.True(!PrimitiveRecordView.IsBlittable, "PrimitiveRecordView is NOT blittable");
 
+        // Verify distinction between length >= 0 and isBlittable (non-blittable but with positive RequiredByteLength)
+        TestAssert.True(!FixedClassView.IsBlittable, "FixedClassView is NOT blittable");
+        TestAssert.True(FixedClassView.RequiredByteLength >= 0, "FixedClassView has RequiredByteLength >= 0");
+        TestAssert.True(!SmallFixedStructView.IsBlittable, "SmallFixedStructView is NOT blittable");
+        TestAssert.True(SmallFixedStructView.RequiredByteLength >= 0, "SmallFixedStructView has RequiredByteLength >= 0");
+
         // 2. Check AsMemory() extension method (syntactic sugar)
         var source = new PackedRecord { Number = 999, State = SignedState.Positive };
         var buffer = new byte[PackedRecordView.RequiredByteLength];
