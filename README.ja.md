@@ -115,22 +115,21 @@ var view = new FooView(buffer.AsMemory(0, writtenBytes));
 ReadOnlySpan<byte> serializedSpan = view;
 ReadOnlyMemory<byte> serializedMemory = view;
 
-// Blittable Struct の View を元の構造体に復元
-Foo original = view.Materialize();
+// .NET 5 では System.IO.Hashing package を参照します。
+uint xxHash32 = System.IO.Hashing.XxHash32.HashToUInt32(view);
+ulong xxHash3 = System.IO.Hashing.XxHash3.HashToUInt64(view);
 ```
 
-さらに、View 構造体には `IsBlittable` 定数と `AsMemory` 拡張メソッドが定義されています。
+さらに、View 構造体には `IsBlittable` 定数と `AsMemory`、`Materialize` 拡張メソッドが定義されています。
 
 ```csharp
 bool isBlittable = FooView.IsBlittable;
 
+// Blittable Struct の View を元の構造体に復元
+Foo original = view.Materialize();
+
 // .AsMemory() を使って内部バッファーを取得
 ReadOnlyMemory<byte> directMemory = view.AsMemory();
-```
-
-// .NET 5 では System.IO.Hashing package を参照します。
-uint xxHash32 = System.IO.Hashing.XxHash32.HashToUInt32(view);
-ulong xxHash3 = System.IO.Hashing.XxHash3.HashToUInt64(view);
 ```
 
 `public const int RequiredByteLength` は、field offset table と予測可能なプロパティーのバイト数を合計します。サイズを予測できないプロパティーは一つにつき native pointer サイズ（`IntPtr.Size`、64 bit CPU では8 byte）として加算し、一つでも含まれる場合は最終合計を負数にします。全て予測可能なら正数です。
