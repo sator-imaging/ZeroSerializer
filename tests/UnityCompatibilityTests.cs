@@ -56,5 +56,25 @@ namespace ZeroSerializer.Tests
             Assert.NotNull(targetFrameworkAttr);
             Assert.Equal(".NETStandard,Version=v2.1", targetFrameworkAttr.FrameworkName);
         }
+
+        [Fact]
+        public void NestedStructPropertiesUseGeneratedViewTypes()
+        {
+            Assembly sandboxAssembly = typeof(Sandbox::FixedPacket).Assembly;
+            Type packedPositionViewType = sandboxAssembly.GetType("ZeroSerializer.PackedPositionView")
+                ?? throw new InvalidOperationException("Could not find generated PackedPositionView type.");
+            Type fixedPacketViewType = sandboxAssembly.GetType("ZeroSerializer.FixedPacketView")
+                ?? throw new InvalidOperationException("Could not find generated FixedPacketView type.");
+            Type packedPacketViewType = sandboxAssembly.GetType("ZeroSerializer.PackedPacketView")
+                ?? throw new InvalidOperationException("Could not find generated PackedPacketView type.");
+            Type variablePacketViewType = sandboxAssembly.GetType("ZeroSerializer.VariablePacketView")
+                ?? throw new InvalidOperationException("Could not find generated VariablePacketView type.");
+
+            Assert.Equal(packedPositionViewType, fixedPacketViewType.GetProperty(nameof(Sandbox::FixedPacket.Position))?.PropertyType);
+            Assert.Equal(packedPositionViewType, packedPacketViewType.GetProperty(nameof(Sandbox::PackedPacket.Position))?.PropertyType);
+            Assert.Equal(
+                typeof(Nullable<>).MakeGenericType(packedPositionViewType),
+                variablePacketViewType.GetProperty(nameof(Sandbox::VariablePacket.OptionalPosition))?.PropertyType);
+        }
     }
 }

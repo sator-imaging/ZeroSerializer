@@ -161,21 +161,26 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         GeneratorExecutionContext executionContext,
         ImmutableArray<INamedTypeSymbol> collectedTypes)
     {
-        var uniqueTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var uniqueTypes = new List<INamedTypeSymbol>();
+        var uniqueTypeSet = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
         foreach (INamedTypeSymbol collectedType in collectedTypes)
         {
-            uniqueTypes.Add(collectedType);
+            if (uniqueTypeSet.Add(collectedType))
+            {
+                uniqueTypes.Add(collectedType);
+            }
         }
 
-        var allSerializableTypes = new HashSet<INamedTypeSymbol>(uniqueTypes, SymbolEqualityComparer.Default);
+        List<INamedTypeSymbol> allSerializableTypes = CollectSerializableTypeClosure(uniqueTypes);
+        var allSerializableTypeSet = new HashSet<INamedTypeSymbol>(allSerializableTypes, SymbolEqualityComparer.Default);
         var generationModels = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
 
-        foreach (INamedTypeSymbol serializableType in uniqueTypes)
+        foreach (INamedTypeSymbol serializableType in allSerializableTypes)
         {
             TypeGenerationModel generationModel = CreateGenerationModel(
                 executionContext,
                 serializableType,
-                allSerializableTypes);
+                allSerializableTypeSet);
             generationModels.Add(serializableType, generationModel);
         }
 
@@ -202,6 +207,79 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                         invalidNestedField = nestedFieldCandidate;
                         break;
                     }
+                }
+
+                private static List<INamedTypeSymbol> CollectSerializableTypeClosure(
+                    IReadOnlyList<INamedTypeSymbol> rootTypes)
+                {
+                    var discoveredTypes = new List<INamedTypeSymbol>(rootTypes.Count);
+                    var knownTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+                    var pendingTypes = new Queue<INamedTypeSymbol>();
+                    for (int typeIndex = 0; typeIndex < rootTypes.Count; typeIndex++)
+                    {
+                        INamedTypeSymbol rootType = rootTypes[typeIndex];
+                        if (knownTypes.Add(rootType))
+                        {
+                            discoveredTypes.Add(rootType);
+                            pendingTypes.Enqueue(rootType);
+                        }
+                    }
+
+                    while (pendingTypes.Count != 0)
+                    {
+                        INamedTypeSymbol currentType = pendingTypes.Dequeue();
+                        foreach (ISymbol declaredMember in currentType.GetMembers())
+                        {
+                            if (declaredMember is not IPropertySymbol serializableProperty
+                                || serializableProperty.IsStatic
+                                || serializableProperty.IsIndexer
+                                || serializableProperty.DeclaredAccessibility != Accessibility.Public
+                                || serializableProperty.GetMethod?.DeclaredAccessibility != Accessibility.Public
+                                || !TryGetNestedStructViewTypeCandidate(serializableProperty.Type, out INamedTypeSymbol? nestedStructType)
+                                || !knownTypes.Add(nestedStructType))
+                            {
+                                continue;
+                            }
+
+                            discoveredTypes.Add(nestedStructType);
+                            pendingTypes.Enqueue(nestedStructType);
+                        }
+                    }
+
+                    return discoveredTypes;
+                }
+
+                private static bool TryGetNestedStructViewTypeCandidate(
+                    ITypeSymbol propertyType,
+                    out INamedTypeSymbol? nestedStructType)
+                {
+                    nestedStructType = null;
+                    if (propertyType is IArrayTypeSymbol)
+                    {
+                        return false;
+                    }
+
+                    ITypeSymbol candidateType = propertyType;
+                    if (propertyType is INamedTypeSymbol nullableType
+                        && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+                    {
+                        candidateType = nullableType.TypeArguments[0];
+                    }
+
+                    if (candidateType is not INamedTypeSymbol namedCandidateType
+                        || namedCandidateType.TypeKind != TypeKind.Struct
+                        || namedCandidateType.Arity != 0
+                        || namedCandidateType.ContainingType is not null
+                        || !TryGetFixedTypeByteCount(
+                            namedCandidateType,
+                            new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
+                            out _))
+                    {
+                        return false;
+                    }
+
+                    nestedStructType = namedCandidateType;
+                    return true;
                 }
                 if (invalidNestedField is null)
                 {
@@ -1039,7 +1117,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             propertyType = GetQualifiedViewName(field.NestedSerializableType!);
         }
         else if (field.Kind == FieldSerializationKind.BlittableStruct
-                 && !containingModel.IsBlittableStruct
                  && field.NestedSerializableType is not null)
         {
             string viewName = GetQualifiedViewName(field.NestedSerializableType);
@@ -1056,8 +1133,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         if (containingModel.IsBlittableStruct)
         {
-            sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
-            sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            if (field.Kind == FieldSerializationKind.BlittableStruct
+                && field.NestedSerializableType is not null
+                && !field.IsNullableType)
+            {
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({CalculateBlittableFieldOffset(containingModel, fieldIndex)}, {field.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
             return;
@@ -1134,6 +1220,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         // Null is handled by the field offset before this point; invalid negative lengths must reach Span.Slice unchanged.
         sourceBuilder.AppendLine($"int fieldPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({fieldDataOffsetName}, 4));");
+    }
+
+    private static int CalculateBlittableFieldOffset(TypeGenerationModel containingModel, int fieldIndex)
+    {
+        int accumulatedByteCount = 0;
+        for (int priorFieldIndex = 0; priorFieldIndex < fieldIndex; priorFieldIndex++)
+        {
+            accumulatedByteCount += containingModel.Fields[priorFieldIndex].ElementByteCount;
+        }
+
+        return accumulatedByteCount;
     }
 
     private static void EmitExtensionClass(
