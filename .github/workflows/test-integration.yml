@@ -29,8 +29,10 @@ jobs:
             6.x.x
             5.x.x
 
+      - run: dotnet restore ./tests-integration
+      
       - run: |
-          dotnet test ./tests-integration -c ${{ matrix.configuration }} \
+          dotnet test ./tests-integration -c ${{ matrix.configuration }} --no-restore \
             > test-output.txt
 
           cat test-output.txt
