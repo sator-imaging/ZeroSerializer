@@ -545,17 +545,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             if (candidateAttribute.AttributeClass is INamedTypeSymbol
                 {
-                    Name: "StructLayoutAttribute",
-                    ContainingNamespace: INamespaceSymbol
+                    Name: "StructLayoutAttribute", ContainingNamespace: INamespaceSymbol
                     {
-                        Name: "InteropServices",
-                        ContainingNamespace: INamespaceSymbol
+                        Name: "InteropServices", ContainingNamespace: INamespaceSymbol
                         {
-                            Name: "Runtime",
-                            ContainingNamespace: INamespaceSymbol
+                            Name: "Runtime", ContainingNamespace: INamespaceSymbol
                             {
-                                Name: "System",
-                                ContainingNamespace: INamespaceSymbol
+                                Name: "System", ContainingNamespace: INamespaceSymbol
                                 {
                                     IsGlobalNamespace: true
                                 }
