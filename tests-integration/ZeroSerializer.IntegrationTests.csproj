@@ -18,13 +18,6 @@
   </ItemGroup>
 
   <!--
-    Reference the NuGet package instead of the local src project reference.
-  -->
-  <ItemGroup>
-    <PackageReference Include="SatorImaging.ZeroSerializer" Version="*-*" />
-  </ItemGroup>
-
-  <!--
     Mirror the full test suite from the tests directory by including all test sources, excluding Unity compatibility tests.
   -->
   <ItemGroup>
