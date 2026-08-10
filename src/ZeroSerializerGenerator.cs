@@ -139,20 +139,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         ExecuteCore(executionContext, collectedTypes.ToImmutable());
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static bool IsZeroSerializerAttribute(string attributeName)
-    {
-        return attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
-            || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal);
-    }
-
     private static bool HasSerializableAttribute(TypeDeclarationSyntax candidateDeclaration)
     {
         foreach (AttributeListSyntax attributeList in candidateDeclaration.AttributeLists)
         {
             foreach (AttributeSyntax attribute in attributeList.Attributes)
             {
-                if (IsZeroSerializerAttribute(attribute.Name.ToString()))
+                var attributeName = attribute.Name.ToString();
+                if (attributeName.EndsWith(SerializerName, StringComparison.Ordinal) ||
+                    attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
                 {
                     return true;
                 }
