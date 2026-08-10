@@ -746,7 +746,7 @@ public sealed class SerializationTests
 
         PropertyInfo? optionalValueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.OptionalValue));
         Assert.NotNull(optionalValueProperty);
-        Assert.Equal(typeof(PackedRecordView?), optionalValueProperty!.PropertyType);
+        Assert.Equal(typeof(Nullable<PackedRecordView>), optionalValueProperty!.PropertyType);
 
         // 2. Assert that nested non-blittable type returns view
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
