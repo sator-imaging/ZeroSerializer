@@ -139,6 +139,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         ExecuteCore(executionContext, collectedTypes.ToImmutable());
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static bool IsZeroSerializerAttribute(string attributeName)
     {
         return attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
@@ -1386,11 +1387,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return true;
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(TypeGenerationModel generationModel)
     {
         return GetQualifiedViewName(generationModel.Symbol);
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(INamedTypeSymbol symbol)
     {
         string generatedNamespaceName = symbol.ContainingNamespace.IsGlobalNamespace
@@ -1399,6 +1402,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
     {
         if (typeSymbol is INamedTypeSymbol namedType)
