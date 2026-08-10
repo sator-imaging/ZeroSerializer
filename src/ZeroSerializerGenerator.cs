@@ -1413,7 +1413,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
         {
             if (attribute.AttributeClass is INamedTypeSymbol attributeClass &&
-                (attributeClass.Name == SerializerName || attributeClass.Name == SerializerAttributeName))
+                (attributeClass.Name is SerializerName or SerializerAttributeName))
             {
                 if (attributeClass.ContainingNamespace is INamespaceSymbol ns)
                 {
@@ -1421,7 +1421,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     {
                         return true;
                     }
-                    if (ns.Name == SerializerNamespace && ns.ContainingNamespace is { IsGlobalNamespace: true })
+                    if (ns.Name == SerializerNamespace && ns.ContainingNamespace is INamespaceSymbol { IsGlobalNamespace: true })
                     {
                         return true;
                     }
