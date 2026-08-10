@@ -21,13 +21,17 @@
     Reference the NuGet package instead of the local src project reference.
   -->
   <ItemGroup>
-    <PackageReference Include="$(NuGetPublishID)" Version="*-*" />
+    <PackageReference Include="SatorImaging.ZeroSerializer" Version="*-*" />
   </ItemGroup>
 
   <!--
     Mirror the full test suite from the tests directory by including all test sources, excluding Unity compatibility tests.
   -->
   <ItemGroup>
-    <Compile Include="../tests/**/*.cs" Exclude="../tests/obj/**/*.cs;../tests/bin/**/*.cs;../tests/UnityCompatibilityTests.cs" />
+    <Compile Include="../tests/**/*.cs"
+             Exclude="../tests/obj/**/*.cs;
+                      ../tests/bin/**/*.cs;
+                      ../tests/UnityCompatibilityTests.cs"
+    />
   </ItemGroup>
 </Project>
