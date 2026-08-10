@@ -81,6 +81,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnsupportedGenericSerializableType = new(
+        "ZEROS008",
+        "Don't allow generic type for ZeroSerializer",
+        "Generic type '{0}' is not allowed for ZeroSerializer",
+        SerializerName,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(GeneratorInitializationContext initializationContext)
     {
         // Unity is pinned to Roslyn 3.8, so discovery must stay on the classic syntax-receiver API.
@@ -277,8 +285,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             isBlittableStruct,
             isBlittableStruct ? blittableStructByteCount : 0);
 
-        bool hasUnsupportedShape = serializableType.Arity != 0
-            || serializableType.ContainingType is not null
+        if (serializableType.Arity != 0)
+        {
+            generationModel.IsValid = false;
+            executionContext.ReportDiagnostic(Diagnostic.Create(
+                UnsupportedGenericSerializableType,
+                GetTypeIdentifierLocation(serializableType),
+                serializableType.ToDisplayString()));
+            return generationModel;
+        }
+
+        bool hasUnsupportedShape = serializableType.ContainingType is not null
             || (serializableType.TypeKind != TypeKind.Class && serializableType.TypeKind != TypeKind.Struct)
             || (serializableType.TypeKind == TypeKind.Class
                 && serializableType.BaseType is not null
