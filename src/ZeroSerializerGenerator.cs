@@ -386,7 +386,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     out int nullableStructByteCount))
             {
                 INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && allSerializableTypes.Contains(namedUnderlying))
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsDecoratedWithZeroSerializer(namedUnderlying))
                 {
                     nestedSerializableType = namedUnderlying;
                 }
@@ -402,7 +402,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             if (nullableUnderlyingType is INamedTypeSymbol namedNullableUnderlyingType
-                && allSerializableTypes.Contains(namedNullableUnderlyingType))
+                && IsDecoratedWithZeroSerializer(namedNullableUnderlyingType))
             {
                 return new FieldGenerationModel(
                     serializableProperty,
@@ -460,7 +460,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
             INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && allSerializableTypes.Contains(namedType))
+            if (serializableProperty.Type is INamedTypeSymbol namedType && IsDecoratedWithZeroSerializer(namedType))
             {
                 nestedSerializableType = namedType;
             }
@@ -468,7 +468,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
-        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && allSerializableTypes.Contains(namedPropertyType))
+        if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsDecoratedWithZeroSerializer(namedPropertyType))
         {
             return new FieldGenerationModel(
                 serializableProperty,
@@ -1027,14 +1027,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         else if (field.Kind == FieldSerializationKind.Nested)
         {
-            propertyType = GetQualifiedViewName(modelLookup[field.NestedSerializableType!]);
+            propertyType = GetQualifiedViewName(field.NestedSerializableType!);
         }
         else if (field.Kind == FieldSerializationKind.BlittableStruct
                  && !containingModel.IsBlittableStruct
-                 && field.NestedSerializableType is not null
-                 && modelLookup.ContainsKey(field.NestedSerializableType))
+                 && field.NestedSerializableType is not null)
         {
-            string viewName = GetQualifiedViewName(modelLookup[field.NestedSerializableType]);
+            string viewName = GetQualifiedViewName(field.NestedSerializableType);
             propertyType = field.IsNullableType ? viewName + "?" : viewName;
         }
         else
@@ -1083,9 +1082,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "fieldDataOffset");
                 break;
             case FieldSerializationKind.BlittableStruct:
-                if (field.NestedSerializableType is not null && modelLookup.TryGetValue(field.NestedSerializableType, out TypeGenerationModel? nestedModel))
+                if (field.NestedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(nestedModel)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
                 }
                 else
                 {
@@ -1110,7 +1109,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 break;
             case FieldSerializationKind.Nested:
                 // Nested views receive an already-positioned memory region; their constructor has no offset semantics.
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(modelLookup[field.NestedSerializableType!])}(serializedMemory.Slice(fieldDataOffset));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType!)}(serializedMemory.Slice(fieldDataOffset));");
                 break;
         }
 
@@ -1384,10 +1383,28 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static string GetQualifiedViewName(TypeGenerationModel generationModel)
     {
-        string generatedNamespaceName = generationModel.Symbol.ContainingNamespace.IsGlobalNamespace
+        return GetQualifiedViewName(generationModel.Symbol);
+    }
+
+    private static string GetQualifiedViewName(INamedTypeSymbol symbol)
+    {
+        string generatedNamespaceName = symbol.ContainingNamespace.IsGlobalNamespace
             ? SerializerNamespace
-            : generationModel.Symbol.ContainingNamespace.ToDisplayString();
-        return "global::" + generatedNamespaceName + "." + generationModel.ViewTypeName;
+            : symbol.ContainingNamespace.ToDisplayString();
+        return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
+    }
+
+    private static bool IsDecoratedWithZeroSerializer(ITypeSymbol typeSymbol)
+    {
+        foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
+        {
+            if (attribute.AttributeClass is not null &&
+                (attribute.AttributeClass.Name == SerializerName || attribute.AttributeClass.Name == SerializerAttributeName))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static string CreateLocalName(string fieldName, string suffix)
