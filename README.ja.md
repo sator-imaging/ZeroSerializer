@@ -110,24 +110,17 @@ null は field offset `0` で表し、length header と payload を格納しま�
 
 View は `ReadOnlySpan<byte>` と `ReadOnlyMemory<byte>` へ暗黙変換でき、どちらもコピーや再シリアライズを行いません。`RequiredByteLength >= 0` の固定長 View は先頭から `RequiredByteLength` までを返します。負値になる可変長 View は総バイト長を wire format から復元できないため、コンストラクターへ渡した借用領域全体を返します。可変長データのハッシュや検証では、未使用のバッファ末尾を含めないよう `writtenBytes` で Memory を切り詰めてから View を作成します。
 
-また、便利な拡張メソッドとして `.AsMemory()` と、Blittable Struct 用に `.Materialize()` が用意されています。
-
-```csharp
-var view = new FooView(buffer.AsMemory(0, writtenBytes));
-ReadOnlySpan<byte> serializedSpan = view;
-ReadOnlyMemory<byte> serializedMemory = view;
-
-// .AsMemory() を使って ReadOnlyMemory<byte> を直接取得
-ReadOnlyMemory<byte> directMemory = view.AsMemory();
-
 // Blittable Struct の View を元の構造体に復元
 Foo original = view.Materialize();
 ```
 
-さらに、View 構造体には `IsBlittable` 定数も定義されています。
+さらに、View 構造体には `IsBlittable` 定数と `AsMemory` 拡張メソッドが定義されています。
 
 ```csharp
 bool isBlittable = FooView.IsBlittable;
+
+// .AsMemory() を使って内部バッファーを取得
+ReadOnlyMemory<byte> directMemory = view.AsMemory();
 ```
 
 // .NET 5 では System.IO.Hashing package を参照します。
