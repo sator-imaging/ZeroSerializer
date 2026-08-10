@@ -52,7 +52,7 @@ public class MyGenericClass<T>
         var diagnostic = genericDiagnostics[0];
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("MyGenericClass", diagnostic.GetMessage());
-        Assert.Equal("Don't allow generic type for ZeroSerializer", diagnostic.Descriptor.Title);
+        Assert.Equal("Generic serializable type", diagnostic.Descriptor.Title);
 
         // Ensure the location is on the identifier
         var lineSpan = diagnostic.Location.GetLineSpan();
