@@ -35,9 +35,12 @@ jobs:
         with:
           dotnet-version: |
             10.x.x
+            9.x.x
             8.x.x
+            7.x.x
             6.x.x
             5.x.x
+          cache: true
 
       # !!! MUST NOT REMOVE THIS !!!
       # As test project cannot use netstandard2.1,
