@@ -146,15 +146,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             foreach (AttributeSyntax attribute in attributeList.Attributes)
             {
                 string attributeName = attribute.Name.ToString();
-                switch (attributeName)
+                if (attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
+                    || attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
                 {
-                    case SerializerName:
-                    case SerializerAttributeName:
-                    case SerializerNamespace + "." + SerializerName:
-                    case SerializerNamespace + "." + SerializerAttributeName:
-                    case "global::" + SerializerNamespace + "." + SerializerName:
-                    case "global::" + SerializerNamespace + "." + SerializerAttributeName:
-                        return true;
+                    return true;
                 }
             }
         }
