@@ -126,6 +126,23 @@ ulong xxHash3 = System.IO.Hashing.XxHash3.HashToUInt64(view);
 
 `public const int RequiredByteLength` は、field offset table と予測可能なプロパティーのバイト数を合計します。サイズを予測できないプロパティーは一つにつき native pointer サイズ（`IntPtr.Size`、64 bit CPU では8 byte）として加算し、一つでも含まれる場合は最終合計を負数にします。全て予測可能なら正数です。
 
+#### `RequiredByteLength` が負数になる条件
+
+`RequiredByteLength` は、シリアライズ対象の型がサイズを予測できない（可変長の）プロパティーを一つでも含む場合に、その合計予測サイズの絶対値にマイナスを掛けた負数になります。具体的には、以下のいずれかの条件を満たす場合に負数となります。
+
+1. **Nullable 型、または参照型のプロパティー**
+   - `Nullable<T>`（例: `int?` など）
+   - クラスなどの参照型（C# の nullable annotation の有無に関わらず、参照型のプロパティーはすべて null 許容・サイズ予測不可能とみなされます）
+2. **可変長データ型のプロパティー**
+   - `string`
+   - 一次元配列（例: `int[]` など）
+3. **サイズ予測不可能なネスト型のプロパティー**
+   - `[ZeroSerializer]` が付与されたネスト型であって、その内部に上記の Nullable 型、参照型、可変長データ型、またはその他のサイズ予測不可能なプロパティーを含んでいるもの
+4. **再帰・循環参照構造**
+   - 自分自身や他の型を相互に参照し合うなどして、依存関係が再帰・循環している場合
+5. **サイズ計算時の算術オーバーフロー**
+   - プロパティーのバイトサイズの計算・加算処理において算術オーバーフローが発生した場合
+
 Blittable Struct は field offset table を持たないため、`RequiredByteLength` は table を含めず struct 全体の raw byte サイズになります。
 
 `RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも field offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
