@@ -389,13 +389,18 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
                     out int nullableStructByteCount))
             {
+                INamedTypeSymbol? nestedSerializableType = null;
+                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && allSerializableTypes.Contains(namedUnderlying))
+                {
+                    nestedSerializableType = namedUnderlying;
+                }
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
                 return new FieldGenerationModel(
                     serializableProperty,
                     FieldSerializationKind.BlittableStruct,
                     nullableStructByteCount,
                     null,
-                    null,
+                    nestedSerializableType,
                     nullableUnderlyingType,
                     isNullableType: true);
             }
@@ -458,8 +463,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
+            INamedTypeSymbol? nestedSerializableType = null;
+            if (serializableProperty.Type is INamedTypeSymbol namedType && allSerializableTypes.Contains(namedType))
+            {
+                nestedSerializableType = namedType;
+            }
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, null);
+            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
         }
 
         if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && allSerializableTypes.Contains(namedPropertyType))
@@ -1009,6 +1019,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             propertyType = GetQualifiedViewName(modelLookup[field.NestedSerializableType!]);
         }
+        else if (field.Kind == FieldSerializationKind.BlittableStruct
+                 && !containingModel.IsBlittableStruct
+                 && field.NestedSerializableType is not null
+                 && modelLookup.ContainsKey(field.NestedSerializableType))
+        {
+            string viewName = GetQualifiedViewName(modelLookup[field.NestedSerializableType]);
+            propertyType = field.IsNullableType ? viewName + "?" : viewName;
+        }
         else
         {
             propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -1055,7 +1073,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "fieldDataOffset");
                 break;
             case FieldSerializationKind.BlittableStruct:
-                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                if (field.NestedSerializableType is not null && modelLookup.TryGetValue(field.NestedSerializableType, out TypeGenerationModel? nestedModel))
+                {
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(nestedModel)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                }
+                else
+                {
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                }
                 break;
             case FieldSerializationKind.String:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "fieldDataOffset");
