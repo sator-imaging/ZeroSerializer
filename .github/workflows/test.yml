@@ -51,6 +51,7 @@ jobs:
           dotnet test -c ${{ matrix.configuration }} --no-restore --no-build \
             > test-output.txt
 
+          cat test-output.txt
           grep -E " - .*\.dll" test-output.txt >> $GITHUB_STEP_SUMMARY
 
 

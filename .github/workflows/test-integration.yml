@@ -33,4 +33,5 @@ jobs:
           dotnet test ./tests-integration -c ${{ matrix.configuration }} \
             > test-output.txt
 
+          cat test-output.txt
           grep -E " - .*\.dll" test-output.txt >> $GITHUB_STEP_SUMMARY
