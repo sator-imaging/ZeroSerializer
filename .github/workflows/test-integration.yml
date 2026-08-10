@@ -1,0 +1,36 @@
+name: 'Test Phase 2: Published Package'
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  test-integration:
+    strategy:
+      matrix:
+        configuration: [Release, Debug]
+
+    # FIX: cannot use ubuntu-latest
+    runs-on: ubuntu-22.04   # tip: runs-on can use ${{ matrix.<name> }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5      # v4.3.1
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
+        with:
+          dotnet-version: |
+            10.x.x
+            9.x.x
+            8.x.x
+            7.x.x
+            6.x.x
+            5.x.x
+
+      - run: |
+          dotnet test ./tests-integration -c ${{ matrix.configuration }} \
+            > test-output.txt
+
+          grep -E " - .*\.dll" test-output.txt >> $GITHUB_STEP_SUMMARY

@@ -1,6 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net8.0;net6.0;net5.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net9.0;net8.0;net7.0;net6.0;net5.0</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -18,13 +18,15 @@
   </ItemGroup>
 
   <!--
-    - Reference the NuGet package instead of the local src project reference.
-    - Mirror the full test suite from the tests directory by including all test sources, excluding Unity compatibility tests.
+    Reference the NuGet package instead of the local src project reference.
   -->
   <ItemGroup>
     <PackageReference Include="$(NuGetPublishID)" Version="*-*" />
   </ItemGroup>
 
+  <!--
+    Mirror the full test suite from the tests directory by including all test sources, excluding Unity compatibility tests.
+  -->
   <ItemGroup>
     <Compile Include="../tests/**/*.cs" Exclude="../tests/obj/**/*.cs;../tests/bin/**/*.cs;../tests/UnityCompatibilityTests.cs" />
   </ItemGroup>
