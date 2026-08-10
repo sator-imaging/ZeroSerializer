@@ -246,11 +246,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             validModels,
             generationModels);
 
+        // Build the lookup and emit all sources in one combined pass.
         var modelLookup = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
-        // Each type owns one generated file and contributes one method to its namespace-local partial extension class.
         foreach (TypeGenerationModel validModel in validModels)
         {
             modelLookup.Add(validModel.Symbol, validModel);
+        }
+
+        // Compute per-model derived data once so no emission helper re-traverses models.
+        foreach (TypeGenerationModel validModel in validModels)
+        {
+            validModel.ComputeDerivedData(modelLookup);
         }
 
         foreach (TypeGenerationModel validModel in validModels)
@@ -1038,7 +1044,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// The fixed byte count (including the offset table) plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
         sourceBuilder.AppendLine("/// </summary>");
-        int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
+        int requiredByteLength = generationModel.RequiredByteLength;
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         sourceBuilder.AppendLine();
@@ -1201,7 +1207,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && field.NestedSerializableType is not null
                 && !field.IsNullableType)
             {
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({CalculateBlittableFieldOffset(containingModel, fieldIndex)}, {field.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({containingModel.BlittableFieldOffsets[fieldIndex]}, {field.ElementByteCount}));");
             }
             else
             {
@@ -1286,17 +1292,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"int fieldPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({fieldDataOffsetName}, 4));");
     }
 
-    private static int CalculateBlittableFieldOffset(TypeGenerationModel containingModel, int fieldIndex)
-    {
-        int accumulatedByteCount = 0;
-        for (int priorFieldIndex = 0; priorFieldIndex < fieldIndex; priorFieldIndex++)
-        {
-            accumulatedByteCount += containingModel.Fields[priorFieldIndex].ElementByteCount;
-        }
-
-        return accumulatedByteCount;
-    }
-
     private static void EmitExtensionClass(
         GeneratedSourceBuilder sourceBuilder,
         TypeGenerationModel generationModel,
@@ -1311,7 +1306,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// <returns>The number of bytes written to <paramref name=\"destination\"/> (including the offset table).</returns>");
         // The Span parameter is named destination so the emitted write body uses it directly without a conversion local.
         if (generationModel.Symbol.TypeKind == TypeKind.Struct
-            && Math.Abs((long)CalculateRequiredByteLength(generationModel, modelLookup)) > 16)
+            && Math.Abs((long)generationModel.RequiredByteLength) > 16)
         {
             // MemoryMarshal.Write changed from ref through .NET 7 to in in .NET 8, so only newer targets can keep a large receiver readonly.
             sourceBuilder.AppendDirective("#if NET8_0_OR_GREATER");
@@ -1675,6 +1670,38 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         internal List<FieldGenerationModel> Fields { get; } = new();
 
         internal bool IsValid { get; set; } = true;
+
+        /// <summary>
+        /// Cached result of <see cref="CalculateRequiredByteLength"/>; populated by <see cref="ComputeDerivedData"/>.
+        /// </summary>
+        internal int RequiredByteLength { get; private set; }
+
+        /// <summary>
+        /// Cached byte offset of each field within the blittable struct layout; populated by <see cref="ComputeDerivedData"/>.
+        /// Only meaningful when <see cref="IsBlittableStruct"/> is <see langword="true"/>.
+        /// </summary>
+        internal int[] BlittableFieldOffsets { get; private set; } = Array.Empty<int>();
+
+        /// <summary>
+        /// Computes derived data (RequiredByteLength, BlittableFieldOffsets) that depends on the fully-built model graph.
+        /// Must be called once after all models are constructed and the modelLookup is complete.
+        /// </summary>
+        internal void ComputeDerivedData(IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
+        {
+            RequiredByteLength = CalculateRequiredByteLength(this, modelLookup);
+
+            if (IsBlittableStruct && Fields.Count > 0)
+            {
+                var offsets = new int[Fields.Count];
+                int accumulated = 0;
+                for (int i = 0; i < Fields.Count; i++)
+                {
+                    offsets[i] = accumulated;
+                    accumulated += Fields[i].ElementByteCount;
+                }
+                BlittableFieldOffsets = offsets;
+            }
+        }
     }
 
     private sealed class FieldGenerationModel
