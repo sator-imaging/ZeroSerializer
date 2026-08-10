@@ -736,6 +736,24 @@ public sealed class SerializationTests
         }
     }
 
+    [Fact]
+    public void NestedTypesReturnViewsTest()
+    {
+        // 1. Assert that PackedContainerView properties return View types instead of the raw struct
+        PropertyInfo? valueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value));
+        Assert.NotNull(valueProperty);
+        Assert.Equal(typeof(PackedRecordView), valueProperty!.PropertyType);
+
+        PropertyInfo? optionalValueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.OptionalValue));
+        Assert.NotNull(optionalValueProperty);
+        Assert.Equal(typeof(PackedRecordView?), optionalValueProperty!.PropertyType);
+
+        // 2. Also assert that a non-blittable nested reference type returns its View type
+        PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
+        Assert.NotNull(childProperty);
+        Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
+    }
+
     public void StrictBlittableStructTests()
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
