@@ -1185,13 +1185,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
-        sourceBuilder.AppendLine($"{methodAccessibility} static global::System.ReadOnlyMemory<byte> AsMemory(this {GetQualifiedViewName(generationModel)} view) => view;");
+        sourceBuilder.AppendLine($"{methodAccessibility} static ReadOnlyMemory<byte> AsMemory(this {GetQualifiedViewName(generationModel)} view) => view;");
 
         if (generationModel.IsBlittableStruct)
         {
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine($"{methodAccessibility} static {generationModel.QualifiedSourceTypeName} Materialize(this {GetQualifiedViewName(generationModel)} view) =>");
-            sourceBuilder.AppendLine($"    global::System.Runtime.InteropServices.MemoryMarshal.Read<{generationModel.QualifiedSourceTypeName}>(view);");
+            sourceBuilder.AppendLine($"    MemoryMarshal.Read<{generationModel.QualifiedSourceTypeName}>(view);");
         }
 
         sourceBuilder.CloseBlock();

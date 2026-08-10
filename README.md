@@ -57,6 +57,21 @@ ReadOnlySpan<byte> serializedData = packetView;
 ReadOnlyMemory<byte> retainedData = packetView;
 ```
 
+You can also use `.AsMemory()` extension method (returns `ReadOnlyMemory<byte>` directly) or `.Materialize()` (for views of blittable structs to convert them back to the original struct):
+
+```csharp
+ReadOnlyMemory<byte> viewMemory = packetView.AsMemory();
+
+// For a view of a blittable struct (e.g. MyBlittableStructView)
+MyBlittableStruct original = blittableView.Materialize();
+```
+
+View structs also expose a compile-time constant `IsBlittable`:
+
+```csharp
+bool isBlittable = PacketView.IsBlittable; // false
+bool isBlittableStruct = MyBlittableStructView.IsBlittable; // true
+```
 
 
 
