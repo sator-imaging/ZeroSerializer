@@ -110,6 +110,11 @@ null は field offset `0` で表し、length header と payload を格納しま�
 
 View は `ReadOnlySpan<byte>` と `ReadOnlyMemory<byte>` へ暗黙変換でき、どちらもコピーや再シリアライズを行いません。`RequiredByteLength >= 0` の固定長 View は先頭から `RequiredByteLength` までを返します。負値になる可変長 View は総バイト長を wire format から復元できないため、コンストラクターへ渡した借用領域全体を返します。可変長データのハッシュや検証では、未使用のバッファ末尾を含めないよう `writtenBytes` で Memory を切り詰めてから View を作成します。
 
+```csharp
+var view = new FooView(buffer.AsMemory(0, writtenBytes));
+ReadOnlySpan<byte> serializedSpan = view;
+ReadOnlyMemory<byte> serializedMemory = view;
+
 // Blittable Struct の View を元の構造体に復元
 Foo original = view.Materialize();
 ```
