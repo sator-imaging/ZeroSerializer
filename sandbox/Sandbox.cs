@@ -224,7 +224,6 @@ public enum PacketState : ushort
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[ZeroSerializer]
 public struct PackedPosition
 {
     public int X;
