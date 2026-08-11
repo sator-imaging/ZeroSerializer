@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
@@ -921,7 +922,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
-        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(shapeTag);
+        uint shapeHash = XXHash32.HashToUInt32(shapeTag);
         sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
@@ -1428,13 +1429,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return true;
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(TypeGenerationModel generationModel)
     {
         return GetQualifiedViewName(generationModel.Symbol);
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(INamedTypeSymbol symbol)
     {
         string generatedNamespaceName = symbol.ContainingNamespace.IsGlobalNamespace
@@ -1443,7 +1444,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
     {
         if (typeSymbol is INamedTypeSymbol namedType)

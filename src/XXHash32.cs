@@ -2,6 +2,7 @@
 // https://github.com/sator-imaging/ZeroSerializer
 
 using System;
+using System.Text;
 
 namespace ZeroSerializer;
 
@@ -15,7 +16,7 @@ public static class XXHash32
     /// </summary>
     public static uint HashToUInt32(string text)
     {
-        return HashToUInt32(System.Text.Encoding.UTF8.GetBytes(text));
+        return HashToUInt32(Encoding.UTF8.GetBytes(text));
     }
 
     /// <summary>

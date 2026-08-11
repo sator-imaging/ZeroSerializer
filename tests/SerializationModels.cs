@@ -3,6 +3,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+using ZeroSerializer.Tests.EnumTypingModels;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
@@ -285,7 +286,7 @@ public sealed class SchemaSignatureTestsModel
 
     // 5. enum array and flags enum array
     public ByteState[] EnumArray { get; init; }
-    public ZeroSerializer.Tests.EnumTypingModels.UlongBackedOptions[] FlagsEnumArray { get; init; }
+    public UlongBackedOptions[] FlagsEnumArray { get; init; }
 
     // 6. nullable primitives
     public int? NullableInt { get; init; }

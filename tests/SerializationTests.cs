@@ -6,9 +6,10 @@ using System.Buffers.Binary;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using Xunit;
-using ZeroSerializer.Tests.Models;
 using ZeroSerializer;
+using ZeroSerializer.Tests.Models;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
@@ -614,7 +615,7 @@ public sealed class SerializationTests
         string originalString = "Hello, UTF-8 World! 世界";
 
         // 2. Use Utf8Encoding to make it byte array
-        byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(originalString);
+        byte[] utf8Bytes = Encoding.UTF8.GetBytes(originalString);
 
         // 3. Set byte array to payload
         var source = new Utf8Payload(utf8Bytes);
@@ -628,7 +629,7 @@ public sealed class SerializationTests
 
         // 6. Decode deserialized byte[] as string
         ReadOnlySpan<byte> decodedBytes = view.Utf8;
-        string decodedString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+        string decodedString = Encoding.UTF8.GetString(decodedBytes);
 
         // 7. Verify the result
         TestAssert.Equal(originalString, decodedString, "Decoded UTF-8 string matches original");
@@ -909,26 +910,26 @@ public sealed class SerializationTests
         // 1. Assert PrimitiveRecordView shape tag and hash
         string primitiveExpected = "{bool,byte,sbyte,char,short,ushort,int,uint,long,ulong,float,double}";
         Assert.Equal(PrimitiveRecordView.ShapeTag, primitiveExpected);
-        Assert.Equal(PrimitiveRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(primitiveExpected));
+        Assert.Equal(PrimitiveRecordView.ShapeHash, XXHash32.HashToUInt32(primitiveExpected));
 
         // 2. Assert PackedRecordView shape tag and hash
         string packedRecordExpected = "blittable{int,enum:short}";
         Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
-        Assert.Equal(PackedRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(packedRecordExpected));
+        Assert.Equal(PackedRecordView.ShapeHash, XXHash32.HashToUInt32(packedRecordExpected));
 
         // 3. Assert PackedContainerView shape tag and hash
         string packedContainerExpected = "{blittable{int,enum:short},blittable{int,enum:short}?,blittable{int,enum:short}[]}";
         Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
-        Assert.Equal(PackedContainerView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(packedContainerExpected));
+        Assert.Equal(PackedContainerView.ShapeHash, XXHash32.HashToUInt32(packedContainerExpected));
 
         // 4. Assert EnumClassView shape tag and hash
         string enumClassExpected = "{enum:byte,enum:short}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
-        Assert.Equal(EnumClassView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(enumClassExpected));
+        Assert.Equal(EnumClassView.ShapeHash, XXHash32.HashToUInt32(enumClassExpected));
 
         // 5. Assert SchemaSignatureTestsModelView shape tag and hash
         string schemaSignatureExpected = "{blittable{int,enum:short},{int,enum:byte},blittable{int,enum:short}[],{},blittable{},{enum:byte,enum:short}?,enum:byte[],flags:ulong[],int?,bool?}";
         Assert.Equal(SchemaSignatureTestsModelView.ShapeTag, schemaSignatureExpected);
-        Assert.Equal(SchemaSignatureTestsModelView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(schemaSignatureExpected));
+        Assert.Equal(SchemaSignatureTestsModelView.ShapeHash, XXHash32.HashToUInt32(schemaSignatureExpected));
     }
 }
