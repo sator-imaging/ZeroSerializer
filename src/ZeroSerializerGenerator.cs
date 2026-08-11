@@ -921,8 +921,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
-        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(Encoding.UTF8.GetBytes(shapeTag));
-        sourceBuilder.AppendLine($"public const string ShapeTag = \"{EscapeString(shapeTag)}\";");
+        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(shapeTag);
+        sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
