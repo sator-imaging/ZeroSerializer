@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Copy settings from unit testing project.
+  -->
   <PropertyGroup>
     <TargetFrameworks>net10.0;net9.0;net8.0;net7.0;net6.0;net5.0</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -7,10 +11,11 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.3" />
-    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -29,9 +34,10 @@
   -->
   <ItemGroup>
     <Compile Include="../tests/**/*.cs"
-             Exclude="../tests/obj/**/*.cs;
+             Exclude="../tests/UnityCompatibilityTests.cs;
+                      ../tests/DiagnosticTests.cs;
                       ../tests/bin/**/*.cs;
-                      ../tests/UnityCompatibilityTests.cs"
+                      ../tests/obj/**/*.cs"
     />
   </ItemGroup>
 </Project>
