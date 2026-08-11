@@ -93,6 +93,7 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 - **構造体が実質的に Blittable（すべてのフィールドが Blittable 型）である場合**
   - 内側の構造体に `[StructLayout(LayoutKind.Sequential, Pack = 1)]` 属性を付与して完全に Blittable な構造体として定義します。この場合、`[ZeroSerializer]` 属性による修飾がなくても親型から直接 raw payload としてシリアライズ・デシリアライズできるようになります（`MemoryMarshal.Write` / `MemoryMarshal.Read` による高速なコピーが行われ、コンパイルエラー `ZEROS003` も回避できます）。
   - **【重要】** `[ZeroSerializer]` 属性が付与されていないため、このネストされた構造体に対する View 構造体自体は自動生成されません。そのため、親型の View 構造体のプロパティは、ネストされた View ではなく、**デシリアライズされた元の構造体そのもの**（Nullable の場合は `PackedPosition?` など）を直接返します（例：`sandbox` テスト内の `PackedPosition` など）。
+  - **【生成コード内のコメントについて】** このような `[ZeroSerializer]` 未付与のネストされた Blittable 構造体を処理する際、ソースジェネレーターは内部的なフォールバックパスを通るため、生成コード（シリアライズおよびデシリアライズ部）の中に `"Fallback generated unexpectedly. According to the specification, this fallback should not be reached."` や `"Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case)."` といった警告風のコメントが出力されます。これはジェネレーターの実装仕様によるものであり、実際のシリアライズ/デシリアライズ処理自体は `MemoryMarshal` を用いて正常に動作します。
 
 ## null と可変長データ
 
