@@ -753,7 +753,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         // Import common BCL APIs while retaining global qualification for generated and user-defined types.
         sourceBuilder.AppendLine("using System;");
         sourceBuilder.AppendLine("using System.Buffers.Binary;");
-        sourceBuilder.AppendLine("using System.Runtime.CompilerServices;");
         sourceBuilder.AppendLine("using System.Runtime.InteropServices;");
         sourceBuilder.AppendLine();
     }
@@ -848,7 +847,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"{serializedPropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {blittableValueName} = {serializationValueExpression};");
                 if (field.NestedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
+                    sourceBuilder.AppendLine($"global::ZeroSerializer.ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
                 }
                 else
                 {
@@ -1219,7 +1218,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.CloseBlock();
 
         sourceBuilder.AppendLine();
-        sourceBuilder.AppendLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
         sourceBuilder.AppendLine($"{methodAccessibility} static ReadOnlyMemory<byte> AsMemory(this {GetQualifiedViewName(generationModel)} view) => view;");
 
         if (generationModel.IsBlittableStruct)
