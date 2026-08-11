@@ -916,6 +916,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
+        string shapeTag = GetShapeTag(generationModel.Symbol);
+        uint shapeHash = XxHash32(Encoding.UTF8.GetBytes(shapeTag));
+        sourceBuilder.AppendLine($"public const string ShapeTag = \"{EscapeString(shapeTag)}\";");
+        sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
@@ -1486,6 +1490,183 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static string EscapeString(string value)
     {
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    private static string GetShapeTag(ITypeSymbol typeSymbol)
+    {
+        if (typeSymbol is INamedTypeSymbol nullableType
+            && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            var underlying = nullableType.TypeArguments[0];
+            return GetShapeTag(underlying) + "?";
+        }
+
+        if (typeSymbol is IArrayTypeSymbol arrayType)
+        {
+            return GetShapeTag(arrayType.ElementType) + "[]";
+        }
+
+        string primitiveKeyword = GetPrimitiveKeyword(typeSymbol);
+        if (primitiveKeyword.Length > 0)
+        {
+            return primitiveKeyword;
+        }
+
+        if (typeSymbol.TypeKind == TypeKind.Enum && typeSymbol is INamedTypeSymbol enumType)
+        {
+            string prefix = HasFlagsAttribute(enumType) ? "flags::" : "enum::";
+            string underlyingName = GetPrimitiveKeyword(enumType.EnumUnderlyingType);
+            if (underlyingName.Length == 0)
+            {
+                underlyingName = "int";
+            }
+            return prefix + underlyingName;
+        }
+
+        if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind == TypeKind.Class || typeSymbol.TypeKind == TypeKind.Struct))
+        {
+            var fields = new List<string>();
+            foreach (ISymbol declaredMember in namedType.GetMembers())
+            {
+                if (declaredMember is IPropertySymbol serializableProperty
+                    && !serializableProperty.IsStatic
+                    && !serializableProperty.IsIndexer
+                    && serializableProperty.DeclaredAccessibility == Accessibility.Public
+                    && serializableProperty.GetMethod?.DeclaredAccessibility == Accessibility.Public)
+                {
+                    fields.Add(GetShapeTag(serializableProperty.Type));
+                }
+            }
+            return "{" + string.Join(",", fields) + "}";
+        }
+
+        return "";
+    }
+
+    private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
+    {
+        if (typeSymbol == null) return "";
+        switch (typeSymbol.SpecialType)
+        {
+            case SpecialType.System_Boolean: return "bool";
+            case SpecialType.System_Byte: return "byte";
+            case SpecialType.System_SByte: return "sbyte";
+            case SpecialType.System_Char: return "char";
+            case SpecialType.System_Int16: return "short";
+            case SpecialType.System_UInt16: return "ushort";
+            case SpecialType.System_Int32: return "int";
+            case SpecialType.System_UInt32: return "uint";
+            case SpecialType.System_Int64: return "long";
+            case SpecialType.System_UInt64: return "ulong";
+            case SpecialType.System_Single: return "float";
+            case SpecialType.System_Double: return "double";
+            case SpecialType.System_String: return "string";
+            default: return "";
+        }
+    }
+
+    private static bool HasFlagsAttribute(INamedTypeSymbol enumType)
+    {
+        foreach (AttributeData attr in enumType.GetAttributes())
+        {
+            if (attr.AttributeClass is INamedTypeSymbol attrClass &&
+                (attrClass.Name == "Flags" || attrClass.Name == "FlagsAttribute"))
+            {
+                if (attrClass.ContainingNamespace is INamespaceSymbol ns &&
+                    ns.Name == "System" && ns.ContainingNamespace is INamespaceSymbol { IsGlobalNamespace: true })
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static uint XxHash32(byte[] bytes)
+    {
+        unchecked
+        {
+            const uint PRIME32_1 = 0x9E3779B1U;
+            const uint PRIME32_2 = 0x85EBCA77U;
+            const uint PRIME32_3 = 0xC2B2AE3DU;
+            const uint PRIME32_4 = 0x27D4EB2FU;
+            const uint PRIME32_5 = 0x165667B1U;
+
+            int len = bytes.Length;
+            uint h32;
+            int index = 0;
+
+            if (len >= 16)
+            {
+                int limit = len - 16;
+                uint v1 = 0 + PRIME32_1 + PRIME32_2;
+                uint v2 = 0 + PRIME32_2;
+                uint v3 = 0;
+                uint v4 = 0 - PRIME32_1;
+
+                while (index <= limit)
+                {
+                    v1 = XxHash32_Round(v1, XxHash32_Read32(bytes, index)); index += 4;
+                    v2 = XxHash32_Round(v2, XxHash32_Read32(bytes, index)); index += 4;
+                    v3 = XxHash32_Round(v3, XxHash32_Read32(bytes, index)); index += 4;
+                    v4 = XxHash32_Round(v4, XxHash32_Read32(bytes, index)); index += 4;
+                }
+
+                h32 = XxHash32_RotateLeft(v1, 1) + XxHash32_RotateLeft(v2, 7) + XxHash32_RotateLeft(v3, 12) + XxHash32_RotateLeft(v4, 18);
+            }
+            else
+            {
+                h32 = 0 + PRIME32_5;
+            }
+
+            h32 += (uint)len;
+
+            while (index <= len - 4)
+            {
+                h32 += XxHash32_Read32(bytes, index) * PRIME32_3;
+                h32 = XxHash32_RotateLeft(h32, 17) * PRIME32_4;
+                index += 4;
+            }
+
+            while (index < len)
+            {
+                h32 += bytes[index] * PRIME32_5;
+                h32 = XxHash32_RotateLeft(h32, 11) * PRIME32_1;
+                index++;
+            }
+
+            h32 ^= h32 >> 15;
+            h32 *= PRIME32_2;
+            h32 ^= h32 >> 13;
+            h32 *= PRIME32_3;
+            h32 ^= h32 >> 16;
+
+            return h32;
+        }
+    }
+
+    private static uint XxHash32_Round(uint acc, uint lane)
+    {
+        unchecked
+        {
+            acc += lane * 0x85EBCA77U; // PRIME32_2
+            acc = XxHash32_RotateLeft(acc, 13);
+            acc *= 0x9E3779B1U; // PRIME32_1
+            return acc;
+        }
+    }
+
+    private static uint XxHash32_RotateLeft(uint value, int count)
+    {
+        return (value << count) | (value >> (32 - count));
+    }
+
+    private static uint XxHash32_Read32(byte[] bytes, int offset)
+    {
+        return bytes[offset] |
+               ((uint)bytes[offset + 1] << 8) |
+               ((uint)bytes[offset + 2] << 16) |
+               ((uint)bytes[offset + 3] << 24);
     }
 
     private enum FieldSerializationKind
