@@ -912,12 +912,12 @@ public sealed class SerializationTests
         Assert.Equal(PrimitiveRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(primitiveExpected)));
 
         // 2. Assert PackedRecordView shape tag and hash
-        string packedRecordExpected = "{int,enum::short}";
+        string packedRecordExpected = "blittable{int,enum::short}";
         Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
         Assert.Equal(PackedRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedRecordExpected)));
 
         // 3. Assert PackedContainerView shape tag and hash
-        string packedContainerExpected = "{{int,enum::short},{int,enum::short}?,{int,enum::short}[]}";
+        string packedContainerExpected = "{blittable{int,enum::short},blittable{int,enum::short}?,blittable{int,enum::short}[]}";
         Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
         Assert.Equal(PackedContainerView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedContainerExpected)));
 

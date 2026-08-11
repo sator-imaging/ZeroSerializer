@@ -1537,7 +1537,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     fields.Add(GetShapeTag(serializableProperty.Type));
                 }
             }
-            return "{" + string.Join(",", fields) + "}";
+            string prefix = "";
+            if (typeSymbol.TypeKind == TypeKind.Struct && TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
+            {
+                prefix = "blittable";
+            }
+            return prefix + "{" + string.Join(",", fields) + "}";
         }
 
         return "";
