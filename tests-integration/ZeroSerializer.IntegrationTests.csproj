@@ -30,7 +30,8 @@
   </ItemGroup>
 
   <!--
-    Mirror the full test suite from the tests directory by including all test sources, excluding Unity compatibility tests.
+    Mirror the full test suite from the tests directory by including all test sources,
+    excluding Unity compatibility and diagnostic tests.
   -->
   <ItemGroup>
     <Compile Include="../tests/**/*.cs"
