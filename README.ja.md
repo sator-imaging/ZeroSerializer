@@ -91,7 +91,8 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 - **参照型（クラス）や非 Blittable な構造体の場合**
   - ネストされている内側のクラスや構造体に対しても `[ZeroSerializer]` 属性を付与して修飾します。これにより、内側の型もシリアライズ可能となり、親型はネストされた View 経由でそのプロパティを公開できるようになります。
 - **構造体が実質的に Blittable（すべてのフィールドが Blittable 型）である場合**
-  - 内側の構造体に `[StructLayout(LayoutKind.Sequential, Pack = 1)]` 属性を付与して完全に Blittable な構造体として定義します。この場合、`[ZeroSerializer]` 修飾を付与しなくても親型から直接 raw payload として高速に読み書きできるようになり、コンパイルエラーも解消されます（前述の `ZEROS006` / `ZEROS007` を参照してください）。
+  - 内側の構造体に `[StructLayout(LayoutKind.Sequential, Pack = 1)]` 属性を付与して完全に Blittable な構造体として定義します。この場合、`[ZeroSerializer]` 属性による修飾がなくても親型から直接 raw payload としてシリアライズ・デシリアライズできるようになります（`MemoryMarshal.Write` / `MemoryMarshal.Read` による高速なコピーが行われ、コンパイルエラー `ZEROS003` も回避できます）。
+  - **【重要】** `[ZeroSerializer]` 属性が付与されていないため、このネストされた構造体に対する View 構造体自体は自動生成されません。そのため、親型の View 構造体のプロパティは、ネストされた View ではなく、**デシリアライズされた元の構造体そのもの**（Nullable の場合は `PackedPosition?` など）を直接返します（例：`sandbox` テスト内の `PackedPosition` など）。
 
 ## null と可変長データ
 
