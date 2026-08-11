@@ -5,6 +5,7 @@ extern alias Sandbox;
 
 using System;
 using System.Reflection;
+using System.Runtime.Versioning;
 using Xunit;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
@@ -51,7 +52,7 @@ namespace ZeroSerializer.Tests
             Assembly sandboxAssembly = typeof(Sandbox::FixedPacket).Assembly;
 
             // Retrieve TargetFrameworkAttribute
-            var targetFrameworkAttr = sandboxAssembly.GetCustomAttribute<System.Runtime.Versioning.TargetFrameworkAttribute>();
+            var targetFrameworkAttr = sandboxAssembly.GetCustomAttribute<TargetFrameworkAttribute>();
 
             Assert.NotNull(targetFrameworkAttr);
             Assert.Equal(".NETStandard,Version=v2.1", targetFrameworkAttr.FrameworkName);

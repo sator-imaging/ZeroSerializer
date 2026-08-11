@@ -9,10 +9,11 @@ using System.IO.Hashing;
 using System.Runtime.InteropServices;
 using ArmCrc32 = System.Runtime.Intrinsics.Arm.Crc32;
 using X86Crc32 = System.Runtime.Intrinsics.X86.Sse42;
+using ZeroSerializer.Benchmarks;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 
-BenchmarkRunner.Run<ZeroSerializer.Benchmarks.ZeroSerializerBenchmarks>();
+BenchmarkRunner.Run<ZeroSerializerBenchmarks>();
 
 namespace ZeroSerializer.Benchmarks
 {

@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
@@ -752,6 +753,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         // Import common BCL APIs while retaining global qualification for generated and user-defined types.
         sourceBuilder.AppendLine("using System;");
         sourceBuilder.AppendLine("using System.Buffers.Binary;");
+        sourceBuilder.AppendLine("using System.Runtime.CompilerServices;");
         sourceBuilder.AppendLine("using System.Runtime.InteropServices;");
         sourceBuilder.AppendLine();
     }
@@ -846,7 +848,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"{serializedPropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {blittableValueName} = {serializationValueExpression};");
                 if (field.NestedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"global::ZeroSerializer.ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
+                    sourceBuilder.AppendLine($"ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
                 }
                 else
                 {
@@ -921,7 +923,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
-        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(shapeTag);
+        uint shapeHash = XXHash32.HashToUInt32(shapeTag);
         sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
@@ -1217,7 +1219,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.CloseBlock();
 
         sourceBuilder.AppendLine();
-        sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+        sourceBuilder.AppendLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sourceBuilder.AppendLine($"{methodAccessibility} static ReadOnlyMemory<byte> AsMemory(this {GetQualifiedViewName(generationModel)} view) => view;");
 
         if (generationModel.IsBlittableStruct)
@@ -1428,13 +1430,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return true;
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(TypeGenerationModel generationModel)
     {
         return GetQualifiedViewName(generationModel.Symbol);
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetQualifiedViewName(INamedTypeSymbol symbol)
     {
         string generatedNamespaceName = symbol.ContainingNamespace.IsGlobalNamespace
@@ -1443,7 +1445,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return "global::" + generatedNamespaceName + "." + symbol.Name + "View";
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsSerializableType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
     {
         if (typeSymbol is INamedTypeSymbol namedType)
