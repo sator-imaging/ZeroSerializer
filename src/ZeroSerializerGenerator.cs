@@ -1440,30 +1440,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         if (typeSymbol is INamedTypeSymbol namedType)
         {
-            return allSerializableTypes.Contains(namedType) || IsDecoratedWithZeroSerializer(namedType);
-        }
-        return false;
-    }
-
-    private static bool IsDecoratedWithZeroSerializer(ITypeSymbol typeSymbol)
-    {
-        foreach (AttributeData attribute in typeSymbol.OriginalDefinition.GetAttributes())
-        {
-            if (attribute.AttributeClass is INamedTypeSymbol attributeClass &&
-                (attributeClass.Name is SerializerName or SerializerAttributeName))
-            {
-                if (attributeClass.ContainingNamespace is INamespaceSymbol ns)
-                {
-                    if (ns.IsGlobalNamespace)
-                    {
-                        return true;
-                    }
-                    if (ns.Name == SerializerNamespace && ns.ContainingNamespace is INamespaceSymbol { IsGlobalNamespace: true })
-                    {
-                        return true;
-                    }
-                }
-            }
+            return allSerializableTypes.Contains(namedType) || namedType.ContainingNamespace.Name != "System";
         }
         return false;
     }
