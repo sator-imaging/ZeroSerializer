@@ -217,7 +217,7 @@ public struct FixedPacket
     public PackedPosition Position { get; init; }
 }
 
-public enum PacketState : ushort
+public enum PacketState : sbyte  // Use sbyte to verify code generator emitting `unchecked` correctly
 {
     None,
     Ready,
