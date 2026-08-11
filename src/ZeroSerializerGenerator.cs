@@ -24,6 +24,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private const string SerializerExtensionsName = SerializerName + "Extensions";
     private const string SerializerHelperName = SerializerName + "Helper";
     private const string QualifiedSerializerHelperName = "global::" + SerializerNamespace + "." + SerializerHelperName;
+    private const string UnknownShapeTagType = "UNKNOWN";
 
     private static readonly DiagnosticDescriptor UnsupportedSerializableType = new(
         "ZEROS001",
@@ -905,9 +906,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         string viewAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
+        string shapeTag = GetShapeTag(generationModel.Symbol);
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Provides a deserialized view of <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
+        sourceBuilder.AppendLine("/// <remarks>");
+        sourceBuilder.AppendLine($"/// ShapeTag: {shapeTag}");
+        sourceBuilder.AppendLine("/// </remarks>");
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("/// <summary>");
@@ -916,6 +921,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
+        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(shapeTag);
+        sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
+        sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
@@ -1486,6 +1494,104 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static string EscapeString(string value)
     {
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    private static string GetShapeTag(ITypeSymbol typeSymbol)
+    {
+        if (typeSymbol is INamedTypeSymbol nullableType
+            && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            var underlying = nullableType.TypeArguments[0];
+            return GetShapeTag(underlying) + "?";
+        }
+
+        if (typeSymbol is IArrayTypeSymbol arrayType)
+        {
+            return GetShapeTag(arrayType.ElementType) + "[]";
+        }
+
+        string primitiveKeyword = GetPrimitiveKeyword(typeSymbol);
+        if (primitiveKeyword.Length > 0)
+        {
+            return primitiveKeyword;
+        }
+
+        if (typeSymbol.TypeKind == TypeKind.Enum && typeSymbol is INamedTypeSymbol enumType)
+        {
+            string prefix = HasFlagsAttribute(enumType) ? "flags:" : "enum:";
+            string underlyingName = GetPrimitiveKeyword(enumType.EnumUnderlyingType);
+            if (underlyingName.Length == 0)
+            {
+                underlyingName = UnknownShapeTagType;
+            }
+            return prefix + underlyingName;
+        }
+
+        if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind is TypeKind.Class or TypeKind.Struct))
+        {
+            var fields = new List<string>();
+            foreach (ISymbol declaredMember in namedType.GetMembers())
+            {
+                if (declaredMember is IPropertySymbol serializableProperty
+                    && !serializableProperty.IsStatic
+                    && !serializableProperty.IsIndexer
+                    && serializableProperty.DeclaredAccessibility == Accessibility.Public
+                    && serializableProperty.GetMethod?.DeclaredAccessibility == Accessibility.Public)
+                {
+                    fields.Add(GetShapeTag(serializableProperty.Type));
+                }
+            }
+            string prefix = "";
+            if (typeSymbol.TypeKind == TypeKind.Struct && TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
+            {
+                prefix = "blittable";
+            }
+            return prefix + "{" + string.Join(",", fields) + "}";
+        }
+
+        return UnknownShapeTagType;
+    }
+
+    private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
+    {
+        return typeSymbol?.SpecialType switch
+        {
+            SpecialType.System_Boolean => "bool",
+            SpecialType.System_Byte => "byte",
+            SpecialType.System_SByte => "sbyte",
+            SpecialType.System_Char => "char",
+            SpecialType.System_Int16 => "short",
+            SpecialType.System_UInt16 => "ushort",
+            SpecialType.System_Int32 => "int",
+            SpecialType.System_UInt32 => "uint",
+            SpecialType.System_Int64 => "long",
+            SpecialType.System_UInt64 => "ulong",
+            SpecialType.System_Single => "float",
+            SpecialType.System_Double => "double",
+            SpecialType.System_String => "string",
+            _ => string.Empty,
+        };
+    }
+
+    private static bool HasFlagsAttribute(INamedTypeSymbol enumType)
+    {
+        foreach (AttributeData attr in enumType.GetAttributes())
+        {
+            if (attr.AttributeClass is INamedTypeSymbol
+                {
+                    Name: "FlagsAttribute", ContainingNamespace: INamespaceSymbol
+                    {
+                        Name: "System", ContainingNamespace: INamespaceSymbol
+                        {
+                            IsGlobalNamespace: true
+                        }
+                    }
+                })
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private enum FieldSerializationKind

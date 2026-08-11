@@ -902,4 +902,33 @@ public sealed class SerializationTests
                     || receiverType.IsByRef && receiverType.GetElementType() == sourceType;
             });
     }
+
+    [Fact]
+    public void ShapeTagAndHashTests()
+    {
+        // 1. Assert PrimitiveRecordView shape tag and hash
+        string primitiveExpected = "{bool,byte,sbyte,char,short,ushort,int,uint,long,ulong,float,double}";
+        Assert.Equal(PrimitiveRecordView.ShapeTag, primitiveExpected);
+        Assert.Equal(PrimitiveRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(primitiveExpected));
+
+        // 2. Assert PackedRecordView shape tag and hash
+        string packedRecordExpected = "blittable{int,enum:short}";
+        Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
+        Assert.Equal(PackedRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(packedRecordExpected));
+
+        // 3. Assert PackedContainerView shape tag and hash
+        string packedContainerExpected = "{blittable{int,enum:short},blittable{int,enum:short}?,blittable{int,enum:short}[]}";
+        Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
+        Assert.Equal(PackedContainerView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(packedContainerExpected));
+
+        // 4. Assert EnumClassView shape tag and hash
+        string enumClassExpected = "{enum:byte,enum:short}";
+        Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
+        Assert.Equal(EnumClassView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(enumClassExpected));
+
+        // 5. Assert SchemaSignatureTestsModelView shape tag and hash
+        string schemaSignatureExpected = "{blittable{int,enum:short},{int,enum:byte},blittable{int,enum:short}[],{},blittable{},{enum:byte,enum:short}?,enum:byte[],flags:ulong[],int?,bool?}";
+        Assert.Equal(SchemaSignatureTestsModelView.ShapeTag, schemaSignatureExpected);
+        Assert.Equal(SchemaSignatureTestsModelView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(schemaSignatureExpected));
+    }
 }

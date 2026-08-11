@@ -260,6 +260,38 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct EmptyBlittableStruct
+{
+}
+
+[ZeroSerializer]
+public sealed class SchemaSignatureTestsModel
+{
+    // 1. blittable and non-blittable nested type combo
+    public PackedRecord BlittableNested { get; init; }
+    public FixedClass NonBlittableNested { get; init; }
+
+    // 2. blittable struct array
+    public PackedRecord[] BlittableStructArray { get; init; }
+
+    // 3. empty class and empty blittable struct
+    public EmptyClass EmptyClassValue { get; init; }
+    public EmptyBlittableStruct EmptyBlittableStructValue { get; init; }
+
+    // 4. non-blittable nullable struct
+    public EnumStruct? NonBlittableNullableStruct { get; init; }
+
+    // 5. enum array and flags enum array
+    public ByteState[] EnumArray { get; init; }
+    public ZeroSerializer.Tests.EnumTypingModels.UlongBackedOptions[] FlagsEnumArray { get; init; }
+
+    // 6. nullable primitives
+    public int? NullableInt { get; init; }
+    public bool? NullableBool { get; init; }
+}
+
 [ZeroSerializer]
 public sealed class AttributeSyntaxType1
 {
