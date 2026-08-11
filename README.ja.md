@@ -75,6 +75,24 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `ZEROS003` error が発生し、`ZEROS007` は生成エラーが解消されるまで出ません。
 
+### `[ZeroSerializer]` 対象型に未修飾のネスト型が含まれる場合の挙動
+
+`[ZeroSerializer]` が付与されたクラスや構造体が、`[ZeroSerializer]` 属性で修飾されていない非 Blittable なクラスや構造体のプロパティを含んでいる場合、ソースジェネレーターは以下のように動作します。
+
+1. **コンパイルエラー（ZEROS003）の発生**
+   - 対象のプロパティ型は「サポートされていないシリアライズ対象フィールド」と判定され、コンパイルエラー `ZEROS003`（`Field '{0}' has unsupported type '{1}'`）が報告されます。
+2. **コード生成のスキップ**
+   - エラーが発生したため、その親クラス・構造体に対応する View 構造体やシリアライズ用拡張メソッド（`Serialize` メソッドなど）の自動生成はスキップされます。
+
+#### 解決方法
+
+このコンパイルエラーを解消し、正しくシリアライズコードを生成するには以下のいずれかの対応が必要です。
+
+- **参照型（クラス）や非 Blittable な構造体の場合**
+  - ネストされている内側のクラスや構造体に対しても `[ZeroSerializer]` 属性を付与して修飾します。これにより、内側の型もシリアライズ可能となり、親型はネストされた View 経由でそのプロパティを公開できるようになります。
+- **構造体が実質的に Blittable（すべてのフィールドが Blittable 型）である場合**
+  - 内側の構造体に `[StructLayout(LayoutKind.Sequential, Pack = 1)]` 属性を付与して完全に Blittable な構造体として定義します。この場合、`[ZeroSerializer]` 修飾を付与しなくても親型から直接 raw payload として高速に読み書きできるようになり、コンパイルエラーも解消されます（前述の `ZEROS006` / `ZEROS007` を参照してください）。
+
 ## null と可変長データ
 
 string を除く参照型と `Nullable<T>` は NullableType です。C# の nullable annotation にかかわらず参照型は同じ分類になり、値型では `int` と `int?` のように分類が分かれます。
