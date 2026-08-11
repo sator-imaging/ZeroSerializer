@@ -1522,7 +1522,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             string underlyingName = GetPrimitiveKeyword(enumType.EnumUnderlyingType);
             if (underlyingName.Length == 0)
             {
-                underlyingName = "int";
+                underlyingName = UnknownShapeTagType;
             }
             return prefix + underlyingName;
         }
@@ -1554,8 +1554,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
     {
-        if (typeSymbol == null) return "";
-        return typeSymbol.SpecialType switch
+        return typeSymbol?.SpecialType switch
         {
             SpecialType.System_Boolean => "bool",
             SpecialType.System_Byte => "byte",
@@ -1570,7 +1569,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             SpecialType.System_Single => "float",
             SpecialType.System_Double => "double",
             SpecialType.System_String => "string",
-            _ => "",
+            _ => string.Empty,
         };
     }
 

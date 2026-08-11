@@ -262,7 +262,7 @@ public struct StrictBlittableStruct
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
-public struct ZeroLengthBlittableStruct
+public struct EmptyBlittableStruct
 {
 }
 
@@ -278,7 +278,7 @@ public sealed class SchemaSignatureTestsModel
 
     // 3. empty class and empty blittable struct
     public EmptyClass EmptyClassValue { get; init; }
-    public ZeroLengthBlittableStruct ZeroLengthBlittableStructValue { get; init; }
+    public EmptyBlittableStruct EmptyBlittableStructValue { get; init; }
 
     // 4. non-blittable nullable struct
     public EnumStruct? NonBlittableNullableStruct { get; init; }

@@ -15,7 +15,6 @@ public static class XXHash32
     /// </summary>
     public static uint HashToUInt32(string text)
     {
-        if (text == null) throw new ArgumentNullException(nameof(text));
         return HashToUInt32(System.Text.Encoding.UTF8.GetBytes(text));
     }
 
