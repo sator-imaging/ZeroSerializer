@@ -1,4 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Copy these settings to integration test.
+  -->
   <PropertyGroup>
     <TargetFrameworks>net10.0;net9.0;net8.0;net7.0;net6.0;net5.0</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -7,14 +11,6 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../src/ZeroSerializer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="../sandbox/ZeroSerializer.Sandbox.csproj">
-      <Aliases>Sandbox</Aliases>
-    </ProjectReference>
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.3" />
@@ -25,4 +21,18 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!--
+    DO NOT copy project references to integration test.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../src/ZeroSerializer.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="true"
+    />
+    <ProjectReference Include="../sandbox/ZeroSerializer.Sandbox.csproj">
+      <Aliases>Sandbox</Aliases>
+    </ProjectReference>
+  </ItemGroup>
+
 </Project>
