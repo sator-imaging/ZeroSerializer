@@ -1491,11 +1491,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ? "@" + identifier : identifier;
     }
 
-    private static string EscapeString(string value)
-    {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
     private static string GetShapeTag(ITypeSymbol typeSymbol)
     {
         if (typeSymbol is INamedTypeSymbol nullableType
