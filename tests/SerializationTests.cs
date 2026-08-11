@@ -925,5 +925,10 @@ public sealed class SerializationTests
         string enumClassExpected = "{enum::byte,enum::short}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
         Assert.Equal(EnumClassView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(enumClassExpected)));
+
+        // 5. Assert MissingTagTestsModelView shape tag and hash
+        string missingTagExpected = "{blittable{int,enum::short},{int,enum::byte},blittable{int,enum::short}[],{},blittable{},{enum::byte,enum::short}?,enum::byte[],flags::ulong[],int?,bool?}";
+        Assert.Equal(MissingTagTestsModelView.ShapeTag, missingTagExpected);
+        Assert.Equal(MissingTagTestsModelView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(missingTagExpected)));
     }
 }

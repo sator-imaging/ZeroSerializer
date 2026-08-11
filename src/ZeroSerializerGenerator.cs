@@ -905,9 +905,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         string viewAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
+        string shapeTag = GetShapeTag(generationModel.Symbol);
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Provides a deserialized view of <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
+        sourceBuilder.AppendLine("/// <remarks>");
+        sourceBuilder.AppendLine($"/// ShapeTag: {shapeTag}");
+        sourceBuilder.AppendLine("/// </remarks>");
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("/// <summary>");
@@ -916,7 +920,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
-        string shapeTag = GetShapeTag(generationModel.Symbol);
         uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(Encoding.UTF8.GetBytes(shapeTag));
         sourceBuilder.AppendLine($"public const string ShapeTag = \"{EscapeString(shapeTag)}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
