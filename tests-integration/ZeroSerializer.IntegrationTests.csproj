@@ -31,15 +31,15 @@
 
   <!--
     Mirror the full test suite from the tests directory by including all test sources,
-    excluding Unity compatibility and diagnostic tests.
+    excluding Unity compatibility, diagnostic and XXHash32 tests.
   -->
   <ItemGroup>
     <Compile Include="../tests/**/*.cs"
              Exclude="../tests/UnityCompatibilityTests.cs;
                       ../tests/DiagnosticTests.cs;
+                      ../tests/XXHash32Tests.cs;
                       ../tests/bin/**/*.cs;
                       ../tests/obj/**/*.cs"
     />
-    <Compile Include="../src/XXHash32.cs" />
   </ItemGroup>
 </Project>

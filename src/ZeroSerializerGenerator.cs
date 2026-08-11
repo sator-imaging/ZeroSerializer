@@ -24,6 +24,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private const string SerializerExtensionsName = SerializerName + "Extensions";
     private const string SerializerHelperName = SerializerName + "Helper";
     private const string QualifiedSerializerHelperName = "global::" + SerializerNamespace + "." + SerializerHelperName;
+    private const string UnknownShapeTagType = "UNKNOWN";
 
     private static readonly DiagnosticDescriptor UnsupportedSerializableType = new(
         "ZEROS001",
@@ -1517,7 +1518,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (typeSymbol.TypeKind == TypeKind.Enum && typeSymbol is INamedTypeSymbol enumType)
         {
-            string prefix = HasFlagsAttribute(enumType) ? "flags::" : "enum::";
+            string prefix = HasFlagsAttribute(enumType) ? "flags:" : "enum:";
             string underlyingName = GetPrimitiveKeyword(enumType.EnumUnderlyingType);
             if (underlyingName.Length == 0)
             {
@@ -1526,7 +1527,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return prefix + underlyingName;
         }
 
-        if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind == TypeKind.Class || typeSymbol.TypeKind == TypeKind.Struct))
+        if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind is TypeKind.Class or TypeKind.Struct))
         {
             var fields = new List<string>();
             foreach (ISymbol declaredMember in namedType.GetMembers())
@@ -1548,43 +1549,47 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return prefix + "{" + string.Join(",", fields) + "}";
         }
 
-        return "";
+        return UnknownShapeTagType;
     }
 
     private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
     {
         if (typeSymbol == null) return "";
-        switch (typeSymbol.SpecialType)
+        return typeSymbol.SpecialType switch
         {
-            case SpecialType.System_Boolean: return "bool";
-            case SpecialType.System_Byte: return "byte";
-            case SpecialType.System_SByte: return "sbyte";
-            case SpecialType.System_Char: return "char";
-            case SpecialType.System_Int16: return "short";
-            case SpecialType.System_UInt16: return "ushort";
-            case SpecialType.System_Int32: return "int";
-            case SpecialType.System_UInt32: return "uint";
-            case SpecialType.System_Int64: return "long";
-            case SpecialType.System_UInt64: return "ulong";
-            case SpecialType.System_Single: return "float";
-            case SpecialType.System_Double: return "double";
-            case SpecialType.System_String: return "string";
-            default: return "";
-        }
+            SpecialType.System_Boolean => "bool",
+            SpecialType.System_Byte => "byte",
+            SpecialType.System_SByte => "sbyte",
+            SpecialType.System_Char => "char",
+            SpecialType.System_Int16 => "short",
+            SpecialType.System_UInt16 => "ushort",
+            SpecialType.System_Int32 => "int",
+            SpecialType.System_UInt32 => "uint",
+            SpecialType.System_Int64 => "long",
+            SpecialType.System_UInt64 => "ulong",
+            SpecialType.System_Single => "float",
+            SpecialType.System_Double => "double",
+            SpecialType.System_String => "string",
+            _ => "",
+        };
     }
 
     private static bool HasFlagsAttribute(INamedTypeSymbol enumType)
     {
         foreach (AttributeData attr in enumType.GetAttributes())
         {
-            if (attr.AttributeClass is INamedTypeSymbol attrClass &&
-                (attrClass.Name == "Flags" || attrClass.Name == "FlagsAttribute"))
-            {
-                if (attrClass.ContainingNamespace is INamespaceSymbol ns &&
-                    ns.Name == "System" && ns.ContainingNamespace is INamespaceSymbol { IsGlobalNamespace: true })
+            if (attr.AttributeClass is INamedTypeSymbol
                 {
-                    return true;
-                }
+                    Name: "FlagsAttribute", ContainingNamespace: INamespaceSymbol
+                    {
+                        Name: "System", ContainingNamespace: INamespaceSymbol
+                        {
+                            IsGlobalNamespace: true
+                        }
+                    }
+                })
+            {
+                return true;
             }
         }
         return false;

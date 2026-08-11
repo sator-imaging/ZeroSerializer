@@ -262,12 +262,12 @@ public struct StrictBlittableStruct
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
-public struct EmptyBlittableStruct
+public struct ZeroLengthBlittableStruct
 {
 }
 
 [ZeroSerializer]
-public sealed class MissingTagTestsModel
+public sealed class SchemaSignatureTestsModel
 {
     // 1. blittable and non-blittable nested type combo
     public PackedRecord BlittableNested { get; init; }
@@ -278,7 +278,7 @@ public sealed class MissingTagTestsModel
 
     // 3. empty class and empty blittable struct
     public EmptyClass EmptyClassValue { get; init; }
-    public EmptyBlittableStruct EmptyBlittableStructValue { get; init; }
+    public ZeroLengthBlittableStruct ZeroLengthBlittableStructValue { get; init; }
 
     // 4. non-blittable nullable struct
     public EnumStruct? NonBlittableNullableStruct { get; init; }

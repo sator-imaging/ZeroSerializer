@@ -21,10 +21,10 @@ public sealed class XXHash32Tests
         FillTestBuffer(sanityBuffer);
 
         // Test vectors for seed = 0
-        Assert.Equal(0x02CC5D05U, XXHash32.HashToUInt32(Array.Empty<byte>()));
-        Assert.Equal(0xCF65B03EU, XXHash32.HashToUInt32(SubArray(sanityBuffer, 1)));
-        Assert.Equal(0x1208E7E2U, XXHash32.HashToUInt32(SubArray(sanityBuffer, 14)));
-        Assert.Equal(0x5BD11DBDU, XXHash32.HashToUInt32(SubArray(sanityBuffer, 222)));
+        Assert.Equal(0x02CC5D05U, XXHash32.HashToUInt32(ReadOnlySpan<byte>.Empty));
+        Assert.Equal(0xCF65B03EU, XXHash32.HashToUInt32(sanityBuffer.AsSpan(0, 1)));
+        Assert.Equal(0x1208E7E2U, XXHash32.HashToUInt32(sanityBuffer.AsSpan(0, 14)));
+        Assert.Equal(0x5BD11DBDU, XXHash32.HashToUInt32(sanityBuffer.AsSpan(0, 222)));
     }
 
     private static void FillTestBuffer(byte[] buffer)
@@ -38,12 +38,5 @@ public sealed class XXHash32Tests
                 byteGen *= PRIME64;
             }
         }
-    }
-
-    private static byte[] SubArray(byte[] source, int length)
-    {
-        byte[] result = new byte[length];
-        Array.Copy(source, result, length);
-        return result;
     }
 }

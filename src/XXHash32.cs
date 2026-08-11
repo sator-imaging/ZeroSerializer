@@ -11,9 +11,18 @@ namespace ZeroSerializer;
 public static class XXHash32
 {
     /// <summary>
-    /// Computes the xxHash32 hash of the provided byte array with seed 0.
+    /// Computes the xxHash32 hash of the provided string as UTF-8 with seed 0.
     /// </summary>
-    public static uint HashToUInt32(byte[] bytes)
+    public static uint HashToUInt32(string text)
+    {
+        if (text == null) throw new ArgumentNullException(nameof(text));
+        return HashToUInt32(System.Text.Encoding.UTF8.GetBytes(text));
+    }
+
+    /// <summary>
+    /// Computes the xxHash32 hash of the provided byte span with seed 0.
+    /// </summary>
+    public static uint HashToUInt32(ReadOnlySpan<byte> bytes)
     {
         unchecked
         {
@@ -92,7 +101,7 @@ public static class XXHash32
         return (value << count) | (value >> (32 - count));
     }
 
-    private static uint Read32(byte[] bytes, int offset)
+    private static uint Read32(ReadOnlySpan<byte> bytes, int offset)
     {
         return bytes[offset] |
                ((uint)bytes[offset + 1] << 8) |
