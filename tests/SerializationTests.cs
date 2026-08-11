@@ -909,92 +909,21 @@ public sealed class SerializationTests
         // 1. Assert PrimitiveRecordView shape tag and hash
         string primitiveExpected = "{bool,byte,sbyte,char,short,ushort,int,uint,long,ulong,float,double}";
         Assert.Equal(PrimitiveRecordView.ShapeTag, primitiveExpected);
-        Assert.Equal(PrimitiveRecordView.ShapeHash, XxHash32(System.Text.Encoding.UTF8.GetBytes(primitiveExpected)));
+        Assert.Equal(PrimitiveRecordView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(primitiveExpected)));
 
         // 2. Assert PackedRecordView shape tag and hash
         string packedRecordExpected = "{int,enum::short}";
         Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
-        Assert.Equal(PackedRecordView.ShapeHash, XxHash32(System.Text.Encoding.UTF8.GetBytes(packedRecordExpected)));
+        Assert.Equal(PackedRecordView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedRecordExpected)));
 
         // 3. Assert PackedContainerView shape tag and hash
         string packedContainerExpected = "{{int,enum::short},{int,enum::short}?,{int,enum::short}[]}";
         Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
-        Assert.Equal(PackedContainerView.ShapeHash, XxHash32(System.Text.Encoding.UTF8.GetBytes(packedContainerExpected)));
+        Assert.Equal(PackedContainerView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedContainerExpected)));
 
         // 4. Assert EnumClassView shape tag and hash
         string enumClassExpected = "{enum::byte,enum::short}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
-        Assert.Equal(EnumClassView.ShapeHash, XxHash32(System.Text.Encoding.UTF8.GetBytes(enumClassExpected)));
-    }
-
-    private static uint XxHash32(byte[] bytes)
-    {
-        unchecked
-        {
-            const uint PRIME32_1 = 0x9E3779B1U;
-            const uint PRIME32_2 = 0x85EBCA77U;
-            const uint PRIME32_3 = 0xC2B2AE3DU;
-            const uint PRIME32_4 = 0x27D4EB2FU;
-            const uint PRIME32_5 = 0x165667B1U;
-
-            int len = bytes.Length;
-            uint h32;
-            int index = 0;
-
-            if (len >= 16)
-            {
-                int limit = len - 16;
-                uint v1 = 0 + PRIME32_1 + PRIME32_2;
-                uint v2 = 0 + PRIME32_2;
-                uint v3 = 0;
-                uint v4 = 0 - PRIME32_1;
-
-                while (index <= limit)
-                {
-                    v1 = (v1 + Read32(bytes, index) * PRIME32_2); v1 = ((v1 << 13) | (v1 >> 19)) * PRIME32_1; index += 4;
-                    v2 = (v2 + Read32(bytes, index) * PRIME32_2); v2 = ((v2 << 13) | (v2 >> 19)) * PRIME32_1; index += 4;
-                    v3 = (v3 + Read32(bytes, index) * PRIME32_2); v3 = ((v3 << 13) | (v3 >> 19)) * PRIME32_1; index += 4;
-                    v4 = (v4 + Read32(bytes, index) * PRIME32_2); v4 = ((v4 << 13) | (v4 >> 19)) * PRIME32_1; index += 4;
-                }
-
-                h32 = ((v1 << 1) | (v1 >> 31)) + ((v2 << 7) | (v2 >> 25)) + ((v3 << 12) | (v3 >> 20)) + ((v4 << 18) | (v4 >> 14));
-            }
-            else
-            {
-                h32 = 0 + PRIME32_5;
-            }
-
-            h32 += (uint)len;
-
-            while (index <= len - 4)
-            {
-                h32 += Read32(bytes, index) * PRIME32_3;
-                h32 = ((h32 << 17) | (h32 >> 15)) * PRIME32_4;
-                index += 4;
-            }
-
-            while (index < len)
-            {
-                h32 += bytes[index] * PRIME32_5;
-                h32 = ((h32 << 11) | (h32 >> 21)) * PRIME32_1;
-                index++;
-            }
-
-            h32 ^= h32 >> 15;
-            h32 *= PRIME32_2;
-            h32 ^= h32 >> 13;
-            h32 *= PRIME32_3;
-            h32 ^= h32 >> 16;
-
-            return h32;
-        }
-    }
-
-    private static uint Read32(byte[] bytes, int offset)
-    {
-        return bytes[offset] |
-               ((uint)bytes[offset + 1] << 8) |
-               ((uint)bytes[offset + 2] << 16) |
-               ((uint)bytes[offset + 3] << 24);
+        Assert.Equal(EnumClassView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(enumClassExpected)));
     }
 }
