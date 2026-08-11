@@ -917,7 +917,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         string shapeTag = GetShapeTag(generationModel.Symbol);
-        uint shapeHash = XxHash32(Encoding.UTF8.GetBytes(shapeTag));
+        uint shapeHash = ZeroSerializer.XXHash32.HashToUInt32(Encoding.UTF8.GetBytes(shapeTag));
         sourceBuilder.AppendLine($"public const string ShapeTag = \"{EscapeString(shapeTag)}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
@@ -1580,11 +1580,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
         }
         return false;
-    }
-
-    private static uint XxHash32(byte[] bytes)
-    {
-        return System.IO.Hashing.XxHash32.HashToUInt32(bytes);
     }
 
     private enum FieldSerializationKind

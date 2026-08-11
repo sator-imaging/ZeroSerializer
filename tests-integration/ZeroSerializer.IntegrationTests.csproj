@@ -40,5 +40,6 @@
                       ../tests/bin/**/*.cs;
                       ../tests/obj/**/*.cs"
     />
+    <Compile Include="../src/XXHash32.cs" />
   </ItemGroup>
 </Project>

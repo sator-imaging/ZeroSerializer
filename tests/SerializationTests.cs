@@ -909,21 +909,21 @@ public sealed class SerializationTests
         // 1. Assert PrimitiveRecordView shape tag and hash
         string primitiveExpected = "{bool,byte,sbyte,char,short,ushort,int,uint,long,ulong,float,double}";
         Assert.Equal(PrimitiveRecordView.ShapeTag, primitiveExpected);
-        Assert.Equal(PrimitiveRecordView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(primitiveExpected)));
+        Assert.Equal(PrimitiveRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(primitiveExpected)));
 
         // 2. Assert PackedRecordView shape tag and hash
         string packedRecordExpected = "{int,enum::short}";
         Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
-        Assert.Equal(PackedRecordView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedRecordExpected)));
+        Assert.Equal(PackedRecordView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedRecordExpected)));
 
         // 3. Assert PackedContainerView shape tag and hash
         string packedContainerExpected = "{{int,enum::short},{int,enum::short}?,{int,enum::short}[]}";
         Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
-        Assert.Equal(PackedContainerView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedContainerExpected)));
+        Assert.Equal(PackedContainerView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(packedContainerExpected)));
 
         // 4. Assert EnumClassView shape tag and hash
         string enumClassExpected = "{enum::byte,enum::short}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
-        Assert.Equal(EnumClassView.ShapeHash, System.IO.Hashing.XxHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(enumClassExpected)));
+        Assert.Equal(EnumClassView.ShapeHash, ZeroSerializer.XXHash32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(enumClassExpected)));
     }
 }

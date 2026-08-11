@@ -9,25 +9,16 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
   </PropertyGroup>
 
   <!-- https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#package-a-generator-as-a-nuget-package -->
   <ItemGroup Condition=" Exists('$(OutputPath)/$(AssemblyName).dll') ">
     <!-- Package the generator in the analyzer directory of the nuget package -->
     <None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="$(PkgSystem_IO_Hashing)\lib\netstandard2.0\System.IO.Hashing.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0" PrivateAssets="all" />
-    <PackageReference Include="System.IO.Hashing" Version="8.0.0" PrivateAssets="all" GeneratePathProperty="true" />
   </ItemGroup>
-
-  <Target Name="GetDependencyTargetPaths">
-    <ItemGroup>
-      <TargetPathWithTargetPlatformMoniker Include="$(PkgSystem_IO_Hashing)\lib\netstandard2.0\System.IO.Hashing.dll" IncludeRuntimeDependency="false" />
-    </ItemGroup>
-  </Target>
 
 </Project>
