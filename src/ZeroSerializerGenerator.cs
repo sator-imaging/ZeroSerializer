@@ -1539,7 +1539,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind is TypeKind.Class or TypeKind.Struct))
         {
-            string prefix = "";
+            string prefix = string.Empty;
             if (typeSymbol.TypeKind == TypeKind.Struct && TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
             {
                 prefix = "blittable";
