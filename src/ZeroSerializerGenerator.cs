@@ -961,7 +961,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (generationModel.EmitShapeTag)
         {
             sourceBuilder.AppendLine("/// <remarks>");
-            sourceBuilder.AppendLine($"/// ShapeTag: {shapeTag}");
+            sourceBuilder.AppendLine($"/// ShapeTag: `{shapeTag}`");
             sourceBuilder.AppendLine("/// </remarks>");
         }
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
