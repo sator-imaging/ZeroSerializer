@@ -60,7 +60,7 @@ field offset は型の先頭からの相対位置で、`0` は null を表しま
 対応する値は次のとおりです。
 
 - Blittable primitive と enum。enum の wire representation は underlying type ですが、View プロパティーは宣言された enum 型を保持します。
-- `[StructLayout(LayoutKind.Sequential, Pack = 1)]` を再帰的に満たす Blittable Struct。
+- `[ZeroSerializer]` と `[StructLayout(LayoutKind.Sequential, Pack = 1)]` を再帰的に満たす Blittable Struct。
 - `string`。
 - 一次元配列。要素は Blittable primitive、enum、または Blittable Struct に限定されます。
 - `[ZeroSerializer]` を付けたネスト型。非 Blittable Struct はネストした View として公開されます。
@@ -75,25 +75,7 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `ZEROS003` error が発生し、`ZEROS007` は生成エラーが解消されるまで出ません。
 
-### `[ZeroSerializer]` 対象型に未修飾のネスト型が含まれる場合の挙動
-
-`[ZeroSerializer]` が付与されたクラスや構造体が、`[ZeroSerializer]` 属性で修飾されていない非 Blittable なクラスや構造体のプロパティを含んでいる場合、ソースジェネレーターは以下のように動作します。
-
-1. **コンパイルエラー（ZEROS003）の発生**
-   - 対象のプロパティ型は「サポートされていないシリアライズ対象フィールド」と判定され、コンパイルエラー `ZEROS003`（`Field '{0}' has unsupported type '{1}'`）が報告されます。
-2. **コード生成のスキップ**
-   - エラーが発生したため、その親クラス・構造体に対応する View 構造体やシリアライズ用拡張メソッド（`Serialize` メソッドなど）の自動生成はスキップされます。
-
-#### 解決方法
-
-このコンパイルエラーを解消し、正しくシリアライズコードを生成するには以下のいずれかの対応が必要です。
-
-- **参照型（クラス）や非 Blittable な構造体の場合**
-  - ネストされている内側のクラスや構造体に対しても `[ZeroSerializer]` 属性を付与して修飾します。これにより、内側の型もシリアライズ可能となり、親型はネストされた View 経由でそのプロパティを公開できるようになります。
-- **構造体が実質的に Blittable（すべてのフィールドが Blittable 型）である場合**
-  - 内側の構造体に `[StructLayout(LayoutKind.Sequential, Pack = 1)]` 属性を付与して完全に Blittable な構造体として定義します。この場合、`[ZeroSerializer]` 属性による修飾がなくても親型から直接 raw payload としてシリアライズ・デシリアライズできるようになります（`MemoryMarshal.Write` / `MemoryMarshal.Read` による高速なコピーが行われ、コンパイルエラー `ZEROS003` も回避できます）。
-  - **【重要】** `[ZeroSerializer]` 属性が付与されていないため、このネストされた構造体に対する View 構造体自体は自動生成されません。そのため、親型の View 構造体のプロパティは、ネストされた View ではなく、**デシリアライズされた元の構造体そのもの**（Nullable の場合は `PackedPosition?` など）を直接返します（例：`tests-unity` テスト内の `PackedPosition` など）。
-  - **【生成コード内のコメントについて】** このような `[ZeroSerializer]` 未付与のネストされた Blittable 構造体を処理する際、ソースジェネレーターは内部的なフォールバックパスを通るため、生成コード（シリアライズおよびデシリアライズ部）の中に `"Fallback generated unexpectedly. According to the specification, this fallback should not be reached."` や `"Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case)."` といった警告風のコメントが出力されます。これはジェネレーターの実装仕様によるものであり、実際のシリアライズ/デシリアライズ処理自体は `MemoryMarshal` を用いて正常に動作します。
+ネストした class/struct にも `[ZeroSerializer]` が必要です。未修飾の型は `ZEROS003` error になります。
 
 ## null と可変長データ
 

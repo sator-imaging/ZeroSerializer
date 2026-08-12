@@ -55,7 +55,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor InvalidBlittableArrayElement = new(
         "ZEROS004",
         "Invalid blittable array element",
-        "Array field '{0}' requires a primitive, enum, or a struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)",
+        "Array field '{0}' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -400,23 +400,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     isNullableType: true);
             }
 
-            if (TryGetFixedTypeByteCount(
-                    nullableUnderlyingType,
+            if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying
+                && IsSerializableType(namedUnderlying, allSerializableTypes)
+                && TryGetFixedTypeByteCount(
+                    namedUnderlying,
                     new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
                     out int nullableStructByteCount))
             {
-                INamedTypeSymbol? nestedSerializableType = null;
-                if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying && IsSerializableType(namedUnderlying, allSerializableTypes))
-                {
-                    nestedSerializableType = namedUnderlying;
-                }
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
                 return new FieldGenerationModel(
                     serializableProperty,
                     FieldSerializationKind.BlittableStruct,
                     nullableStructByteCount,
                     null,
-                    nestedSerializableType,
+                    namedUnderlying,
                     nullableUnderlyingType,
                     isNullableType: true);
             }
@@ -449,6 +446,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
             }
 
+            if (arrayType.ElementType is INamedTypeSymbol { TypeKind: TypeKind.Struct } arrayElementStruct
+                && arrayElementStruct.SpecialType == SpecialType.None
+                && !IsSerializableType(arrayElementStruct, allSerializableTypes))
+            {
+                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+            }
+
             if (!TryGetFixedTypeByteCount(arrayType.ElementType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int elementByteCount))
             {
                 return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
@@ -477,15 +481,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, enumByteCount, null, null);
         }
 
-        if (TryGetFixedTypeByteCount(serializableProperty.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
+        if (serializableProperty.Type is INamedTypeSymbol namedFixedType
+            && IsSerializableType(namedFixedType, allSerializableTypes)
+            && TryGetFixedTypeByteCount(namedFixedType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
         {
-            INamedTypeSymbol? nestedSerializableType = null;
-            if (serializableProperty.Type is INamedTypeSymbol namedType && IsSerializableType(namedType, allSerializableTypes))
-            {
-                nestedSerializableType = namedType;
-            }
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, nestedSerializableType);
+            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, namedFixedType);
         }
 
         if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))

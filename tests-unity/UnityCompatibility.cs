@@ -229,11 +229,11 @@ public enum PacketState : sbyte  // Use sbyte to verify code generator emitting 
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
 public struct PackedPosition
 {
-    public int X;
-
-    public int Y;
+    public int X { get; init; }
+    public int Y { get; init; }
 }
 
 [ZeroSerializer]
