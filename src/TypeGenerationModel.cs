@@ -15,6 +15,7 @@ internal sealed class TypeGenerationModel
         string qualifiedSourceTypeName,
         string viewTypeName,
         bool isEffectivelyPublic,
+        bool emitShapeTag,
         bool isBlittableStruct,
         int blittableStructByteCount)
     {
@@ -22,6 +23,7 @@ internal sealed class TypeGenerationModel
         QualifiedSourceTypeName = qualifiedSourceTypeName;
         ViewTypeName = viewTypeName;
         IsEffectivelyPublic = isEffectivelyPublic;
+        EmitShapeTag = emitShapeTag;
         IsBlittableStruct = isBlittableStruct;
         BlittableStructByteCount = blittableStructByteCount;
     }
@@ -33,6 +35,8 @@ internal sealed class TypeGenerationModel
     internal string ViewTypeName { get; }
 
     internal bool IsEffectivelyPublic { get; }
+
+    internal bool EmitShapeTag { get; }
 
     internal bool IsBlittableStruct { get; }
 

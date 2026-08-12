@@ -111,6 +111,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         injectedAttributeSourceBuilder.AppendLine("    Inherited = false)]");
         injectedAttributeSourceBuilder.AppendLine($"internal sealed class {SerializerAttributeName} : Attribute");
         injectedAttributeSourceBuilder.OpenBlock();
+        injectedAttributeSourceBuilder.AppendLine("[Obsolete(\"Emitting string representation of the type will expose internal details in the resulting assembly. Consider using `ShapeHash` instead, or using `#if DEBUG` directive to prevent emitting on release build.\")]");
+        injectedAttributeSourceBuilder.AppendLine("public bool EmitShapeTag;");
+        injectedAttributeSourceBuilder.AppendLine();
+        injectedAttributeSourceBuilder.AppendLine($"public {SerializerAttributeName}() {{ }}");
         injectedAttributeSourceBuilder.CloseBlock();
         injectedAttributeSourceBuilder.CloseBlock();
         executionContext.AddSource(
@@ -285,6 +289,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             qualifiedSourceTypeName,
             serializableType.Name + "View",
             IsEffectivelyPublic(serializableType),
+            ShouldEmitShapeTag(serializableType),
             isBlittableStruct,
             isBlittableStruct ? blittableStructByteCount : 0);
 
@@ -363,6 +368,46 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         return generationModel;
+    }
+
+    private static bool ShouldEmitShapeTag(INamedTypeSymbol serializableType)
+    {
+        foreach (SyntaxReference syntaxReference in serializableType.DeclaringSyntaxReferences)
+        {
+            if (syntaxReference.GetSyntax() is not TypeDeclarationSyntax declaration)
+            {
+                continue;
+            }
+
+            foreach (AttributeListSyntax attributeList in declaration.AttributeLists)
+            {
+                foreach (AttributeSyntax attribute in attributeList.Attributes)
+                {
+                    string attributeName = attribute.Name.ToString();
+                    if (!attributeName.EndsWith(SerializerName, StringComparison.Ordinal) &&
+                        !attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (attribute.ArgumentList == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (AttributeArgumentSyntax argument in attribute.ArgumentList.Arguments)
+                    {
+                        if (argument.NameEquals?.Name.Identifier.ValueText == "EmitShapeTag" &&
+                            argument.Expression.IsKind(SyntaxKind.TrueLiteralExpression))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     private static FieldGenerationModel? CreatePropertyGenerationModel(
@@ -913,9 +958,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Provides a deserialized view of <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
-        sourceBuilder.AppendLine("/// <remarks>");
-        sourceBuilder.AppendLine($"/// ShapeTag: {shapeTag}");
-        sourceBuilder.AppendLine("/// </remarks>");
+        if (generationModel.EmitShapeTag)
+        {
+            sourceBuilder.AppendLine("/// <remarks>");
+            sourceBuilder.AppendLine($"/// ShapeTag: {shapeTag}");
+            sourceBuilder.AppendLine("/// </remarks>");
+        }
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("/// <summary>");
@@ -925,7 +973,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         uint shapeHash = XXHash32.HashToUInt32(shapeTag);
-        sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
+        if (!generationModel.EmitShapeTag)
+        {
+            sourceBuilder.AppendLine("// To emit this, `set EmitShapeTag = true` on ZeroSerializerAttribute.");
+        }
+        sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "// " : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
