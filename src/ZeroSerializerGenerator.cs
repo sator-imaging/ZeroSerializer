@@ -1019,19 +1019,37 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField)};");
                 sourceBuilder.CloseBlock();
-                sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("// Fallback for null/empty trailing fields in variable-length types.");
-                for (int i = fieldCount - 2; i >= 0; i--)
+                if (fieldCount > 1)
                 {
-                    var field = generationModel.Fields[i];
-                    sourceBuilder.AppendLine($"offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
-                    sourceBuilder.AppendLine("if (offset > 0)");
+                    sourceBuilder.AppendLine();
+                    sourceBuilder.AppendLine("return GetFallbackByteLength(serializedMemory);");
+                    sourceBuilder.AppendLine();
+                    sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+                    sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlyMemory<byte> serializedMemory)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(field)};");
+                    sourceBuilder.AppendLine("int fallbackOffset;");
+                    for (int i = fieldCount - 2; i >= 0; i--)
+                    {
+                        var field = generationModel.Fields[i];
+                        sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
+                        sourceBuilder.AppendLine("if (fallbackOffset > 0)");
+                        sourceBuilder.OpenBlock();
+                        sourceBuilder.AppendLine($"int offset = fallbackOffset; // map to 'offset' for GetFieldLengthExpression");
+                        sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field)};");
+                        sourceBuilder.CloseBlock();
+                    }
+                    sourceBuilder.AppendLine($"return {fieldCount * 4};");
                     sourceBuilder.CloseBlock();
                 }
+                else
+                {
+                    sourceBuilder.AppendLine($"return {fieldCount * 4};");
+                }
             }
-            sourceBuilder.AppendLine($"return {fieldCount * 4};");
+            else
+            {
+                sourceBuilder.AppendLine("return 0;");
+            }
             sourceBuilder.CloseBlock();
         }
         for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)

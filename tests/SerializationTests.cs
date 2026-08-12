@@ -1058,6 +1058,16 @@ public sealed class SerializationTests
             var viewNull = new VariableStructWithPrimitiveAtEndView(buffer);
             TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength with null text");
         }
+
+        // 4. All nullable properties are null
+        {
+            var source = new StringOnlyRecord { Text = null };
+            var buffer = new byte[16];
+            int writtenBytes = source.Serialize(buffer);
+            var view = new StringOnlyRecordView(buffer);
+            TestAssert.Equal(4, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null");
+            TestAssert.Equal(writtenBytes, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null matches writtenBytes");
+        }
     }
 
     private static MethodInfo GetSerializeMethod(Type sourceType)
