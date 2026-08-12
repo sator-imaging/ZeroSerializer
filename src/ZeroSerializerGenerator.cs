@@ -26,6 +26,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private const string SerializerHelperName = SerializerName + "Helper";
     private const string QualifiedSerializerHelperName = "global::" + SerializerNamespace + "." + SerializerHelperName;
     private const string UnknownShapeTagType = "UNKNOWN";
+    private const string ShapeTagVersionPrefix = "v1/";  // Not shape tag version, This is serialize format version
 
     private static readonly DiagnosticDescriptor UnsupportedSerializableType = new(
         "ZEROS001",
@@ -907,7 +908,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
         string viewAccessibility = generationModel.IsEffectivelyPublic ? "public" : "internal";
-        string shapeTag = GetShapeTag(generationModel.Symbol);
+        string shapeTag = CreateShapeTag(generationModel.Symbol);
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Provides a deserialized view of <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>.");
         sourceBuilder.AppendLine("/// </summary>");
@@ -1492,24 +1493,36 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ? "@" + identifier : identifier;
     }
 
-    private static string GetShapeTag(ITypeSymbol typeSymbol)
+    private static string CreateShapeTag(ITypeSymbol typeSymbol)
+    {
+        var shapeTagBuilder = new StringBuilder();
+        CreateShapeTag(typeSymbol, shapeTagBuilder);
+        return ShapeTagVersionPrefix + shapeTagBuilder.ToString();
+    }
+
+    private static void CreateShapeTag(ITypeSymbol typeSymbol, StringBuilder shapeTagBuilder)
     {
         if (typeSymbol is INamedTypeSymbol nullableType
             && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
         {
             var underlying = nullableType.TypeArguments[0];
-            return GetShapeTag(underlying) + "?";
+            CreateShapeTag(underlying, shapeTagBuilder);
+            shapeTagBuilder.Append('?');
+            return;
         }
 
         if (typeSymbol is IArrayTypeSymbol arrayType)
         {
-            return GetShapeTag(arrayType.ElementType) + "[]";
+            CreateShapeTag(arrayType.ElementType, shapeTagBuilder);
+            shapeTagBuilder.Append("[]");
+            return;
         }
 
         string primitiveKeyword = GetPrimitiveKeyword(typeSymbol);
         if (primitiveKeyword.Length > 0)
         {
-            return primitiveKeyword;
+            shapeTagBuilder.Append(primitiveKeyword);
+            return;
         }
 
         if (typeSymbol.TypeKind == TypeKind.Enum && typeSymbol is INamedTypeSymbol enumType)
@@ -1520,12 +1533,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 underlyingName = UnknownShapeTagType;
             }
-            return prefix + underlyingName;
+            shapeTagBuilder.Append(prefix);
+            shapeTagBuilder.Append(underlyingName);
+            return;
         }
 
         if (typeSymbol is INamedTypeSymbol namedType && (typeSymbol.TypeKind is TypeKind.Class or TypeKind.Struct))
         {
-            var fields = new List<string>();
+            string prefix = string.Empty;
+            if (typeSymbol.TypeKind == TypeKind.Struct && TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
+            {
+                prefix = "blittable";
+            }
+            shapeTagBuilder.Append(prefix);
+            shapeTagBuilder.Append('{');
+            bool hasField = false;
             foreach (ISymbol declaredMember in namedType.GetMembers())
             {
                 if (declaredMember is IPropertySymbol serializableProperty
@@ -1534,18 +1556,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     && serializableProperty.DeclaredAccessibility == Accessibility.Public
                     && serializableProperty.GetMethod?.DeclaredAccessibility == Accessibility.Public)
                 {
-                    fields.Add(GetShapeTag(serializableProperty.Type));
+                    if (hasField)
+                    {
+                        shapeTagBuilder.Append(',');
+                    }
+                    CreateShapeTag(serializableProperty.Type, shapeTagBuilder);
+                    hasField = true;
                 }
             }
-            string prefix = "";
-            if (typeSymbol.TypeKind == TypeKind.Struct && TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
-            {
-                prefix = "blittable";
-            }
-            return prefix + "{" + string.Join(",", fields) + "}";
+            shapeTagBuilder.Append('}');
+            return;
         }
 
-        return UnknownShapeTagType;
+        shapeTagBuilder.Append(UnknownShapeTagType);
     }
 
     private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
