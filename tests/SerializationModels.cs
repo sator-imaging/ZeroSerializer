@@ -300,6 +300,13 @@ public struct EmptyBlittableStruct
 {
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public sealed class SequentialPackOneClass
+{
+    public int Value { get; init; }
+}
+
 [ZeroSerializer(EmitShapeTag = true)]
 public sealed class SchemaSignatureTestsModel
 {
