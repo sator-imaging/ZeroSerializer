@@ -4,7 +4,6 @@
 using System;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
-using SandboxModels;
 using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
@@ -12,7 +11,7 @@ using ZeroSerializer;
 #pragma warning disable CEK003  // Collection expression text length must be 12 or fewer characters
 #pragma warning disable CEK005  // Collection expressions must be empty
 
-// The sandbox compiles every successful public wire shape against netstandard2.1; diagnostic failures remain test-project cases because they intentionally prevent compilation.
+// This project compiles every successful public wire shape against netstandard2.1; diagnostic failures remain test-project cases because they intentionally prevent compilation.
 var fixedPacket = new FixedPacket
 {
     BooleanValue = true,
@@ -34,7 +33,7 @@ var fixedBuffer = new byte[FixedPacketView.RequiredByteLength];
 int fixedWrittenByteCount = fixedPacket.Serialize(fixedBuffer);
 var fixedView = new FixedPacketView(fixedBuffer);
 
-RequireSandboxCondition(
+RequireCondition(
     fixedWrittenByteCount == FixedPacketView.RequiredByteLength
     && fixedView.BooleanValue == fixedPacket.BooleanValue
     && fixedView.ByteValue == fixedPacket.ByteValue
@@ -55,7 +54,7 @@ RequireSandboxCondition(
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
 ReadOnlyMemory<byte> fixedSerializedMemory = fixedView;
-RequireSandboxCondition(
+RequireCondition(
     fixedSerializedSpan.Length == FixedPacketView.RequiredByteLength
     && fixedSerializedMemory.Length == FixedPacketView.RequiredByteLength,
     "Fixed-size View conversion did not expose its exact serialized region.");
@@ -68,7 +67,7 @@ var packedPacket = new PackedPacket
 var packedBuffer = new byte[PackedPacketView.RequiredByteLength];
 int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
 var packedView = new PackedPacketView(packedBuffer);
-RequireSandboxCondition(
+RequireCondition(
     packedWrittenByteCount == PackedPacketView.RequiredByteLength
     && packedView.Identifier == packedPacket.Identifier
     && packedView.Position.X == packedPacket.Position.X
@@ -77,7 +76,7 @@ RequireSandboxCondition(
 
 var variablePacket = new VariablePacket
 {
-    Name = "sandbox",
+    Name = "unity",
     EmptyName = string.Empty,
     MissingName = null,
     Values = [10, 20, 30],
@@ -102,9 +101,9 @@ var variableBuffer = new byte[1024];
 int variableWrittenByteCount = variablePacket.Serialize(variableBuffer);
 var variableView = new VariablePacketView(variableBuffer.AsMemory(0, variableWrittenByteCount));
 
-RequireSandboxCondition(
+RequireCondition(
     VariablePacketView.RequiredByteLength < 0
-    && variableView.Name.SequenceEqual("sandbox".AsSpan())
+    && variableView.Name.SequenceEqual("unity".AsSpan())
     && variableView.EmptyName.IsEmpty
     && variableView.MissingName.IsEmpty
     && variableView.Values.Length == 3
@@ -133,13 +132,13 @@ RequireSandboxCondition(
 
 ReadOnlySpan<byte> variableSerializedSpan = variableView;
 ReadOnlyMemory<byte> variableSerializedMemory = variableView;
-RequireSandboxCondition(
+RequireCondition(
     variableSerializedSpan.Length == variableWrittenByteCount
     && variableSerializedMemory.Length == variableWrittenByteCount,
     "Runtime-sized View conversion did not retain its supplied serialized region.");
 
 ReadOnlySpan<byte> variableSerializedData = variableView;
-RequireSandboxCondition(
+RequireCondition(
     BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(2 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(7 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(9 * sizeof(int), sizeof(int))) == 0
@@ -152,7 +151,7 @@ var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10
 var ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
 ignoredMembersPacket.Serialize(ignoredMembersBuffer);
 var ignoredMembersView = new IgnoredMembersPacketView(ignoredMembersBuffer);
-RequireSandboxCondition(
+RequireCondition(
     ignoredMembersView.Included == 7
     && ignoredMembersView.PrivateSetter == 8
     && typeof(IgnoredMembersPacketView).GetProperties().Length == 2
@@ -160,24 +159,30 @@ RequireSandboxCondition(
     && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.PrivateSetter)) is not null,
     "Ignored fields, indexers, setters, or non-public getters changed the generated View.");
 
-var namespacedPacket = new SandboxModels.NamespacedPacket { Identifier = 11 };
-var namespacedBuffer = new byte[SandboxModels.NamespacedPacketView.RequiredByteLength];
+var namespacedPacket = new UnityCompatibilityModels.NamespacedPacket { Identifier = 11 };
+var namespacedBuffer = new byte[UnityCompatibilityModels.NamespacedPacketView.RequiredByteLength];
 namespacedPacket.Serialize(namespacedBuffer);
-var namespacedView = new SandboxModels.NamespacedPacketView(namespacedBuffer);
-RequireSandboxCondition(namespacedView.Identifier == namespacedPacket.Identifier, "Namespace-local generation failed.");
+var namespacedView = new UnityCompatibilityModels.NamespacedPacketView(namespacedBuffer);
+RequireCondition(namespacedView.Identifier == namespacedPacket.Identifier, "Namespace-local generation failed.");
 
 var emptyClassBuffer = Span<byte>.Empty;
 var emptyStructBuffer = Span<byte>.Empty;
-RequireSandboxCondition(
+RequireCondition(
     new EmptyClassPacket().Serialize(emptyClassBuffer) == 0
     && new EmptyStructPacket().Serialize(emptyStructBuffer) == 0
     && EmptyClassPacketView.RequiredByteLength == 0
     && EmptyStructPacketView.RequiredByteLength == 0,
     "Empty serializable types did not remain zero length.");
 
-Console.WriteLine("ZeroSerializer sandbox passed.");
+Console.WriteLine("ZeroSerializer Unity compatibility tests passed.");
 
-static void RequireSandboxCondition(bool condition, string failureMessage)
+return 0;
+
+
+
+
+
+static void RequireCondition(bool condition, string failureMessage)
 {
     if (!condition)
     {
@@ -329,7 +334,7 @@ public struct EmptyStructPacket
 {
 }
 
-namespace SandboxModels
+namespace UnityCompatibilityModels
 {
     [ZeroSerializer]
     public sealed class NamespacedPacket
@@ -344,10 +349,10 @@ namespace System.Runtime.CompilerServices
     struct IsExternalInit { }
 }
 
-public static class SandboxHelper
+public static class UnityCompatibilityHelper
 {
     public static void AlwaysFail()
     {
-        throw new InvalidOperationException("Intentional sandbox failure.");
+        throw new InvalidOperationException("Intentional failure for verifying CI workflow correctness.");
     }
 }

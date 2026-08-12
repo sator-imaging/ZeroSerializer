@@ -9,7 +9,7 @@ permissions:
 
 jobs:
 
-  sandbox-generated-source:
+  preview:
     strategy:
       matrix:
         configuration: [Release, Debug]
@@ -22,14 +22,14 @@ jobs:
           dotnet-version: |
             10.x.x
 
-      - run: dotnet restore ${{ github.workspace }}/sandbox
+      - run: dotnet restore ${{ github.workspace }}/tests-unity
 
-      - name: Build sandbox project with generated source output
+      - name: Build project with generated source output
         run: |
           generated_source_dir="${{ runner.temp }}/generated/${{ matrix.configuration }}"
           rm -rf "$generated_source_dir"
 
-          dotnet build ${{ github.workspace }}/sandbox \
+          dotnet build ${{ github.workspace }}/tests-unity \
             -c ${{ matrix.configuration }} \
             -t:Rebuild \
             --no-restore \
