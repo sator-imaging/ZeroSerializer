@@ -39,7 +39,7 @@ public class ShapeTagAndHashTests
     [Fact]
     public void EnumClassViewTest()
     {
-        string enumClassExpected = "v1/{enum:byte,enum:short}";
+        string enumClassExpected = "v1/{enum:byte,enum:short,enum:int,enum:int?}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
         Assert.Equal(EnumClassView.ShapeHash, XXHash32.HashToUInt32(enumClassExpected));
     }

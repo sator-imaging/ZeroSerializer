@@ -59,13 +59,38 @@ public sealed class SerializationTests
     [Fact]
     public void EnumClassAndStructRoundTrip()
     {
-        var classSource = new EnumClass { ByteState = ByteState.Ready, SignedState = SignedState.Negative };
-        var classBuffer = new byte[EnumClassView.RequiredByteLength];
-        classSource.Serialize(classBuffer);
-        var classView = new EnumClassView(classBuffer);
+        var classSource = new EnumClass
+        {
+            ByteState = ByteState.Ready,
+            SignedState = SignedState.Negative,
+            DefaultState = DefaultState.Ready,
+            NullableDefaultState = DefaultState.Ready
+        };
+        var classBuffer = new byte[1024];
+        int classWritten = classSource.Serialize(classBuffer);
+        var classView = new EnumClassView(classBuffer.AsMemory(0, classWritten));
 
         TestAssert.Equal(ByteState.Ready, classView.ByteState, nameof(classView.ByteState));
         TestAssert.Equal(SignedState.Negative, classView.SignedState, nameof(classView.SignedState));
+        TestAssert.Equal(DefaultState.Ready, classView.DefaultState, nameof(classView.DefaultState));
+        TestAssert.Equal(DefaultState.Ready, classView.NullableDefaultState, nameof(classView.NullableDefaultState));
+
+        // Test with NullableDefaultState as null
+        var classSourceNull = new EnumClass
+        {
+            ByteState = ByteState.None,
+            SignedState = SignedState.Positive,
+            DefaultState = DefaultState.None,
+            NullableDefaultState = null
+        };
+        var classBufferNull = new byte[1024];
+        int classWrittenNull = classSourceNull.Serialize(classBufferNull);
+        var classViewNull = new EnumClassView(classBufferNull.AsMemory(0, classWrittenNull));
+
+        TestAssert.Equal(ByteState.None, classViewNull.ByteState, nameof(classViewNull.ByteState));
+        TestAssert.Equal(SignedState.Positive, classViewNull.SignedState, nameof(classViewNull.SignedState));
+        TestAssert.Equal(DefaultState.None, classViewNull.DefaultState, nameof(classViewNull.DefaultState));
+        Assert.Null(classViewNull.NullableDefaultState);
 
         var structSource = new EnumStruct(ByteState.Ready, SignedState.Positive);
         var structBuffer = new byte[EnumStructView.RequiredByteLength];
@@ -885,6 +910,69 @@ public sealed class SerializationTests
         // It shouldn't be defined for VariableRecordView, etc.
         bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
         TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
+    }
+
+    [Fact]
+    public void SByteMinValueRoundTripTest()
+    {
+        // Tests sbyte min value roundtrip with different shapes:
+        // - sbyte value roundtrip
+        // - nullable sbyte value roundtrip
+        // - sbyte backed enum roundtrip
+        // - nullable sbyte backed enum roundtrip
+        // - sbyte array roundtrip
+        // - sbyte backed enum array roundtrip
+
+        var source = new SByteTestRecord
+        {
+            SByteValue = sbyte.MinValue,
+            NullableSByteValue = sbyte.MinValue,
+            SByteBackedEnum = SByteEnum.Min,
+            NullableSByteBackedEnum = SByteEnum.Min,
+            SByteArray = new sbyte[] { sbyte.MinValue, 0, sbyte.MaxValue },
+            SByteBackedEnumArray = new SByteEnum[] { SByteEnum.Min, SByteEnum.Zero, SByteEnum.Max }
+        };
+
+        var buffer = new byte[1024];
+        int writtenBytes = source.Serialize(buffer);
+
+        var view = new SByteTestRecordView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(sbyte.MinValue, view.SByteValue, nameof(view.SByteValue));
+        TestAssert.Equal((sbyte?)sbyte.MinValue, view.NullableSByteValue, nameof(view.NullableSByteValue));
+        TestAssert.Equal(SByteEnum.Min, view.SByteBackedEnum, nameof(view.SByteBackedEnum));
+        TestAssert.Equal((SByteEnum?)SByteEnum.Min, view.NullableSByteBackedEnum, nameof(view.NullableSByteBackedEnum));
+
+        TestAssert.SequenceEqual<sbyte>(source.SByteArray, view.SByteArray, nameof(view.SByteArray));
+
+        TestAssert.Equal(source.SByteBackedEnumArray.Length, view.SByteBackedEnumArray.Length, "SByteBackedEnumArray.Length");
+        for (int i = 0; i < source.SByteBackedEnumArray.Length; i++)
+        {
+            TestAssert.Equal(source.SByteBackedEnumArray[i], view.SByteBackedEnumArray[i], $"SByteBackedEnumArray[{i}]");
+        }
+
+        // Also test Nullables with nulls (using max values)
+        var sourceWithNulls = new SByteTestRecord
+        {
+            SByteValue = sbyte.MaxValue,
+            NullableSByteValue = null,
+            SByteBackedEnum = SByteEnum.Max,
+            NullableSByteBackedEnum = null,
+            SByteArray = Array.Empty<sbyte>(),
+            SByteBackedEnumArray = Array.Empty<SByteEnum>()
+        };
+
+        var bufferWithNulls = new byte[1024];
+        int writtenBytesWithNulls = sourceWithNulls.Serialize(bufferWithNulls);
+
+        var viewWithNulls = new SByteTestRecordView(bufferWithNulls.AsMemory(0, writtenBytesWithNulls));
+
+        TestAssert.Equal(sbyte.MaxValue, viewWithNulls.SByteValue, nameof(viewWithNulls.SByteValue));
+        Assert.Null(viewWithNulls.NullableSByteValue);
+        TestAssert.Equal(SByteEnum.Max, viewWithNulls.SByteBackedEnum, nameof(viewWithNulls.SByteBackedEnum));
+        Assert.Null(viewWithNulls.NullableSByteBackedEnum);
+        TestAssert.Equal(0, viewWithNulls.SByteArray.Length, "SByteArray.Length");
+        TestAssert.Equal(0, viewWithNulls.SByteBackedEnumArray.Length, "SByteBackedEnumArray.Length");
     }
 
     private static MethodInfo GetSerializeMethod(Type sourceType)
