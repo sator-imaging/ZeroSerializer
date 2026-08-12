@@ -23,6 +23,8 @@ public class ShapeTagEmissionTests
         Assert.Contains("// To emit this, `set EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
         Assert.Contains("// public const string ShapeTag = \"v1/{int}\";", generatedView);
         Assert.Contains("public const uint ShapeHash = ", generatedView);
+
+        Assert.DoesNotContain("            public const string ShapeTag", generatedView);
     }
 
     [Fact]
@@ -35,8 +37,6 @@ public class ShapeTagEmissionTests
         Assert.Contains("public const string ShapeTag = \"v1/{int}\";", generatedView);
         Assert.DoesNotContain("// public const string ShapeTag", generatedView);
         Assert.Contains("public const uint ShapeHash = ", generatedView);
-
-        Assert.DoesNotContain("            public const string ShapeTag", generatedView);
     }
 
     [Fact]
