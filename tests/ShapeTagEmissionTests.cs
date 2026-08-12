@@ -21,8 +21,8 @@ public class ShapeTagEmissionTests
 
         Assert.DoesNotContain("/// <remarks>", generatedView);
         Assert.DoesNotContain("    public const string ShapeTag", generatedView);
-        Assert.Contains("// To emit this, `set EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
-        Assert.Contains("// public const string ShapeTag = \"v1/{int}\";", generatedView);
+        Assert.Contains("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
+        Assert.Contains("//public const string ShapeTag = \"v1/{int}\";", generatedView);
         Assert.Contains("public const uint ShapeHash = ", generatedView);
     }
 
