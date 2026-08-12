@@ -324,12 +324,12 @@ public sealed class IgnoredMembersPacket
     public int IgnoredField;
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class EmptyClassPacket
 {
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public struct EmptyStructPacket
 {
 }
@@ -353,6 +353,6 @@ public static class UnityCompatibilityHelper
 {
     public static void AlwaysFail()
     {
-        throw new InvalidOperationException("Intentional failure for verifying CI workflow correctness.");
+        throw new InvalidOperationException("Intentional failure for vertness.");
     }
 }
