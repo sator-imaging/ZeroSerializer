@@ -25,8 +25,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private const string SerializerHelperName = SerializerName + "Helper";
     private const string QualifiedSerializerHelperName = "global::" + SerializerNamespace + "." + SerializerHelperName;
     private const string UnknownShapeTagType = "UNKNOWN";
-    private const int FormatVersion = 1;
-    private const string ShapeTagVersionPrefix = "v" + FormatVersion + "/";
+    private const string ShapeTagVersionPrefix = "v1/";  // Not shape tag version, This is serialize format version
 
     private static readonly DiagnosticDescriptor UnsupportedSerializableType = new(
         "ZEROS001",
