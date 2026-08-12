@@ -22,7 +22,7 @@ public enum SignedState : short
     Positive = 5,
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class PrimitiveRecord
 {
     public bool Boolean { get; init; }
@@ -50,7 +50,7 @@ public sealed class PrimitiveRecord
     public double Double { get; init; }
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class EnumClass
 {
     public ByteState ByteState { get; init; }
@@ -73,7 +73,7 @@ public readonly struct EnumStruct
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public struct PackedRecord
 {
     public int Number { get; init; }
@@ -81,7 +81,7 @@ public struct PackedRecord
     public SignedState State { get; init; }
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class PackedContainer
 {
     public PackedRecord Value { get; init; }
@@ -267,7 +267,7 @@ public struct EmptyBlittableStruct
 {
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class SchemaSignatureTestsModel
 {
     // 1. blittable and non-blittable nested type combo
