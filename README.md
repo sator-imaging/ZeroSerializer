@@ -17,7 +17,7 @@ Zero-copy, Zero-allocation, Deserialize-on-Read
 
 ## Why ZeroSerializer?
 
-Receiving data over a network, reading a file, or calling another API often leaves you with an unavoidable `byte[]` allocation. `ZeroSerializer` generates a read-only view that reuses that allocation and provides strongly typed slices without creating another buffer or a deserialized object graph. Each property is read only when accessed, and strings and arrays remain borrowed from the original memory, like `Span<T>` or `Memory<T>`.
+Receiving data over a network, reading a file, or calling another API often leaves you with an unavoidable `byte[]` allocation. **ZeroSerializer** generates a read-only view like `ReadOnlySpan<T>` or `ReadOnlyMemory<T>` that reuses that allocation and provides strongly typed values and slices without creating another buffer or a deserialized object graph. Each property is read only when accessed, and strings and arrays remain borrowed from the original memory.
 
 
 
