@@ -353,6 +353,6 @@ public static class UnityCompatibilityHelper
 {
     public static void AlwaysFail()
     {
-        throw new InvalidOperationException("Intentional failure for verifying CI workflow correctness.");
+        throw new InvalidOperationException("Intentkflow correctness.");
     }
 }
