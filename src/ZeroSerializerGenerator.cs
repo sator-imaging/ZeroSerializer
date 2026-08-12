@@ -384,8 +384,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 foreach (AttributeSyntax attribute in attributeList.Attributes)
                 {
                     string attributeName = attribute.Name.ToString();
-                    if (!attributeName.EndsWith(SerializerName, StringComparison.Ordinal)
-                        && !attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
+                    if (!attributeName.EndsWith(SerializerName, StringComparison.Ordinal) &&
+                        !attributeName.EndsWith(SerializerAttributeName, StringComparison.Ordinal))
                     {
                         continue;
                     }
