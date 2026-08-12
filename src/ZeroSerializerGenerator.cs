@@ -279,11 +279,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         string qualifiedSourceTypeName = serializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         int blittableStructByteCount = 0;
-        bool isBlittableStruct = serializableType.TypeKind == TypeKind.Struct
-            && TryGetFixedTypeByteCount(
-                serializableType,
-                new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
-                out blittableStructByteCount);
+        bool isBlittableStruct = TryGetBlittableStructByteCount(
+            serializableType,
+            out blittableStructByteCount);
         var generationModel = new TypeGenerationModel(
             serializableType,
             qualifiedSourceTypeName,
@@ -447,10 +445,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
             if (nullableUnderlyingType is INamedTypeSymbol namedUnderlying
                 && IsSerializableType(namedUnderlying, allSerializableTypes)
-                && TryGetFixedTypeByteCount(
-                    namedUnderlying,
-                    new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
-                    out int nullableStructByteCount))
+                && TryGetBlittableStructByteCount(namedUnderlying, out int nullableStructByteCount))
             {
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
                 return new FieldGenerationModel(
@@ -528,7 +523,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (serializableProperty.Type is INamedTypeSymbol namedFixedType
             && IsSerializableType(namedFixedType, allSerializableTypes)
-            && TryGetFixedTypeByteCount(namedFixedType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int fixedStructByteCount))
+            && TryGetBlittableStructByteCount(namedFixedType, out int fixedStructByteCount))
         {
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
             return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, namedFixedType);
@@ -608,6 +603,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         typesBeingInspected.Remove(candidateType);
         byteCount = accumulatedByteCount;
         return true;
+    }
+
+    private static bool TryGetBlittableStructByteCount(INamedTypeSymbol candidateType, out int byteCount)
+    {
+        if (candidateType.TypeKind != TypeKind.Struct)
+        {
+            byteCount = 0;
+            return false;
+        }
+
+        return TryGetFixedTypeByteCount(
+            candidateType,
+            new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default),
+            out byteCount);
     }
 
     private static bool HasSequentialPackOneLayout(INamedTypeSymbol structType)

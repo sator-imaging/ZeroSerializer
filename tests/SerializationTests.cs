@@ -788,6 +788,20 @@ public sealed class SerializationTests
     }
 
     [Fact]
+    public void SequentialPackOneClassIsNotBlittable()
+    {
+        var source = new SequentialPackOneClass { Value = 42 };
+        var buffer = new byte[SequentialPackOneClassView.RequiredByteLength];
+
+        int writtenBytes = source.Serialize(buffer);
+
+        TestAssert.True(!SequentialPackOneClassView.IsBlittable, "SequentialPackOneClassView is NOT blittable");
+        TestAssert.Equal(8, writtenBytes, nameof(writtenBytes));
+        TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
+        TestAssert.Equal(42, new SequentialPackOneClassView(buffer).Value, nameof(SequentialPackOneClass.Value));
+    }
+
+    [Fact]
     public void AttributeSyntaxVariationsRoundTrip()
     {
         // 1. [ZeroSerializer]
