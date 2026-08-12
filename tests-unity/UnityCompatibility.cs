@@ -174,7 +174,7 @@ RequireCondition(
     && EmptyStructPacketView.RequiredByteLength == 0,
     "Empty serializable types did not remain zero length.");
 
-Console.WriteLine("ZeroSerializer Unity compatibility tests passed.");
+Console.WriteLine("ZeroSerializer Unity comssed.");
 
 return 0;
 
