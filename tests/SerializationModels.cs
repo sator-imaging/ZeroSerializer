@@ -322,6 +322,13 @@ public sealed class VariableStructWithPrimitiveAtEnd
     public int Value { get; init; }
 }
 
+[ZeroSerializer]
+public sealed class VariableStructWithAllNullableFields
+{
+    public string? Text { get; init; }
+    public int[]? Values { get; init; }
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
 public struct EmptyBlittableStruct

@@ -1017,34 +1017,25 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({(fieldCount - 1) * 4}, 4));");
                 sourceBuilder.AppendLine("if (offset > 0)");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField)};");
+                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset")};");
                 sourceBuilder.CloseBlock();
-                if (fieldCount > 1)
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine("return GetFallbackByteLength(serializedMemory);");
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlyMemory<byte> serializedMemory)");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("int fallbackOffset;");
+                for (int i = fieldCount - 2; i >= 0; i--)
                 {
-                    sourceBuilder.AppendLine();
-                    sourceBuilder.AppendLine("return GetFallbackByteLength(serializedMemory);");
-                    sourceBuilder.AppendLine();
-                    sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
-                    sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlyMemory<byte> serializedMemory)");
+                    var field = generationModel.Fields[i];
+                    sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
+                    sourceBuilder.AppendLine("if (fallbackOffset > 0)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine("int fallbackOffset;");
-                    for (int i = fieldCount - 2; i >= 0; i--)
-                    {
-                        var field = generationModel.Fields[i];
-                        sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
-                        sourceBuilder.AppendLine("if (fallbackOffset > 0)");
-                        sourceBuilder.OpenBlock();
-                        sourceBuilder.AppendLine($"int offset = fallbackOffset; // map to 'offset' for GetFieldLengthExpression");
-                        sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field)};");
-                        sourceBuilder.CloseBlock();
-                    }
-                    sourceBuilder.AppendLine($"return {fieldCount * 4};");
+                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset")};");
                     sourceBuilder.CloseBlock();
                 }
-                else
-                {
-                    sourceBuilder.AppendLine($"return {fieldCount * 4};");
-                }
+                sourceBuilder.AppendLine($"return {fieldCount * 4};");
+                sourceBuilder.CloseBlock();
             }
             else
             {
@@ -1358,7 +1349,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return propertyModel.IsNullableType || propertyModel.Kind == FieldSerializationKind.String;
     }
 
-    private static string GetFieldLengthExpression(FieldGenerationModel field)
+    private static string GetFieldLengthExpression(FieldGenerationModel field, string offsetVarName)
     {
         switch (field.Kind)
         {
@@ -1367,10 +1358,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 return $"{field.ElementByteCount}";
             case FieldSerializationKind.String:
             case FieldSerializationKind.Array:
-                return $"4 + BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice(offset, 4))";
+                return $"4 + BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({offsetVarName}, 4))";
             case FieldSerializationKind.Nested:
                 string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
-                return $"new {nestedViewTypeName}(serializedMemory.Slice(offset)).GetByteLength()";
+                return $"new {nestedViewTypeName}(serializedMemory.Slice({offsetVarName})).GetByteLength()";
             default:
                 throw new InvalidOperationException("Unknown field kind");
         }
