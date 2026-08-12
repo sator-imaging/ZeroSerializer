@@ -48,8 +48,8 @@ RequireCondition(
     && fixedView.SingleValue == fixedPacket.SingleValue
     && fixedView.DoubleValue == fixedPacket.DoubleValue
     && fixedView.State == fixedPacket.State
-    && fixedView.Position.X == fixedPacket.Position.X
-    && fixedView.Position.Y == fixedPacket.Position.Y,
+    && fixedView.Position.Materialize().X == fixedPacket.Position.X
+    && fixedView.Position.Materialize().Y == fixedPacket.Position.Y,
     "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
@@ -117,7 +117,7 @@ RequireCondition(
     && variableView.OptionalValue == 17
     && variableView.MissingOptionalValue is null
     && variableView.OptionalState == PacketState.Ready
-    && variableView.OptionalPosition!.Value.X == 30
+    && variableView.OptionalPosition!.Value.Materialize().X == 30
     && variableView.MissingOptionalPosition is null
     && variableView.Child.Identifier == 99
     && variableView.StructChild.Identifier == 100
@@ -232,9 +232,9 @@ public enum PacketState : sbyte  // Use sbyte to verify code generator emitting 
 [ZeroSerializer]
 public struct PackedPosition
 {
-    public int X { get; init; }
+    public int X;
 
-    public int Y { get; init; }
+    public int Y;
 }
 
 [ZeroSerializer]
