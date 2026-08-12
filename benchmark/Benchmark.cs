@@ -321,6 +321,7 @@ namespace ZeroSerializer.Benchmarks
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [ZeroSerializerAttribute]
     public struct PackedBenchmarkValue
     {
         public int Number { get; init; }
