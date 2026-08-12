@@ -390,15 +390,17 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                         continue;
                     }
 
-                    if (attribute.ArgumentList != null)
+                    if (attribute.ArgumentList == null)
                     {
-                        foreach (AttributeArgumentSyntax argument in attribute.ArgumentList.Arguments)
-                        {
-                            if (argument.NameEquals?.Name.Identifier.ValueText == "EmitShapeTag" &&
+                        continue;
+                    }
+
+                    foreach (AttributeArgumentSyntax argument in attribute.ArgumentList.Arguments)
+                    {
+                        if (argument.NameEquals?.Name.Identifier.ValueText == "EmitShapeTag" &&
                             argument.Expression.IsKind(SyntaxKind.TrueLiteralExpression))
-                            {
-                                return true;
-                            }
+                        {
+                            return true;
                         }
                     }
                 }
