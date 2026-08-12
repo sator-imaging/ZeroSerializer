@@ -12,7 +12,7 @@ Production source under `src/` avoids `System.Linq`. The generator has few query
 6. Keep filtering and terminal checks in one loop instead of materializing an intermediate collection.
 7. Introduce a reusable query helper only after the same non-trivial operation has multiple real call sites.
 
-Tests, benchmarks, and sandbox projects are outside this migration rule.
+Tests and benchmarks projects are outside this migration rule.
 
 ## Inlining examples
 

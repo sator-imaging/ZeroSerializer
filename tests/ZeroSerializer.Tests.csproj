@@ -30,8 +30,8 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="true"
     />
-    <ProjectReference Include="../sandbox/ZeroSerializer.Sandbox.csproj">
-      <Aliases>Sandbox</Aliases>
+    <ProjectReference Include="../tests-unity/ZeroSerializer.UnityCompatibilityTests.csproj">
+      <Aliases>UnityCompatibility</Aliases>
     </ProjectReference>
   </ItemGroup>
 

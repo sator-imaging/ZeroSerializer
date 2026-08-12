@@ -3,7 +3,6 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
-using System;
 using System.Threading.Tasks;
 using Xunit;
 using ZeroSerializer.Generator;

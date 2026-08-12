@@ -3,7 +3,6 @@
 
 using System;
 using Xunit;
-using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 #pragma warning disable SMA8003  // Do not use debug-only `Assert` in public API surface
