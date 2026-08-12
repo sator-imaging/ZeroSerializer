@@ -975,9 +975,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         uint shapeHash = XXHash32.HashToUInt32(shapeTag);
         if (!generationModel.EmitShapeTag)
         {
-            sourceBuilder.AppendLine("// To emit this, `set EmitShapeTag = true` on ZeroSerializerAttribute.");
+            sourceBuilder.AppendLine("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.");
         }
-        sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "// " : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
+        sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "//" : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.

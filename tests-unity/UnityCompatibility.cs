@@ -324,12 +324,12 @@ public sealed class IgnoredMembersPacket
     public int IgnoredField;
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public sealed class EmptyClassPacket
 {
 }
 
-[ZeroSerializer]
+[ZeroSerializer(EmitShapeTag = true)]
 public struct EmptyStructPacket
 {
 }
