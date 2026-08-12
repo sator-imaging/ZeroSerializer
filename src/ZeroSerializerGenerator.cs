@@ -998,7 +998,48 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlySpan<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression}.Span;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlyMemory<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression};");
-        for (int fieldIndex = 0, fieldCount = generationModel.Fields.Count; fieldIndex < fieldCount; fieldIndex++)
+        sourceBuilder.AppendLine();
+        sourceBuilder.AppendLine("/// <summary>");
+        sourceBuilder.AppendLine("/// Gets the actual byte length of the serialized data.");
+        sourceBuilder.AppendLine("/// </summary>");
+        sourceBuilder.AppendLine("public int GetByteLength()");
+        sourceBuilder.OpenBlock();
+        sourceBuilder.AppendLine("if (RequiredByteLength >= 0)");
+        sourceBuilder.OpenBlock();
+        sourceBuilder.AppendLine("return RequiredByteLength;");
+        sourceBuilder.CloseBlock();
+        sourceBuilder.AppendLine();
+        int fieldCount = generationModel.Fields.Count;
+        if (fieldCount > 0)
+        {
+            sourceBuilder.AppendLine("int offset;");
+            for (int i = fieldCount - 1; i >= 0; i--)
+            {
+                var field = generationModel.Fields[i];
+                sourceBuilder.AppendLine($"offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
+                sourceBuilder.AppendLine("if (offset > 0)");
+                sourceBuilder.OpenBlock();
+                switch (field.Kind)
+                {
+                    case FieldSerializationKind.Primitive:
+                    case FieldSerializationKind.BlittableStruct:
+                        sourceBuilder.AppendLine($"return offset + {field.ElementByteCount};");
+                        break;
+                    case FieldSerializationKind.String:
+                    case FieldSerializationKind.Array:
+                        sourceBuilder.AppendLine($"return offset + 4 + BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice(offset, 4));");
+                        break;
+                    case FieldSerializationKind.Nested:
+                        string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
+                        sourceBuilder.AppendLine($"return offset + new {nestedViewTypeName}(serializedMemory.Slice(offset)).GetByteLength();");
+                        break;
+                }
+                sourceBuilder.CloseBlock();
+            }
+        }
+        sourceBuilder.AppendLine($"return {fieldCount * 4};");
+        sourceBuilder.CloseBlock();
+        for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)
         {
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Fields[fieldIndex], fieldIndex, modelLookup);
