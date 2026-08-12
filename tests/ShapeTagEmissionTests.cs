@@ -31,10 +31,10 @@ public class ShapeTagEmissionTests
     {
         string generatedView = GenerateView("[ZeroSerializer.ZeroSerializer(EmitShapeTag = true)] public class Record { public int Value { get; set; } }");
 
+        Assert.DoesNotContain("// public const string ShapeTag", generatedView);
         Assert.Contains("/// <remarks>", generatedView);
         Assert.Contains("/// ShapeTag: v1/{int}", generatedView);
         Assert.Contains("public const string ShapeTag = \"v1/{int}\";", generatedView);
-        Assert.DoesNotContain("// public const string ShapeTag", generatedView);
         Assert.Contains("public const uint ShapeHash = ", generatedView);
     }
 
