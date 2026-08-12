@@ -23,7 +23,7 @@ public class ShapeTagEmissionTests
         Assert.Contains("// public const string ShapeTag = \"v1/{int}\";", generatedView);
         Assert.Contains("public const uint ShapeHash = ", generatedView);
         Assert.DoesNotContain("/// <remarks>", generatedView);
-        Assert.DoesNotContain("            public const string ShapeTag", generatedView);
+        Assert.DoesNotContain("    public const string ShapeTag", generatedView);
     }
 
     [Fact]
