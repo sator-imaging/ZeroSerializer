@@ -232,8 +232,8 @@ public enum PacketState : sbyte  // Use sbyte to verify code generator emitting 
 [ZeroSerializer]
 public struct PackedPosition
 {
-    public int X { get; }
-    public int Y { get; }
+    public int X { get; init; }
+    public int Y { get; init; }
 }
 
 [ZeroSerializer]
