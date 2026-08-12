@@ -22,6 +22,19 @@ public enum SignedState : short
     Positive = 5,
 }
 
+public enum DefaultState
+{
+    None,
+    Ready = 42,
+}
+
+public enum SByteEnum : sbyte
+{
+    Min = -128,
+    Zero = 0,
+    Max = 127,
+}
+
 [ZeroSerializer(EmitShapeTag = true)]
 public sealed class PrimitiveRecord
 {
@@ -56,6 +69,10 @@ public sealed class EnumClass
     public ByteState ByteState { get; init; }
 
     public SignedState SignedState { get; init; }
+
+    public DefaultState DefaultState { get; init; }
+
+    public DefaultState? NullableDefaultState { get; init; }
 }
 
 [ZeroSerializer]
@@ -89,6 +106,22 @@ public sealed class PackedContainer
     public PackedRecord? OptionalValue { get; init; }
 
     public PackedRecord[]? Values { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class SByteTestRecord
+{
+    public sbyte SByteValue { get; init; }
+
+    public sbyte? NullableSByteValue { get; init; }
+
+    public SByteEnum SByteBackedEnum { get; init; }
+
+    public SByteEnum? NullableSByteBackedEnum { get; init; }
+
+    public sbyte[] SByteArray { get; init; } = Array.Empty<sbyte>();
+
+    public SByteEnum[] SByteBackedEnumArray { get; init; } = Array.Empty<SByteEnum>();
 }
 
 [ZeroSerializer]
