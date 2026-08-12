@@ -1002,36 +1002,38 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine("/// Gets the actual byte length of the offset table plus its payloads.");
         sourceBuilder.AppendLine("/// </summary>");
-        sourceBuilder.AppendLine("public int GetByteLength()");
-        sourceBuilder.OpenBlock();
-        sourceBuilder.AppendLine("if (RequiredByteLength >= 0)");
-        sourceBuilder.OpenBlock();
-        sourceBuilder.AppendLine("return RequiredByteLength;");
-        sourceBuilder.CloseBlock();
-        sourceBuilder.AppendLine();
         int fieldCount = generationModel.Fields.Count;
-        if (fieldCount > 0)
+        if (requiredByteLength >= 0)
         {
-            var lastField = generationModel.Fields[fieldCount - 1];
-            sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({(fieldCount - 1) * 4}, 4));");
-            sourceBuilder.AppendLine("if (offset > 0)");
+            sourceBuilder.AppendLine("public int GetByteLength() => RequiredByteLength;");
+        }
+        else
+        {
+            sourceBuilder.AppendLine("public int GetByteLength()");
             sourceBuilder.OpenBlock();
-            sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField)};");
-            sourceBuilder.CloseBlock();
-            sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("// Fallback for null/empty trailing fields in variable-length types.");
-            for (int i = fieldCount - 2; i >= 0; i--)
+            if (fieldCount > 0)
             {
-                var field = generationModel.Fields[i];
-                sourceBuilder.AppendLine($"offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
+                var lastField = generationModel.Fields[fieldCount - 1];
+                sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({(fieldCount - 1) * 4}, 4));");
                 sourceBuilder.AppendLine("if (offset > 0)");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(field)};");
+                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField)};");
                 sourceBuilder.CloseBlock();
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine("// Fallback for null/empty trailing fields in variable-length types.");
+                for (int i = fieldCount - 2; i >= 0; i--)
+                {
+                    var field = generationModel.Fields[i];
+                    sourceBuilder.AppendLine($"offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
+                    sourceBuilder.AppendLine("if (offset > 0)");
+                    sourceBuilder.OpenBlock();
+                    sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(field)};");
+                    sourceBuilder.CloseBlock();
+                }
             }
+            sourceBuilder.AppendLine($"return {fieldCount * 4};");
+            sourceBuilder.CloseBlock();
         }
-        sourceBuilder.AppendLine($"return {fieldCount * 4};");
-        sourceBuilder.CloseBlock();
         for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)
         {
             sourceBuilder.AppendLine();
