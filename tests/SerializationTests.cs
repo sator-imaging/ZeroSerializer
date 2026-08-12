@@ -913,9 +913,9 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void SByteMaxValueRoundTripTest()
+    public void SByteMinValueRoundTripTest()
     {
-        // Tests sbyte max value roundtrip with different shapes:
+        // Tests sbyte min value roundtrip with different shapes:
         // - sbyte value roundtrip
         // - nullable sbyte value roundtrip
         // - sbyte backed enum roundtrip
@@ -925,10 +925,10 @@ public sealed class SerializationTests
 
         var source = new SByteTestRecord
         {
-            SByteValue = sbyte.MaxValue,
-            NullableSByteValue = sbyte.MaxValue,
-            SByteBackedEnum = SByteEnum.Max,
-            NullableSByteBackedEnum = SByteEnum.Max,
+            SByteValue = sbyte.MinValue,
+            NullableSByteValue = sbyte.MinValue,
+            SByteBackedEnum = SByteEnum.Min,
+            NullableSByteBackedEnum = SByteEnum.Min,
             SByteArray = new sbyte[] { sbyte.MinValue, 0, sbyte.MaxValue },
             SByteBackedEnumArray = new SByteEnum[] { SByteEnum.Min, SByteEnum.Zero, SByteEnum.Max }
         };
@@ -938,10 +938,10 @@ public sealed class SerializationTests
 
         var view = new SByteTestRecordView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(sbyte.MaxValue, view.SByteValue, nameof(view.SByteValue));
-        TestAssert.Equal((sbyte?)sbyte.MaxValue, view.NullableSByteValue, nameof(view.NullableSByteValue));
-        TestAssert.Equal(SByteEnum.Max, view.SByteBackedEnum, nameof(view.SByteBackedEnum));
-        TestAssert.Equal((SByteEnum?)SByteEnum.Max, view.NullableSByteBackedEnum, nameof(view.NullableSByteBackedEnum));
+        TestAssert.Equal(sbyte.MinValue, view.SByteValue, nameof(view.SByteValue));
+        TestAssert.Equal((sbyte?)sbyte.MinValue, view.NullableSByteValue, nameof(view.NullableSByteValue));
+        TestAssert.Equal(SByteEnum.Min, view.SByteBackedEnum, nameof(view.SByteBackedEnum));
+        TestAssert.Equal((SByteEnum?)SByteEnum.Min, view.NullableSByteBackedEnum, nameof(view.NullableSByteBackedEnum));
 
         TestAssert.SequenceEqual<sbyte>(source.SByteArray, view.SByteArray, nameof(view.SByteArray));
 
@@ -951,12 +951,12 @@ public sealed class SerializationTests
             TestAssert.Equal(source.SByteBackedEnumArray[i], view.SByteBackedEnumArray[i], $"SByteBackedEnumArray[{i}]");
         }
 
-        // Also test Nullables with nulls
+        // Also test Nullables with nulls (using max values)
         var sourceWithNulls = new SByteTestRecord
         {
-            SByteValue = sbyte.MinValue,
+            SByteValue = sbyte.MaxValue,
             NullableSByteValue = null,
-            SByteBackedEnum = SByteEnum.Min,
+            SByteBackedEnum = SByteEnum.Max,
             NullableSByteBackedEnum = null,
             SByteArray = Array.Empty<sbyte>(),
             SByteBackedEnumArray = Array.Empty<SByteEnum>()
@@ -967,9 +967,9 @@ public sealed class SerializationTests
 
         var viewWithNulls = new SByteTestRecordView(bufferWithNulls.AsMemory(0, writtenBytesWithNulls));
 
-        TestAssert.Equal(sbyte.MinValue, viewWithNulls.SByteValue, nameof(viewWithNulls.SByteValue));
+        TestAssert.Equal(sbyte.MaxValue, viewWithNulls.SByteValue, nameof(viewWithNulls.SByteValue));
         Assert.Null(viewWithNulls.NullableSByteValue);
-        TestAssert.Equal(SByteEnum.Min, viewWithNulls.SByteBackedEnum, nameof(viewWithNulls.SByteBackedEnum));
+        TestAssert.Equal(SByteEnum.Max, viewWithNulls.SByteBackedEnum, nameof(viewWithNulls.SByteBackedEnum));
         Assert.Null(viewWithNulls.NullableSByteBackedEnum);
         TestAssert.Equal(0, viewWithNulls.SByteArray.Length, "SByteArray.Length");
         TestAssert.Equal(0, viewWithNulls.SByteBackedEnumArray.Length, "SByteBackedEnumArray.Length");
