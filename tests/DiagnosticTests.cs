@@ -116,13 +116,21 @@ public class Container
     public async Task ZEROS003_Compliant_SupportedFields()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class ContainerWithPrimitives
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PackedValue
 {
-    public int Value { get; set; }
-    public string Name { get; set; }
+    public int Value;
+}
+
+[ZeroSerializer]
+public class Container
+{
+    public PackedValue Value { get; set; }
+    public PackedValue? OptionalValue { get; set; }
 }
 ";
 
@@ -163,12 +171,20 @@ public class Container
     public async Task ZEROS004_Compliant_SupportedArrayElement()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class ContainerWithArray
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PackedValue
 {
-    public int[] Values { get; set; }
+    public int Value;
+}
+
+[ZeroSerializer]
+public class Container
+{
+    public PackedValue[] Values { get; set; }
 }
 ";
 
