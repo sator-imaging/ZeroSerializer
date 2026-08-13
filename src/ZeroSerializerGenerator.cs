@@ -1273,7 +1273,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
-        var propertyReturnType = field.Kind is FieldSerializationKind.BlittableStruct
+        var propertyReturnType
+            = field.Kind is FieldSerializationKind.BlittableStruct or FieldSerializationKind.Nested
             ? GetQualifiedViewName(field.NestedSerializableType)
             : propertyType;
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(field.Symbol.Name)}");
@@ -1287,14 +1288,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             // Null is represented entirely by the offset table; no property payload marker is read.
             sourceBuilder.AppendLine("if (fieldDataOffset == 0)");
             sourceBuilder.OpenBlock();
-            if (field.NullableUnderlyingType is not null && field.Kind != FieldSerializationKind.Nested)
-            {
-                sourceBuilder.AppendLine("return null;");
-            }
-            else
-            {
-                sourceBuilder.AppendLine("return default;");
-            }
+            // Always use 'default' instead of 'null' for reference types.
+            sourceBuilder.AppendLine("return default;");
             sourceBuilder.CloseBlock();
         }
 
