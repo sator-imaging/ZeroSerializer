@@ -45,8 +45,12 @@ public class Outer
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class TopLevelClass
+public class Outer
 {
+    public class Inner
+    {
+        public int Value { get; set; }
+    }
     public int Value { get; set; }
 }
 ";
