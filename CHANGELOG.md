@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.1.0-rc.2](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.2) (2026-08-13)
+
+### 📣 Breaking Changes ⚠
+* Drop unexpected nested blittable struct support; require `[ZeroSerializer]` and tighten diagnostics by [@sator-imaging](https://github.com/sator-imaging) in [#48](https://github.com/sator-imaging/ZeroSerializer/pull/48)
+### 🚀 Features
+* Add `ShapeTag` and `ShapeHash` to Generated View Structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#43](https://github.com/sator-imaging/ZeroSerializer/pull/43)
+* Add opt-in EmitShapeTag support by [@sator-imaging](https://github.com/sator-imaging) in [#49](https://github.com/sator-imaging/ZeroSerializer/pull/49)
+### 📖 Documentation
+* docs(ja): README by [@sator-imaging](https://github.com/sator-imaging) in [#39](https://github.com/sator-imaging/ZeroSerializer/pull/39)
+* Describe behavior of non-marked nested types in README docs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#42](https://github.com/sator-imaging/ZeroSerializer/pull/42)
+* docs: README by [@sator-imaging](https://github.com/sator-imaging) in [#50](https://github.com/sator-imaging/ZeroSerializer/pull/50)
+### 📚 Other Changes
+* Use Serialize method for nested blittable structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#35](https://github.com/sator-imaging/ZeroSerializer/pull/35)
+* Add generic type disallowance diagnostic (ZEROS008) for ZeroSerializer by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#36](https://github.com/sator-imaging/ZeroSerializer/pull/36)
+* test: reflect update to integration test by [@sator-imaging](https://github.com/sator-imaging) in [#40](https://github.com/sator-imaging/ZeroSerializer/pull/40)
+* chore by [@sator-imaging](https://github.com/sator-imaging) in [#44](https://github.com/sator-imaging/ZeroSerializer/pull/44)
+* style: add using directives and remove inline fully-qualified type references by [@sator-imaging](https://github.com/sator-imaging) in [#45](https://github.com/sator-imaging/ZeroSerializer/pull/45)
+* Prefix generated ShapeTag with version (v1) and refactor creation by [@sator-imaging](https://github.com/sator-imaging) in [#46](https://github.com/sator-imaging/ZeroSerializer/pull/46)
+* refactor: project structure by [@sator-imaging](https://github.com/sator-imaging) in [#47](https://github.com/sator-imaging/ZeroSerializer/pull/47)
+* style: doc comment by [@sator-imaging](https://github.com/sator-imaging) in [#51](https://github.com/sator-imaging/ZeroSerializer/pull/51)
+* style: shape tag by [@sator-imaging](https://github.com/sator-imaging) in [#53](https://github.com/sator-imaging/ZeroSerializer/pull/53)
+* Add tests for nullable enums and sbyte max value/array roundtrips by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#52](https://github.com/sator-imaging/ZeroSerializer/pull/52)
+* fix: limit blittable detection to structs by [@sator-imaging](https://github.com/sator-imaging) in [#55](https://github.com/sator-imaging/ZeroSerializer/pull/55)
+
+
+**Full Changelog**: https://github.com/sator-imaging/ZeroSerializer/compare/v1.1.0-rc.1...v1.1.0-rc.2
+
+
 ## [1.1.0-rc.1](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.1) (2026-08-10)
 
 ### 📣 Breaking Changes ⚠
