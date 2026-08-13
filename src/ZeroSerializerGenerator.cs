@@ -979,8 +979,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (!generationModel.EmitShapeTag)
         {
             sourceBuilder.AppendLine("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.");
+            sourceBuilder.AppendLine("///// <summary>");
+            sourceBuilder.AppendLine("///// A structural signature that describes the layout of the serialized type and any nested structures.");
+            sourceBuilder.AppendLine("///// </summary>");
+            sourceBuilder.AppendLine($"//public const string ShapeTag = \"{shapeTag}\";");
         }
-        sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "//" : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
+        else
+        {
+            sourceBuilder.AppendLine("/// <summary>");
+            sourceBuilder.AppendLine("/// A structural signature that describes the layout of the serialized type and any nested structures.");
+            sourceBuilder.AppendLine("/// </summary>");
+            sourceBuilder.AppendLine($"public const string ShapeTag = \"{shapeTag}\";");
+        }
+        sourceBuilder.AppendLine("/// <summary>");
+        sourceBuilder.AppendLine("/// A hash of the structural signature that describes the layout of the serialized type and any nested structures.");
+        sourceBuilder.AppendLine("/// </summary>");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
