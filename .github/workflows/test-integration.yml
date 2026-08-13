@@ -33,7 +33,10 @@ jobs:
       
       - run: |
           dotnet test ./tests-integration -c ${{ matrix.configuration }} --no-restore \
-            > test-output.txt
+            > test-output.txt 2>&1
 
-          cat test-output.txt
           grep -E " - .*\.dll" test-output.txt >> $GITHUB_STEP_SUMMARY
+
+      - if: failure()
+        name: TEST FAILURE LOG
+        run: cat test-output.txt

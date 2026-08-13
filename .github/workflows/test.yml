@@ -54,6 +54,7 @@ jobs:
           grep -E " - .*\.dll" test-output.txt >> $GITHUB_STEP_SUMMARY
 
       - if: failure()
+        name: TEST FAILURE LOG
         run: cat test-output.txt
 
 

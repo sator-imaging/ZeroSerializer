@@ -980,7 +980,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.");
         }
-        sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "//" : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
+        string shapeTagPrefix = generationModel.EmitShapeTag ? string.Empty : "//";
+        sourceBuilder.AppendLine($"{shapeTagPrefix}/// <summary>");
+        sourceBuilder.AppendLine($"{shapeTagPrefix}/// A structural signature that describes the layout of the serialized type and any nested structures.");
+        sourceBuilder.AppendLine($"{shapeTagPrefix}/// </summary>");
+        sourceBuilder.AppendLine($"{shapeTagPrefix}public const string ShapeTag = \"{shapeTag}\";");
+        sourceBuilder.AppendLine();
+        sourceBuilder.AppendLine("/// <summary>");
+        sourceBuilder.AppendLine("/// A hash of the structural signature that describes the layout of the serialized type and any nested structures.");
+        sourceBuilder.AppendLine("/// </summary>");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
@@ -1017,37 +1025,32 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
             sourceBuilder.AppendLine("public int GetByteLength() => RequiredByteLength;");
-            sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
-            sourceBuilder.AppendLine("public int GetByteLength(ReadOnlySpan<byte> scan) => RequiredByteLength;");
         }
         else
         {
-            sourceBuilder.AppendLine("public int GetByteLength() => GetByteLength(serializedMemory.Span);");
-            sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("public int GetByteLength(ReadOnlySpan<byte> scan)");
+            sourceBuilder.AppendLine("public int GetByteLength()");
             sourceBuilder.OpenBlock();
             if (fieldCount > 0)
             {
                 var lastField = generationModel.Fields[fieldCount - 1];
-                sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(scan.Slice({(fieldCount - 1) * 4}, 4));");
+                sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({(fieldCount - 1) * 4}, 4));");
                 sourceBuilder.AppendLine("if (offset > 0)");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "scan")};");
+                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset")};");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("return GetFallbackByteLength(scan);");
+                sourceBuilder.AppendLine("return GetFallbackByteLength(serializedMemory);");
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("static int GetFallbackByteLength(ReadOnlySpan<byte> scan)");
+                sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlyMemory<byte> serializedMemory)");
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("int fallbackOffset;");
                 for (int i = fieldCount - 2; i >= 0; i--)
                 {
                     var field = generationModel.Fields[i];
-                    sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(scan.Slice({i * 4}, 4));");
+                    sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({i * 4}, 4));");
                     sourceBuilder.AppendLine("if (fallbackOffset > 0)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "scan")};");
+                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset")};");
                     sourceBuilder.CloseBlock();
                 }
                 sourceBuilder.AppendLine($"return {fieldCount * 4};");
@@ -1365,7 +1368,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return propertyModel.IsNullableType || propertyModel.Kind == FieldSerializationKind.String;
     }
 
-    private static string GetFieldLengthExpression(FieldGenerationModel field, string offsetVarName, string spanVarName)
+    private static string GetFieldLengthExpression(FieldGenerationModel field, string offsetVarName)
     {
         switch (field.Kind)
         {
@@ -1374,10 +1377,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 return $"{field.ElementByteCount}";
             case FieldSerializationKind.String:
             case FieldSerializationKind.Array:
-                return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanVarName}.Slice({offsetVarName}, 4))";
+                return $"4 + BinaryPrimitives.ReadInt32LittleEndian(serializedMemory.Span.Slice({offsetVarName}, 4))";
             case FieldSerializationKind.Nested:
                 string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
-                return $"default({nestedViewTypeName}).GetByteLength({spanVarName}.Slice({offsetVarName}))";
+                return $"new {nestedViewTypeName}(serializedMemory.Slice({offsetVarName})).GetByteLength()";
             default:
                 throw new InvalidOperationException("Unknown field kind");
         }

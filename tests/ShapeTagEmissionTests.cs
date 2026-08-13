@@ -19,11 +19,18 @@ public class ShapeTagEmissionTests
     {
         string generatedView = GenerateView("[ZeroSerializer.ZeroSerializer] public class Record { public int Value { get; set; } }");
 
-        Assert.DoesNotContain("/// <remarks>", generatedView);
+        // Do not remove leading spaces (no indentation checks are fragile).
+        Assert.DoesNotContain("    /// <remarks>", generatedView);
         Assert.DoesNotContain("    public const string ShapeTag", generatedView);
-        Assert.Contains("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
-        Assert.Contains("//public const string ShapeTag = \"v1/{int}\";", generatedView);
-        Assert.Contains("public const uint ShapeHash = ", generatedView);
+        Assert.Contains("    // Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
+        Assert.Contains("    ///// <summary>", generatedView);
+        Assert.Contains("    ///// A structural signature that describes the layout of the serialized type and any nested structures.", generatedView);
+        Assert.Contains("    ///// </summary>", generatedView);
+        Assert.Contains("    //public const string ShapeTag = \"v1/{int}\";", generatedView);
+        Assert.Contains("    /// <summary>", generatedView);
+        Assert.Contains("    /// A hash of the structural signature that describes the layout of the serialized type and any nested structures.", generatedView);
+        Assert.Contains("    /// </summary>", generatedView);
+        Assert.Contains("    public const uint ShapeHash = ", generatedView);
     }
 
     [Fact]
@@ -31,11 +38,17 @@ public class ShapeTagEmissionTests
     {
         string generatedView = GenerateView("[ZeroSerializer.ZeroSerializer(EmitShapeTag = true)] public class Record { public int Value { get; set; } }");
 
-        Assert.DoesNotContain("// public const string ShapeTag", generatedView);
-        Assert.Contains("/// <remarks>", generatedView);
-        Assert.Contains("/// ShapeTag: `v1/{int}`", generatedView);
-        Assert.Contains("public const string ShapeTag = \"v1/{int}\";", generatedView);
-        Assert.Contains("public const uint ShapeHash = ", generatedView);
+        // Do not remove leading spaces (no indentation checks are fragile).
+        Assert.Contains("    /// <remarks>", generatedView);
+        Assert.Contains("    /// ShapeTag: `v1/{int}`", generatedView);
+        Assert.Contains("    /// <summary>", generatedView);
+        Assert.Contains("    /// A structural signature that describes the layout of the serialized type and any nested structures.", generatedView);
+        Assert.Contains("    /// </summary>", generatedView);
+        Assert.Contains("    public const string ShapeTag = \"v1/{int}\";", generatedView);
+        Assert.Contains("    /// <summary>", generatedView);
+        Assert.Contains("    /// A hash of the structural signature that describes the layout of the serialized type and any nested structures.", generatedView);
+        Assert.Contains("    /// </summary>", generatedView);
+        Assert.Contains("    public const uint ShapeHash = ", generatedView);
     }
 
     [Fact]
