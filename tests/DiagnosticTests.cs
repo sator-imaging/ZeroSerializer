@@ -20,8 +20,11 @@ public class DiagnosticTests
         string source = @"
 using ZeroSerializer;
 
+[ZeroSerializer]
 public class Outer
 {
+    public Inner {|#1:Value|} { get; set; }
+
     [ZeroSerializer]
     public class {|#0:Inner|}
     {
@@ -34,7 +37,10 @@ public class Outer
             source,
             new DiagnosticResult("ZEROS001", DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithMessage("Type 'Outer.Inner' must be a non-generic, top-level class or struct without a non-object base class")
+                .WithMessage("Type 'Outer.Inner' must be a non-generic, top-level class or struct without a non-object base class"),
+            new DiagnosticResult("ZEROS005", DiagnosticSeverity.Error)
+                .WithLocation(1)
+                .WithMessage("Field 'Value' refers to serializable type 'Outer.Inner', but that type contains errors")
         );
     }
 
@@ -47,10 +53,12 @@ using ZeroSerializer;
 [ZeroSerializer]
 public class Outer
 {
-    public class Inner
-    {
-        public int Value { get; set; }
-    }
+    public Inner Value { get; set; }
+}
+
+[ZeroSerializer]
+public class Inner
+{
     public int Value { get; set; }
 }
 ";
