@@ -26,6 +26,9 @@ Receiving data over a network, reading a file, or calling another API often leav
 # Usage
 
 ```csharp
+using System;
+using ZeroSerializer;
+
 // Some APIs require data to be received into a byte array.
 byte[] receivedBuffer = ReceivePacket();
 
@@ -53,6 +56,9 @@ View construction does not read every property. Values are decoded directly from
 The complete serialized region is also available through implicit conversion:
 
 ```csharp
+using System;
+using ZeroSerializer;
+
 ReadOnlySpan<byte> serializedData = packetView;
 ReadOnlyMemory<byte> retainedData = packetView;
 ```
