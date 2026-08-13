@@ -43,15 +43,14 @@ public class Outer
         string source = @"
 using ZeroSerializer;
 
-[ZeroSerializer]
 public class Outer
 {
-    public int Value { get; set; }
+}
 
-    public class Inner
-    {
-        public int Value { get; set; }
-    }
+[ZeroSerializer]
+public class TopLevelInner
+{
+    public int Value { get; set; }
 }
 ";
 
