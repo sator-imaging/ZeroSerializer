@@ -294,6 +294,41 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[ZeroSerializer]
+public sealed class VariableStructWithArrayAtEnd
+{
+    public int ID { get; init; }
+    public int[]? Values { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class VariableStructWithStringAtEnd
+{
+    public int ID { get; init; }
+    public string? Text { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class VariableStructWithBlittableStructAtEnd
+{
+    public string? Text { get; init; }
+    public PackedRecord Blittable { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class VariableStructWithPrimitiveAtEnd
+{
+    public string? Text { get; init; }
+    public int Value { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class VariableStructWithAllNullableFields
+{
+    public string? Text { get; init; }
+    public int[]? Values { get; init; }
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
 public struct EmptyBlittableStruct

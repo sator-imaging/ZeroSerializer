@@ -989,6 +989,120 @@ public sealed class SerializationTests
         TestAssert.Equal(0, viewWithNulls.SByteBackedEnumArray.Length, "SByteBackedEnumArray.Length");
     }
 
+    [Fact]
+    public void GetByteLength_BlittableStruct()
+    {
+        var source = new StrictBlittableStruct { Value = 12345 };
+        var buffer = new byte[16];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new StrictBlittableStructView(buffer);
+        TestAssert.Equal(4, view.GetByteLength(), "StrictBlittableStructView.GetByteLength");
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "StrictBlittableStructView.GetByteLength matches writtenBytes");
+    }
+
+    [Fact]
+    public void GetByteLength_FixedSizedNonBlittableStruct()
+    {
+        var source = new FixedClass { Identifier = 9876, State = ByteState.Ready };
+        var buffer = new byte[32];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new FixedClassView(buffer);
+        TestAssert.Equal(13, view.GetByteLength(), "FixedClassView.GetByteLength");
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "FixedClassView.GetByteLength matches writtenBytes");
+    }
+
+    [Fact]
+    public void GetByteLength_VariableStruct_ArrayAtEnd()
+    {
+        var source = new VariableStructWithArrayAtEnd { ID = 1, Values = new int[] { 10, 20, 30 } };
+        var buffer = new byte[64];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new VariableStructWithArrayAtEndView(buffer);
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength");
+
+        // with null values (array is null, last field with non-null value is ID)
+        var sourceNull = new VariableStructWithArrayAtEnd { ID = 42, Values = null };
+        int writtenBytesNull = sourceNull.Serialize(buffer);
+        var viewNull = new VariableStructWithArrayAtEndView(buffer);
+        TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength with null values");
+    }
+
+    [Fact]
+    public void GetByteLength_VariableStruct_StringAtEnd()
+    {
+        var source = new VariableStructWithStringAtEnd { ID = 2, Text = "hello" };
+        var buffer = new byte[64];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new VariableStructWithStringAtEndView(buffer);
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength");
+
+        // with null text
+        var sourceNull = new VariableStructWithStringAtEnd { ID = 12, Text = null };
+        int writtenBytesNull = sourceNull.Serialize(buffer);
+        var viewNull = new VariableStructWithStringAtEndView(buffer);
+        TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength with null text");
+    }
+
+    [Fact]
+    public void GetByteLength_VariableStruct_BlittableStructAtEnd()
+    {
+        var source = new VariableStructWithBlittableStructAtEnd { Text = "hello", Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
+        var buffer = new byte[64];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new VariableStructWithBlittableStructAtEndView(buffer);
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength");
+
+        // with null text
+        var sourceNull = new VariableStructWithBlittableStructAtEnd { Text = null, Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
+        int writtenBytesNull = sourceNull.Serialize(buffer);
+        var viewNull = new VariableStructWithBlittableStructAtEndView(buffer);
+        TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength with null text");
+    }
+
+    [Fact]
+    public void GetByteLength_VariableStruct_PrimitiveAtEnd()
+    {
+        var source = new VariableStructWithPrimitiveAtEnd { Text = "world", Value = 100 };
+        var buffer = new byte[64];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new VariableStructWithPrimitiveAtEndView(buffer);
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength");
+
+        // with null text
+        var sourceNull = new VariableStructWithPrimitiveAtEnd { Text = null, Value = 100 };
+        int writtenBytesNull = sourceNull.Serialize(buffer);
+        var viewNull = new VariableStructWithPrimitiveAtEndView(buffer);
+        TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength with null text");
+    }
+
+    [Fact]
+    public void GetByteLength_VariableStruct_AllNullableFieldsAreNull()
+    {
+        // 1. One nullable property with null (fieldCount = 1)
+        {
+            var source = new StringOnlyRecord { Text = null };
+            var buffer = new byte[16];
+            int writtenBytes = source.Serialize(buffer);
+            var view = new StringOnlyRecordView(buffer);
+            TestAssert.Equal(4, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null");
+            TestAssert.Equal(writtenBytes, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null matches writtenBytes");
+        }
+
+        // 2. Multiple nullable properties all null (fieldCount > 1)
+        {
+            var source = new VariableStructWithAllNullableFields
+            {
+                Text = null,
+                Values = null
+            };
+            var buffer = new byte[16];
+            int writtenBytes = source.Serialize(buffer);
+            var view = new VariableStructWithAllNullableFieldsView(buffer);
+            TestAssert.Equal(8, view.GetByteLength(), "VariableStructWithAllNullableFieldsView.GetByteLength with all nulls");
+            TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithAllNullableFieldsView.GetByteLength with all nulls matches writtenBytes");
+        }
+    }
+
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {
         return typeof(ZeroSerializerExtensions)
