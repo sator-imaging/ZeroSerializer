@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="NuGetPublishSettings">
-    <NuGetPublishVersion>1.1.0-rc.2</NuGetPublishVersion>
+    <NuGetPublishVersion>1.1.0-rc.3</NuGetPublishVersion>
     <!-- relative path from .csproj files, without trailing slash -->
     <NuGetPublishProjectRootRelPath>..</NuGetPublishProjectRootRelPath>
     <NuGetPublishIconFile>icon-128px.png</NuGetPublishIconFile>
