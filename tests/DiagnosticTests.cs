@@ -234,18 +234,26 @@ public class Container
     public async Task ZEROS005_Compliant_ValidNestedSerializableType()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class ValidNested
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PackedValue
 {
-    public int Value { get; set; }
+    public int Value;
+}
+
+[ZeroSerializer]
+public class ValidType
+{
+    public PackedValue Value { get; set; }
 }
 
 [ZeroSerializer]
 public class Container
 {
-    public ValidNested NestedValue { get; set; }
+    public ValidType NestedValue { get; set; }
 }
 ";
 
