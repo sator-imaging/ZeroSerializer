@@ -1019,14 +1019,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             sourceBuilder.AppendLine("public int GetByteLength() => RequiredByteLength;");
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
-            sourceBuilder.AppendLine("public static int GetByteLength(ReadOnlySpan<byte> scan) => RequiredByteLength;");
+            sourceBuilder.AppendLine("public int GetByteLength(ReadOnlySpan<byte> scan) => RequiredByteLength;");
         }
         else
         {
-            sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
             sourceBuilder.AppendLine("public int GetByteLength() => GetByteLength(serializedMemory.Span);");
             sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("public static int GetByteLength(ReadOnlySpan<byte> scan)");
+            sourceBuilder.AppendLine("public int GetByteLength(ReadOnlySpan<byte> scan)");
             sourceBuilder.OpenBlock();
             if (fieldCount > 0)
             {
@@ -1378,7 +1377,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanVarName}.Slice({offsetVarName}, 4))";
             case FieldSerializationKind.Nested:
                 string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
-                return $"{nestedViewTypeName}.GetByteLength({spanVarName}.Slice({offsetVarName}))";
+                return $"default({nestedViewTypeName}).GetByteLength({spanVarName}.Slice({offsetVarName}))";
             default:
                 throw new InvalidOperationException("Unknown field kind");
         }
