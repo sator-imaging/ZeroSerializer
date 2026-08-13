@@ -1196,6 +1196,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(field.Symbol.Name)}");
         sourceBuilder.OpenBlock();
+        if (containingModel.IsBlittableStruct)
+        {
+            sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+        }
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
         if (containingModel.IsBlittableStruct)
@@ -1204,6 +1208,23 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
+
+            if (field.Kind == FieldSerializationKind.BlittableStruct
+                && field.NestedSerializableType is not null)
+            {
+                string valuePropertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine($"{propertyAccessibility} {valuePropertyType} {EscapeIdentifier(field.Symbol.Name)}_AsValue");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+                sourceBuilder.AppendLine("get");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+            }
+
             return;
         }
 
@@ -1271,7 +1292,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.CloseBlock();
 
         if (field.Kind == FieldSerializationKind.BlittableStruct
-            && !containingModel.IsBlittableStruct
             && field.NestedSerializableType is not null)
         {
             string valuePropertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

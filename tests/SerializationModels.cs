@@ -294,6 +294,14 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct NestedBlittableStruct
+{
+    public int Id { get; init; }
+    public PackedRecord Nested { get; init; }
+}
+
 [ZeroSerializer]
 public sealed class VariableStructWithArrayAtEnd
 {

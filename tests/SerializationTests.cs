@@ -822,6 +822,31 @@ public sealed class SerializationTests
         Assert.False(viewWithNullOptional.OptionalValue_AsValue.HasValue);
     }
 
+    [Fact]
+    public void BlittableNestedPropertyInBlittableStructTest()
+    {
+        // 1. Assert that nested blittable type inside a blittable struct has companion _AsValue property
+        PropertyInfo? nestedAsValueProperty = typeof(NestedBlittableStructView).GetProperty("Nested_AsValue");
+        Assert.NotNull(nestedAsValueProperty);
+        Assert.Equal(typeof(PackedRecord), nestedAsValueProperty!.PropertyType);
+
+        // 2. Assert values are read correctly
+        var nested = new PackedRecord { Number = 123, State = SignedState.Positive };
+        var source = new NestedBlittableStruct
+        {
+            Id = 5,
+            Nested = nested,
+        };
+
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new NestedBlittableStructView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(5, view.Id, "Id");
+        TestAssert.Equal(123, view.Nested_AsValue.Number, "Nested_AsValue.Number");
+        TestAssert.Equal(SignedState.Positive, view.Nested_AsValue.State, "Nested_AsValue.State");
+    }
+
     public void StrictBlittableStructTests()
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
