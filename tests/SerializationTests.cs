@@ -989,6 +989,7 @@ public sealed class SerializationTests
         TestAssert.Equal(0, viewWithNulls.SByteBackedEnumArray.Length, "SByteBackedEnumArray.Length");
     }
 
+#if !PUBLISHED_PACKAGE_TESTS
     [Fact]
     public void GetByteLength_BlittableStruct()
     {
@@ -1102,6 +1103,7 @@ public sealed class SerializationTests
             TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithAllNullableFieldsView.GetByteLength with all nulls matches writtenBytes");
         }
     }
+#endif
 
     private static MethodInfo GetSerializeMethod(Type sourceType)
     {

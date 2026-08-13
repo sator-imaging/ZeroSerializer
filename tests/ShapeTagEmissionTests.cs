@@ -12,6 +12,7 @@ using ZeroSerializer.Generator;
 
 namespace ZeroSerializer.Tests;
 
+#if !PUBLISHED_PACKAGE_TESTS
 public class ShapeTagEmissionTests
 {
     [Fact]
@@ -72,3 +73,4 @@ public class ShapeTagEmissionTests
         return driver.RunGenerators(compilation).GetRunResult();
     }
 }
+#endif

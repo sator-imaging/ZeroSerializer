@@ -9,6 +9,7 @@ using ZeroSerializer.Tests.Models;
 
 namespace ZeroSerializer.Tests;
 
+#if !PUBLISHED_PACKAGE_TESTS
 public class ShapeTagAndHashTests
 {
     [Fact]
@@ -52,3 +53,4 @@ public class ShapeTagAndHashTests
         Assert.Equal(SchemaSignatureTestsModelView.ShapeHash, XXHash32.HashToUInt32(schemaSignatureExpected));
     }
 }
+#endif
