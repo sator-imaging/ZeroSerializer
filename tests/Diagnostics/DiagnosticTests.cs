@@ -21,6 +21,8 @@ using ZeroSerializer;
 
 public class Outer
 {
+    public Inner Value { get; set; }
+
     [ZeroSerializer]
     public class {|#0:Inner|}
     {
@@ -45,6 +47,7 @@ using ZeroSerializer;
 
 public class Outer
 {
+    public TopLevelInner Value { get; set; }
 }
 
 [ZeroSerializer]
