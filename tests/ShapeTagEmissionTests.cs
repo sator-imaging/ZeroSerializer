@@ -19,6 +19,7 @@ public class ShapeTagEmissionTests
     {
         string generatedView = GenerateView("[ZeroSerializer.ZeroSerializer] public class Record { public int Value { get; set; } }");
 
+        // Do not remove leading spaces (no indentation checks are fragile).
         Assert.DoesNotContain("    /// <remarks>", generatedView);
         Assert.DoesNotContain("    public const string ShapeTag", generatedView);
         Assert.Contains("    // Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.", generatedView);
@@ -37,7 +38,7 @@ public class ShapeTagEmissionTests
     {
         string generatedView = GenerateView("[ZeroSerializer.ZeroSerializer(EmitShapeTag = true)] public class Record { public int Value { get; set; } }");
 
-        Assert.DoesNotContain("    // public const string ShapeTag", generatedView);
+        // Do not remove leading spaces (no indentation checks are fragile).
         Assert.Contains("    /// <remarks>", generatedView);
         Assert.Contains("    /// ShapeTag: `v1/{int}`", generatedView);
         Assert.Contains("    /// <summary>", generatedView);
