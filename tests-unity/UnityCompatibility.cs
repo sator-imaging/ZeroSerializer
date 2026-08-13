@@ -174,6 +174,41 @@ RequireCondition(
     && EmptyStructPacketView.RequiredByteLength == 0,
     "Empty serializable types did not remain zero length.");
 
+// Record test (class)
+var recordObj = new UnitySimpleCsharpRecord { IntValue = 55, DoubleValue = 99.9 };
+var recordBuffer = new byte[128];
+int recordWritten = recordObj.Serialize(recordBuffer);
+var recordView = new UnitySimpleCsharpRecordView(recordBuffer);
+RequireCondition(
+    recordView.IntValue == 55
+    && recordView.DoubleValue == 99.9
+    && !UnitySimpleCsharpRecordView.IsBlittable,
+    "UnitySimpleCsharpRecord did not match its source or IsBlittable was incorrect.");
+
+// Record struct test
+var recordStructObj = new UnitySimpleRecordStruct { IntValue = 66, DoubleValue = 88.8 };
+var recordStructBuffer = new byte[128];
+int recordStructWritten = recordStructObj.Serialize(recordStructBuffer);
+var recordStructView = new UnitySimpleRecordStructView(recordStructBuffer);
+RequireCondition(
+    recordStructView.IntValue == 66
+    && recordStructView.DoubleValue == 88.8
+    && !UnitySimpleRecordStructView.IsBlittable,
+    "UnitySimpleRecordStruct did not match its source or IsBlittable was incorrect.");
+
+// Record struct with blittable layout test
+var blittableRecordStructObj = new UnitySimpleBlittableRecordStruct { IntValue = 77, DoubleValue = 77.7 };
+var blittableRecordStructBuffer = new byte[UnitySimpleBlittableRecordStructView.RequiredByteLength];
+int blittableRecordStructWritten = blittableRecordStructObj.Serialize(blittableRecordStructBuffer);
+var blittableRecordStructView = new UnitySimpleBlittableRecordStructView(blittableRecordStructBuffer);
+RequireCondition(
+    blittableRecordStructView.IntValue == 77
+    && blittableRecordStructView.DoubleValue == 77.7
+    && UnitySimpleBlittableRecordStructView.IsBlittable
+    && UnitySimpleBlittableRecordStructView.RequiredByteLength == 12
+    && blittableRecordStructWritten == 12,
+    "UnitySimpleBlittableRecordStruct did not match its source or IsBlittable was incorrect.");
+
 Console.WriteLine("ZeroSerializer Unity compatibility tests passed.");
 
 return 0;
@@ -347,6 +382,28 @@ namespace UnityCompatibilityModels
 namespace System.Runtime.CompilerServices
 {
     struct IsExternalInit { }
+}
+
+[ZeroSerializer]
+public record UnitySimpleCsharpRecord
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
+}
+
+[ZeroSerializer]
+public record struct UnitySimpleRecordStruct
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public record struct UnitySimpleBlittableRecordStruct
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
 }
 
 public static class UnityCompatibilityHelper

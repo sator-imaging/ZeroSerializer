@@ -295,6 +295,28 @@ public struct StrictBlittableStruct
 }
 
 [ZeroSerializer]
+public record SimpleCsharpRecord
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
+}
+
+[ZeroSerializer]
+public record struct SimpleRecordStruct
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public record struct SimpleBlittableRecordStruct
+{
+    public int IntValue { get; init; }
+    public double DoubleValue { get; init; }
+}
+
+[ZeroSerializer]
 public sealed class VariableStructWithArrayAtEnd
 {
     public int ID { get; init; }
