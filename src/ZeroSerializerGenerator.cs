@@ -985,6 +985,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// A structural signature that describes the layout of the serialized type and any nested structures.");
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// </summary>");
         sourceBuilder.AppendLine($"{shapeTagPrefix}public const string ShapeTag = \"{shapeTag}\";");
+        sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine("/// A hash of the structural signature that describes the layout of the serialized type and any nested structures.");
         sourceBuilder.AppendLine("/// </summary>");
