@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 
-namespace ZeroSerializer.Tests.Verifiers;
+namespace ZeroSerializer.Tests.Diagnostics;
 
 public static class CSharpSourceGeneratorVerifier<TGenerator>
     where TGenerator : ISourceGenerator, new()
