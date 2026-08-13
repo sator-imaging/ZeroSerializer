@@ -819,6 +819,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine($"internal static class {SerializerHelperName}");
         sourceBuilder.OpenBlock();
+        sourceBuilder.AppendLine("[ThreadStatic] internal static ReadOnlyMemory<byte> t_serializedMemory;");
+        sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("internal static void ThrowEndianError() =>");
         sourceBuilder.AppendLine("    throw new PlatformNotSupportedException(\"ZeroSerializer requires a little-endian runtime.\");");
         sourceBuilder.CloseBlock();
@@ -1000,7 +1002,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
-        sourceBuilder.AppendLine("[ThreadStatic] private static ReadOnlyMemory<byte> t_serializedMemory;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine($"public {generationModel.ViewTypeName}(ReadOnlyMemory<byte> containingSerializedMemory)");
         sourceBuilder.OpenBlock();
@@ -1041,15 +1042,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "span", "serializedMemory", modelLookup)};");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("var prevMemory = t_serializedMemory;");
-                sourceBuilder.AppendLine("t_serializedMemory = serializedMemory;");
+                sourceBuilder.AppendLine("var prevMemory = global::ZeroSerializer.ZeroSerializerHelper.t_serializedMemory;");
+                sourceBuilder.AppendLine("global::ZeroSerializer.ZeroSerializerHelper.t_serializedMemory = serializedMemory;");
                 sourceBuilder.AppendLine("try");
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("return GetFallbackByteLength(span);");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine("finally");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine("t_serializedMemory = prevMemory;");
+                sourceBuilder.AppendLine("global::ZeroSerializer.ZeroSerializerHelper.t_serializedMemory = prevMemory;");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
                 sourceBuilder.AppendLine("static int GetFallbackByteLength(ReadOnlySpan<byte> span)");
@@ -1061,7 +1062,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(span.Slice({i * 4}, 4));");
                     sourceBuilder.AppendLine("if (fallbackOffset > 0)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "span", "t_serializedMemory", modelLookup)};");
+                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "span", "global::ZeroSerializer.ZeroSerializerHelper.t_serializedMemory", modelLookup)};");
                     sourceBuilder.CloseBlock();
                 }
                 sourceBuilder.AppendLine($"return {fieldCount * 4};");
