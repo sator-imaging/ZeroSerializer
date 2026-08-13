@@ -1662,7 +1662,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (typeSymbol.TypeKind == TypeKind.Enum && typeSymbol is INamedTypeSymbol enumType)
         {
-            string prefix = HasFlagsAttribute(enumType) ? "flags:" : "enum:";
+            string prefix = "enum:";
             string underlyingName = GetPrimitiveKeyword(enumType.EnumUnderlyingType);
             if (underlyingName.Length == 0)
             {
@@ -1727,24 +1727,4 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         };
     }
 
-    private static bool HasFlagsAttribute(INamedTypeSymbol enumType)
-    {
-        foreach (AttributeData attr in enumType.GetAttributes())
-        {
-            if (attr.AttributeClass is INamedTypeSymbol
-                {
-                    Name: "FlagsAttribute", ContainingNamespace: INamespaceSymbol
-                    {
-                        Name: "System", ContainingNamespace: INamespaceSymbol
-                        {
-                            IsGlobalNamespace: true
-                        }
-                    }
-                })
-            {
-                return true;
-            }
-        }
-        return false;
-    }
 }
