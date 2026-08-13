@@ -975,12 +975,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         sourceBuilder.AppendLine($"{viewAccessibility} readonly struct {generationModel.ViewTypeName}");
         sourceBuilder.OpenBlock();
-        sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine($"/// The fixed byte count (including the offset table) plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
-        sourceBuilder.AppendLine("/// </summary>");
-        int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
-        sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
-        sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         uint shapeHash = XXHash32.HashToUInt32(shapeTag);
         if (!generationModel.EmitShapeTag)
         {
@@ -988,6 +982,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         sourceBuilder.AppendLine($"{(!generationModel.EmitShapeTag ? "//" : string.Empty)}public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
+        sourceBuilder.AppendLine();
+        sourceBuilder.AppendLine("/// <summary>");
+        sourceBuilder.AppendLine($"/// The fixed byte count, including the offset table for non-blittable layouts, plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
+        sourceBuilder.AppendLine("/// </summary>");
+        int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
+        sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
+        sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         sourceBuilder.AppendLine();
         // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
@@ -1009,11 +1010,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlyMemory<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression};");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine("/// Gets the actual byte length of the offset table plus its payloads.");
+        sourceBuilder.AppendLine("/// Gets the actual total serialized length; non-blittable layouts include the offset table.");
         sourceBuilder.AppendLine("/// </summary>");
         int fieldCount = generationModel.Fields.Count;
         if (requiredByteLength >= 0)
         {
+            sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
             sourceBuilder.AppendLine("public int GetByteLength() => RequiredByteLength;");
         }
         else
