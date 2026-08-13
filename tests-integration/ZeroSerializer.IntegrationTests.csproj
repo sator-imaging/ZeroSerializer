@@ -38,6 +38,8 @@
              Exclude="../tests/UnityCompatibilityTests.cs;
                       ../tests/DiagnosticTests.cs;
                       ../tests/XXHash32Tests.cs;
+                      ../tests/ShapeTagAndHashTests.cs;
+                      ../tests/ShapeTagEmissionTests.cs;
                       ../tests/bin/**/*.cs;
                       ../tests/obj/**/*.cs"
     />
