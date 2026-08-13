@@ -4,7 +4,7 @@
 using System;
 using System.Text;
 
-namespace ZeroSerializer;
+namespace ZeroSerializer.Generator;
 
 /// <summary>
 /// Provides a standalone, zero-dependency implementation of the xxHash32 algorithm.
