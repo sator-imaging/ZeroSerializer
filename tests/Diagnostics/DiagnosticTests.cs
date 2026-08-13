@@ -63,6 +63,59 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS009_Violation_UnmarkedTypeReturnedByProperty()
+    {
+        string source = @"
+using ZeroSerializer;
+
+public class UnmarkedClass
+{
+    public int Value { get; set; }
+}
+
+[ZeroSerializer]
+public class Container
+{
+    public {|#0:UnmarkedClass|} {|#1:Value|} { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Property 'Value' returns type 'UnmarkedClass' that is not marked with [ZeroSerializer]"),
+            new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
+                .WithLocation(1)
+                .WithMessage("Field 'Value' has unsupported type 'UnmarkedClass'")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS009_Compliant_MarkedTypeReturnedByProperty()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public class MarkedClass
+{
+    public int Value { get; set; }
+}
+
+[ZeroSerializer]
+public class Container
+{
+    public MarkedClass Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Compliant_InaccessibleField()
     {
         string source = @"
@@ -97,16 +150,22 @@ public struct PackedValue
 [ZeroSerializer]
 public class Container
 {
-    public PackedValue {|#0:Value|} { get; set; }
-    public PackedValue? {|#1:OptionalValue|} { get; set; }
+    public {|#2:PackedValue|} {|#0:Value|} { get; set; }
+    public {|#3:PackedValue?|} {|#1:OptionalValue|} { get; set; }
 }
 ";
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(2)
+                .WithMessage("Property 'Value' returns type 'PackedValue' that is not marked with [ZeroSerializer]"),
             new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
                 .WithLocation(0)
                 .WithMessage("Field 'Value' has unsupported type 'PackedValue'"),
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(3)
+                .WithMessage("Property 'OptionalValue' returns type 'PackedValue' that is not marked with [ZeroSerializer]"),
             new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
                 .WithLocation(1)
                 .WithMessage("Field 'OptionalValue' has unsupported type 'PackedValue?'")
@@ -210,7 +269,7 @@ public struct PackedValue
 [ZeroSerializer]
 public class InvalidType
 {
-    public PackedValue {|#0:Value|} { get; set; }
+    public {|#2:PackedValue|} {|#0:Value|} { get; set; }
 }
 
 [ZeroSerializer]
@@ -222,6 +281,9 @@ public class Container
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(2)
+                .WithMessage("Property 'Value' returns type 'PackedValue' that is not marked with [ZeroSerializer]"),
             new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
                 .WithLocation(0)
                 .WithMessage("Field 'Value' has unsupported type 'PackedValue'"),

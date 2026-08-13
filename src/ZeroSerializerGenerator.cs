@@ -92,6 +92,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnmarkedSerializableTypeReturned = new(
+        "ZEROS009",
+        "Unmarked serializable type returned",
+        "Property '{0}' returns type '{1}' that is not marked with [ZeroSerializer]",
+        SerializerName,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(GeneratorInitializationContext initializationContext)
     {
         // Unity is pinned to Roslyn 3.8, so discovery must stay on the classic syntax-receiver API.
@@ -338,6 +346,22 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 || serializableProperty.GetMethod?.DeclaredAccessibility != Accessibility.Public)
             {
                 continue;
+            }
+
+            ITypeSymbol checkType = serializableProperty.Type;
+            if (checkType is INamedTypeSymbol nullableType
+                && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+            {
+                checkType = nullableType.TypeArguments[0];
+            }
+
+            if (ShouldWarnForUnmarkedType(checkType, allSerializableTypes))
+            {
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    UnmarkedSerializableTypeReturned,
+                    GetPropertyTypeLocation(serializableProperty),
+                    serializableProperty.Name,
+                    checkType.ToDisplayString()));
             }
 
             FieldGenerationModel? propertyModel = CreatePropertyGenerationModel(serializableProperty, allSerializableTypes);
@@ -1704,6 +1728,59 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         shapeTagBuilder.Append(UnknownShapeTagType);
+    }
+
+    private static bool IsInSystemOrMicrosoftNamespace(ITypeSymbol typeSymbol)
+    {
+        for (INamespaceSymbol? ns = typeSymbol.ContainingNamespace; ns is not null; ns = ns.ContainingNamespace)
+        {
+            if (ns.IsGlobalNamespace)
+            {
+                break;
+            }
+            if (ns.Name == "System" || ns.Name == "Microsoft")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool ShouldWarnForUnmarkedType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
+    {
+        if (typeSymbol.SpecialType != SpecialType.None)
+        {
+            return false;
+        }
+
+        if (typeSymbol.TypeKind != TypeKind.Class && typeSymbol.TypeKind != TypeKind.Struct)
+        {
+            return false;
+        }
+
+        if (IsInSystemOrMicrosoftNamespace(typeSymbol))
+        {
+            return false;
+        }
+
+        if (IsSerializableType(typeSymbol, allSerializableTypes))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static Location? GetPropertyTypeLocation(IPropertySymbol propertySymbol)
+    {
+        foreach (SyntaxReference syntaxReference in propertySymbol.DeclaringSyntaxReferences)
+        {
+            if (syntaxReference.GetSyntax() is PropertyDeclarationSyntax propertyDeclaration)
+            {
+                return propertyDeclaration.Type.GetLocation();
+            }
+        }
+        return propertySymbol.Locations.IsDefaultOrEmpty ? null : propertySymbol.Locations[0];
     }
 
     private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
