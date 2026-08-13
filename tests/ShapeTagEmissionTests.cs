@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using System;
 using System.Linq;
 using Xunit;
+using ZeroSerializer.Generator;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member
 
