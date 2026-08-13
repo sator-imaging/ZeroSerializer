@@ -984,7 +984,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine($"/// The fixed byte count (including the offset table) plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
+        sourceBuilder.AppendLine($"/// The fixed byte count, including the offset table for non-blittable layouts, plus one native pointer per runtime-sized property for <see cref=\"{generationModel.QualifiedSourceTypeName}\"/>; negative when variable data is present.");
         sourceBuilder.AppendLine("/// </summary>");
         int requiredByteLength = CalculateRequiredByteLength(generationModel, modelLookup);
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
@@ -1010,7 +1010,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public static implicit operator ReadOnlyMemory<byte>({generationModel.ViewTypeName} serializedView) => {serializedMemoryExpression};");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine("/// Gets the actual total length of the data (including the offset table).");
+        sourceBuilder.AppendLine("/// Gets the actual total serialized length; non-blittable layouts include the offset table.");
         sourceBuilder.AppendLine("/// </summary>");
         int fieldCount = generationModel.Fields.Count;
         if (requiredByteLength >= 0)
