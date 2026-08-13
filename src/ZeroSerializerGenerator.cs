@@ -31,7 +31,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor UnsupportedSerializableType = new(
         "ZEROS001",
         "Unsupported serializable type",
-        "Type '{0}' must be a non-generic, top-level class or struct without a non-object base class",
+        "Type '{0}' must be a top-level class or struct without a non-object base class",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

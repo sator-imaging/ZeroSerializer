@@ -33,7 +33,7 @@ public class Outer
             source,
             new DiagnosticResult("ZEROS001", DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithMessage("Type 'Outer.Inner' must be a non-generic, top-level class or struct without a non-object base class")
+                .WithMessage("Type 'Outer.Inner' must be a top-level class or struct without a non-object base class")
         );
     }
 
