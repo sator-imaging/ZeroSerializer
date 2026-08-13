@@ -980,7 +980,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine("// Note: Emitting ShapeTag requires `EmitShapeTag = true` on ZeroSerializerAttribute.");
         }
-        string shapeTagPrefix = generationModel.EmitShapeTag ? "" : "//";
+        string shapeTagPrefix = generationModel.EmitShapeTag ? string.Empty : "//";
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// <summary>");
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// A structural signature that describes the layout of the serialized type and any nested structures.");
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// </summary>");
