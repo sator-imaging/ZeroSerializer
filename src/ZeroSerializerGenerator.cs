@@ -1194,7 +1194,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
-        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(field.Symbol.Name)}");
+        var propertyReturnType = field.Kind is FieldSerializationKind.BlittableStruct
+            ? GetQualifiedViewName(field.NestedSerializableType)
+            : propertyType;
+        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(field.Symbol.Name)}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
