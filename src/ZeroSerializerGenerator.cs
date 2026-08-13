@@ -1208,14 +1208,18 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 fieldOffset += f.ElementByteCount;
             }
-            if (field.Kind == FieldSerializationKind.BlittableStruct && field.NestedSerializableType is not null)
+            if (field.Kind == FieldSerializationKind.BlittableStruct)
             {
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({fieldOffset}, {field.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType!)}(serializedMemory.Slice({fieldOffset}, {field.ElementByteCount}));");
             }
             else
             {
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
-                sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {propertyType}>(serializedData.Slice({fieldOffset}, {field.ElementByteCount}))[0];");
+                EmitPrimitiveRead(
+                    sourceBuilder,
+                    GetSerializedPropertyType(field),
+                    "serializedData",
+                    $"{fieldOffset}");
             }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
@@ -1250,15 +1254,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "fieldDataOffset");
                 break;
             case FieldSerializationKind.BlittableStruct:
-                if (field.NestedSerializableType is not null)
-                {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}))[0];");
-                }
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType!)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
                 break;
             case FieldSerializationKind.String:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "fieldDataOffset");
