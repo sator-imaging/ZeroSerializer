@@ -1269,6 +1269,31 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+
+        if (field.Kind == FieldSerializationKind.BlittableStruct
+            && !containingModel.IsBlittableStruct
+            && field.NestedSerializableType is not null)
+        {
+            string valuePropertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            sourceBuilder.AppendLine();
+            sourceBuilder.AppendLine($"{propertyAccessibility} {valuePropertyType} {EscapeIdentifier(field.Symbol.Name)}_AsValue");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("get");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+            sourceBuilder.AppendLine($"int fieldDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({fieldIndex * 4}, 4));");
+            if (IsNullRepresentedByZeroFieldOffset(field))
+            {
+                sourceBuilder.AppendLine("if (fieldDataOffset == 0)");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("return null;");
+                sourceBuilder.CloseBlock();
+            }
+            string nonNullableStructType = GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            sourceBuilder.AppendLine($"return MemoryMarshal.Read<{nonNullableStructType}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+        }
     }
 
     private static void EmitViewCollectionHeader(

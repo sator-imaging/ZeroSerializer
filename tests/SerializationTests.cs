@@ -780,6 +780,48 @@ public sealed class SerializationTests
         Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
     }
 
+    [Fact]
+    public void BlittableNestedPropertiesAsValuePropertiesTest()
+    {
+        // 1. Assert that nested blittable type has companion _AsValue property returning the original struct type
+        PropertyInfo? valueAsValueProperty = typeof(PackedContainerView).GetProperty("Value_AsValue");
+        Assert.NotNull(valueAsValueProperty);
+        Assert.Equal(typeof(PackedRecord), valueAsValueProperty!.PropertyType);
+
+        PropertyInfo? optionalValueAsValueProperty = typeof(PackedContainerView).GetProperty("OptionalValue_AsValue");
+        Assert.NotNull(optionalValueAsValueProperty);
+        Assert.Equal(typeof(Nullable<PackedRecord>), optionalValueAsValueProperty!.PropertyType);
+
+        // 2. Assert values are read correctly
+        var first = new PackedRecord { Number = 42, State = SignedState.Negative };
+        var second = new PackedRecord { Number = 99, State = SignedState.Positive };
+
+        var sourceWithOptional = new PackedContainer
+        {
+            Value = first,
+            OptionalValue = second,
+        };
+        var buffer = new byte[128];
+        int writtenBytes = sourceWithOptional.Serialize(buffer);
+        var viewWithOptional = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(first.Number, viewWithOptional.Value_AsValue.Number, "Value_AsValue.Number");
+        TestAssert.Equal(first.State, viewWithOptional.Value_AsValue.State, "Value_AsValue.State");
+        Assert.True(viewWithOptional.OptionalValue_AsValue.HasValue);
+        TestAssert.Equal(second.Number, viewWithOptional.OptionalValue_AsValue.Value.Number, "OptionalValue_AsValue.Value.Number");
+        TestAssert.Equal(second.State, viewWithOptional.OptionalValue_AsValue.Value.State, "OptionalValue_AsValue.Value.State");
+
+        // Test with null optional value
+        var sourceWithNullOptional = new PackedContainer
+        {
+            Value = first,
+            OptionalValue = null,
+        };
+        int writtenBytesNull = sourceWithNullOptional.Serialize(buffer);
+        var viewWithNullOptional = new PackedContainerView(buffer.AsMemory(0, writtenBytesNull));
+        Assert.False(viewWithNullOptional.OptionalValue_AsValue.HasValue);
+    }
+
     public void StrictBlittableStructTests()
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
