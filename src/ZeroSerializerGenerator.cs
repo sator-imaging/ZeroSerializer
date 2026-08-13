@@ -1200,8 +1200,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         if (containingModel.IsBlittableStruct)
         {
-            sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
-            sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {containingModel.QualifiedSourceTypeName}>(serializedMemory.Span)[0].{EscapeIdentifier(field.Symbol.Name)};");
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
             return;
@@ -1242,7 +1241,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 else
                 {
                     sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}))[0];");
                 }
                 break;
             case FieldSerializationKind.String:
