@@ -885,7 +885,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ViewUpdateFeaturesTest()
+    public void ViewExtensionsAndMetadata()
     {
         // 1. Check IsBlittable constants
         TestAssert.True(PackedRecordView.IsBlittable, "PackedRecordView is blittable");
