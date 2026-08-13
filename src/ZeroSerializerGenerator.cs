@@ -1024,7 +1024,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             sourceBuilder.OpenBlock();
             if (fieldCount > 0)
             {
-                sourceBuilder.AppendLine("ReadOnlyMemory<byte> serializedMemory = this.serializedMemory;");
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> scan = serializedMemory.Span;");
                 var lastField = generationModel.Fields[fieldCount - 1];
                 sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(scan.Slice({(fieldCount - 1) * 4}, 4));");
@@ -1033,9 +1032,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "scan")};");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("return GetFallbackByteLength(scan);");
+                sourceBuilder.AppendLine("return GetFallbackByteLength(scan, serializedMemory);");
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlySpan<byte> scan)");
+                sourceBuilder.AppendLine("int GetFallbackByteLength(ReadOnlySpan<byte> scan, ReadOnlyMemory<byte> serializedMemory)");
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("int fallbackOffset;");
                 for (int i = fieldCount - 2; i >= 0; i--)
