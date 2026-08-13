@@ -9,6 +9,8 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+
+    <RootNamespace>ZeroSerializer.Generator</RootNamespace>
   </PropertyGroup>
 
   <!-- https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#package-a-generator-as-a-nuget-package -->
