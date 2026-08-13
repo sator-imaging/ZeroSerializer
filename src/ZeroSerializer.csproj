@@ -13,7 +13,8 @@
 
   <!-- https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#package-a-generator-as-a-nuget-package -->
   <ItemGroup Condition=" Exists('$(OutputPath)/$(AssemblyName).dll') ">
-    <!-- Package the generator in the analyzer directory of the nuget package -->
+    <!-- Package the generator as both a compile-time reference and an analyzer so the published package matches the project reference behavior used by tests. -->
+    <None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
     <None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
