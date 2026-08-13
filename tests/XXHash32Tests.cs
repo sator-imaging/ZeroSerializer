@@ -8,7 +8,6 @@ using Xunit;
 
 namespace ZeroSerializer.Tests;
 
-#if !PUBLISHED_PACKAGE_TESTS
 // Test source: https://github.com/Cyan4973/xxHash/blob/v0.8.3/cli/xsum_sanity_check.c#L100-L110
 public sealed class XXHash32Tests
 {
@@ -41,4 +40,3 @@ public sealed class XXHash32Tests
         }
     }
 }
-#endif
