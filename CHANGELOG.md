@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0-rc.3](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.3) (2026-08-13)
+
+### 📣 Breaking Changes ⚠
+* Remove distinction of enum and flags-enum for ShapeTag by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#65](https://github.com/sator-imaging/ZeroSerializer/pull/65)
+### 🚀 Features
+* Add `GetByteLength()` to generated View structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#56](https://github.com/sator-imaging/ZeroSerializer/pull/56)
+### 📚 Other Changes
+* refactor: chore by [@sator-imaging](https://github.com/sator-imaging) in [#59](https://github.com/sator-imaging/ZeroSerializer/pull/59)
+* Fix and Add Diagnostic Tests with Rule Prefix Naming by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#57](https://github.com/sator-imaging/ZeroSerializer/pull/57)
+* Add XML comments to ShapeTag and ShapeHash view constants by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#60](https://github.com/sator-imaging/ZeroSerializer/pull/60)
+* Rename bad naming in test method by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#63](https://github.com/sator-imaging/ZeroSerializer/pull/63)
+* test: fix project structure by [@sator-imaging](https://github.com/sator-imaging) in [#69](https://github.com/sator-imaging/ZeroSerializer/pull/69)
+
+
+**Full Changelog**: https://github.com/sator-imaging/ZeroSerializer/compare/v1.1.0-rc.2...v1.1.0-rc.3
+
+
 ## [1.1.0-rc.2](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.2) (2026-08-13)
 
 ### 📣 Breaking Changes ⚠
