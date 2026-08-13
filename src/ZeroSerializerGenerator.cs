@@ -1037,12 +1037,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(span.Slice({(fieldCount - 1) * 4}, 4));");
                 sourceBuilder.AppendLine("if (offset > 0)");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "span", modelLookup)};");
+                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "span", "serializedMemory")};");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("return GetFallbackByteLength(span);");
+                sourceBuilder.AppendLine("return GetFallbackByteLength(span, serializedMemory);");
                 sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine("static int GetFallbackByteLength(ReadOnlySpan<byte> s)");
+                sourceBuilder.AppendLine("static int GetFallbackByteLength(ReadOnlySpan<byte> s, ReadOnlyMemory<byte> serializedMemory)");
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("int fallbackOffset;");
                 for (int i = fieldCount - 2; i >= 0; i--)
@@ -1051,7 +1051,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(s.Slice({i * 4}, 4));");
                     sourceBuilder.AppendLine("if (fallbackOffset > 0)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "s", modelLookup)};");
+                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "s", "serializedMemory")};");
                     sourceBuilder.CloseBlock();
                 }
                 sourceBuilder.AppendLine($"return {fieldCount * 4};");
@@ -1373,7 +1373,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         FieldGenerationModel field,
         string offsetVarName,
         string spanVarName,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
+        string memoryVarName)
     {
         switch (field.Kind)
         {
@@ -1385,87 +1385,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanVarName}.Slice({offsetVarName}, 4))";
             case FieldSerializationKind.Nested:
                 string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
-                if (modelLookup.TryGetValue(field.NestedSerializableType!, out TypeGenerationModel? nestedModel))
-                {
-                    int nestedRequiredByteLength = CalculateRequiredByteLength(nestedModel, modelLookup);
-                    if (nestedRequiredByteLength >= 0)
-                    {
-                        return $"{nestedViewTypeName}.RequiredByteLength";
-                    }
-                    else
-                    {
-                        return GetStaticLengthExpression(nestedModel, $"{spanVarName}.Slice({offsetVarName})", modelLookup);
-                    }
-                }
-                return $"new {nestedViewTypeName}(serializedMemory.Slice({offsetVarName})).GetByteLength()";
+                return $"new {nestedViewTypeName}({memoryVarName}.Slice({offsetVarName})).GetByteLength()";
             default:
                 throw new InvalidOperationException("Unknown field kind");
         }
     }
 
-    private static string GetStaticLengthExpression(
-        TypeGenerationModel model,
-        string spanExpr,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
-    {
-        int requiredByteLength = CalculateRequiredByteLength(model, modelLookup);
-        if (requiredByteLength >= 0)
-        {
-            return $"{requiredByteLength}";
-        }
-
-        int fieldCount = model.Fields.Count;
-        if (fieldCount == 0)
-        {
-            return "0";
-        }
-
-        return BuildTernaryFallback(model, fieldCount - 1, spanExpr, modelLookup);
-    }
-
-    private static string BuildTernaryFallback(
-        TypeGenerationModel model,
-        int fieldIndex,
-        string spanExpr,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
-    {
-        var field = model.Fields[fieldIndex];
-        string offsetRead = $"BinaryPrimitives.ReadInt32LittleEndian({spanExpr}.Slice({fieldIndex * 4}, 4))";
-        string fieldLength = GetStaticFieldLengthExpression(field, $"{spanExpr}.Slice({offsetRead})", modelLookup);
-        string successExpr = $"({offsetRead} + {fieldLength})";
-
-        if (fieldIndex == 0)
-        {
-            return $"({offsetRead} > 0 ? {successExpr} : {model.Fields.Count * 4})";
-        }
-
-        string fallbackExpr = BuildTernaryFallback(model, fieldIndex - 1, spanExpr, modelLookup);
-        return $"({offsetRead} > 0 ? {successExpr} : {fallbackExpr})";
-    }
-
-    private static string GetStaticFieldLengthExpression(
-        FieldGenerationModel field,
-        string spanExpr,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
-    {
-        switch (field.Kind)
-        {
-            case FieldSerializationKind.Primitive:
-            case FieldSerializationKind.BlittableStruct:
-                return $"{field.ElementByteCount}";
-            case FieldSerializationKind.String:
-            case FieldSerializationKind.Array:
-                return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanExpr}.Slice(0, 4))";
-            case FieldSerializationKind.Nested:
-                if (modelLookup.TryGetValue(field.NestedSerializableType!, out var nestedModel))
-                {
-                    return GetStaticLengthExpression(nestedModel, spanExpr, modelLookup);
-                }
-                throw new InvalidOperationException("Could not look up nested model");
-            default:
-                throw new InvalidOperationException("Unknown field kind");
-        }
-    }
 
     private static string GetSerializationValueExpression(
         FieldGenerationModel propertyModel,
