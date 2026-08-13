@@ -1183,7 +1183,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             propertyType = GetQualifiedViewName(field.NestedSerializableType!);
         }
         else if (field.Kind == FieldSerializationKind.BlittableStruct
-                 && !containingModel.IsBlittableStruct
                  && field.NestedSerializableType is not null)
         {
             string viewName = GetQualifiedViewName(field.NestedSerializableType);
@@ -1209,8 +1208,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 fieldOffset += f.ElementByteCount;
             }
-            sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
-            sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {propertyType}>(serializedData.Slice({fieldOffset}, {field.ElementByteCount}))[0];");
+            if (field.Kind == FieldSerializationKind.BlittableStruct && field.NestedSerializableType is not null)
+            {
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({fieldOffset}, {field.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+                sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {propertyType}>(serializedData.Slice({fieldOffset}, {field.ElementByteCount}))[0];");
+            }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
             return;
