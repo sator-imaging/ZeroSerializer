@@ -123,7 +123,7 @@ RequireCondition(
     && variableView.StructChild.Identifier == 100
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
     && variableView.OptionalStructChild?.Identifier == 101
-    && variableView.OptionalStructChild?.Name.SequenceEqual("optional struct".AsSpan())
+    && variableView.OptionalStructChild?.Name.SequenceEqual("optional struct".AsSpan()) == true
     && variableView.FloatValues.Length == 3
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3
