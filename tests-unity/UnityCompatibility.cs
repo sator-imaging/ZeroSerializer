@@ -209,6 +209,19 @@ RequireCondition(
     && blittableRecordStructWritten == 12,
     "UnitySimpleBlittableRecordStruct did not match its source or IsBlittable was incorrect.");
 
+// Nested blittable record struct container test
+var nestedBlittableRecordContainer = new UnityBlittableRecordStructContainer
+{
+    Nested = new UnitySimpleBlittableRecordStruct { IntValue = 88, DoubleValue = 88.88 }
+};
+var nestedBlittableRecordBuffer = new byte[128];
+int nestedBlittableRecordWritten = nestedBlittableRecordContainer.Serialize(nestedBlittableRecordBuffer);
+var nestedBlittableRecordView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer);
+RequireCondition(
+    nestedBlittableRecordView.Nested.IntValue == 88
+    && nestedBlittableRecordView.Nested.DoubleValue == 88.88,
+    "UnityBlittableRecordStructContainer did not match its source.");
+
 Console.WriteLine("ZeroSerializer Unity compatibility tests passed.");
 
 return 0;
@@ -389,6 +402,12 @@ public record UnitySimpleCsharpRecord
 {
     public int IntValue { get; init; }
     public double DoubleValue { get; init; }
+}
+
+[ZeroSerializer]
+public sealed class UnityBlittableRecordStructContainer
+{
+    public UnitySimpleBlittableRecordStruct Nested { get; init; }
 }
 
 [ZeroSerializer]

@@ -1121,56 +1121,74 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RecordTypesRoundTrip()
+    public void RecordClassRoundTrip()
     {
-        // 1. Simple record (class)
+        var source = new SimpleCsharpRecord
         {
-            var source = new SimpleCsharpRecord
-            {
-                IntValue = 123,
-                DoubleValue = 456.78
-            };
-            var buffer = new byte[128];
-            int writtenBytes = source.Serialize(buffer);
-            var view = new SimpleCsharpRecordView(buffer);
+            IntValue = 123,
+            DoubleValue = 456.78
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleCsharpRecordView(buffer);
 
-            TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
-            TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
-            TestAssert.True(!SimpleCsharpRecordView.IsBlittable, "SimpleCsharpRecordView is not blittable");
-        }
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(!SimpleCsharpRecordView.IsBlittable, "SimpleCsharpRecordView is not blittable");
+    }
 
-        // 2. Simple record struct
+    [Fact]
+    public void RecordStructRoundTrip()
+    {
+        var source = new SimpleRecordStruct
         {
-            var source = new SimpleRecordStruct
-            {
-                IntValue = 789,
-                DoubleValue = 1011.12
-            };
-            var buffer = new byte[128];
-            int writtenBytes = source.Serialize(buffer);
-            var view = new SimpleRecordStructView(buffer);
+            IntValue = 789,
+            DoubleValue = 1011.12
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleRecordStructView(buffer);
 
-            TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
-            TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
-            TestAssert.True(!SimpleRecordStructView.IsBlittable, "SimpleRecordStructView is not blittable");
-        }
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(!SimpleRecordStructView.IsBlittable, "SimpleRecordStructView is not blittable");
+    }
 
-        // 3. Simple record struct with blittable layout attribute
+    [Fact]
+    public void BlittableRecordStructRoundTrip()
+    {
+        var source = new SimpleBlittableRecordStruct
         {
-            var source = new SimpleBlittableRecordStruct
-            {
-                IntValue = 1314,
-                DoubleValue = 1516.17
-            };
-            var buffer = new byte[128];
-            int writtenBytes = source.Serialize(buffer);
-            var view = new SimpleBlittableRecordStructView(buffer);
+            IntValue = 1314,
+            DoubleValue = 1516.17
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleBlittableRecordStructView(buffer);
 
-            TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
-            TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
-            TestAssert.True(SimpleBlittableRecordStructView.IsBlittable, "SimpleBlittableRecordStructView is blittable");
-            TestAssert.Equal(12, SimpleBlittableRecordStructView.RequiredByteLength, "SimpleBlittableRecordStructView.RequiredByteLength");
-            TestAssert.Equal(12, writtenBytes, "SimpleBlittableRecordStructView writtenBytes");
-        }
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(SimpleBlittableRecordStructView.IsBlittable, "SimpleBlittableRecordStructView is blittable");
+        TestAssert.Equal(12, SimpleBlittableRecordStructView.RequiredByteLength, "SimpleBlittableRecordStructView.RequiredByteLength");
+        TestAssert.Equal(12, writtenBytes, "SimpleBlittableRecordStructView writtenBytes");
+    }
+
+    [Fact]
+    public void BlittableRecordStructNestedPropertyRoundTrip()
+    {
+        var source = new BlittableRecordStructContainer
+        {
+            Nested = new SimpleBlittableRecordStruct
+            {
+                IntValue = 100,
+                DoubleValue = 200.5
+            }
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new BlittableRecordStructContainerView(buffer);
+
+        TestAssert.Equal(source.Nested.IntValue, view.Nested.IntValue, nameof(source.Nested.IntValue));
+        TestAssert.Equal(source.Nested.DoubleValue, view.Nested.DoubleValue, nameof(source.Nested.DoubleValue));
     }
 }
