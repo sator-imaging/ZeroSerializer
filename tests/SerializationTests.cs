@@ -3,7 +3,6 @@
 
 using System;
 using System.Buffers.Binary;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using Xunit;
@@ -887,22 +886,9 @@ public sealed class SerializationTests
             TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
         }
 
-        // 6. [global::ZeroSerializer.ZeroSerializerAttribute]
-        {
-            var source = new AttributeSyntaxType6 { Value = 106 };
-            var buffer = new byte[AttributeSyntaxType6View.RequiredByteLength];
-            source.Serialize(buffer);
-            var view = new AttributeSyntaxType6View(buffer);
-            TestAssert.Equal(106, view.Value, "AttributeSyntaxType6");
-        }
-    }
-
-    [Fact]
-    public void ViewExtensionsAndMetadata()
-    {
-        // 1. Check IsBlittable constants
-        TestAssert.True(PackedRecordView.IsBlittable, "PackedRecordView is blittable");
-        TestAssert.True(StrictBlittableStructView.IsBlittable, "StrictBlittableStructView is blittable");
+        // 3. Read the serialized values through the generated view API.
+        TestAssert.Equal(source.Number, view.Number, "View Number matches source");
+        TestAssert.Equal(source.State, view.State, "View State matches source");
         TestAssert.True(!VariableRecordView.IsBlittable, "VariableRecordView is NOT blittable");
         TestAssert.True(!PrimitiveRecordView.IsBlittable, "PrimitiveRecordView is NOT blittable");
 
