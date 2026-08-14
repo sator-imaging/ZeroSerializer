@@ -122,8 +122,10 @@ RequireCondition(
     && variableView.Child.Identifier == 99
     && variableView.StructChild.Identifier == 100
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
-    && variableView.OptionalStructChild.Value.Identifier == 101
-    && variableView.OptionalStructChild.Value.Name.SequenceEqual("optional struct".AsSpan())
+    && variableView.OptionalStructChild is StructChildPacketView optionalStructChildView
+    && optionalStructChildView.Identifier == 101
+    && optionalStructChildView.Name.SequenceEqual("optional struct".AsSpan())
+    && variableView.MissingOptionalStructChild is null
     && variableView.FloatValues.Length == 3
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3

@@ -778,6 +778,12 @@ public sealed class SerializationTests
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
         Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
+
+        // 3. Assert that a nullable nested struct preserves its nullability while returning a view
+        PropertyInfo? nullableStructProperty = typeof(SchemaSignatureTestsModelView)
+            .GetProperty(nameof(SchemaSignatureTestsModelView.NonBlittableNullableStruct));
+        Assert.NotNull(nullableStructProperty);
+        Assert.Equal(typeof(Nullable<EnumStructView>), nullableStructProperty!.PropertyType);
     }
 
     public void StrictBlittableStructTests()
