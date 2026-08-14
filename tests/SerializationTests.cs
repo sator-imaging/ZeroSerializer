@@ -3,6 +3,7 @@
 
 using System;
 using System.Buffers.Binary;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Xunit;
@@ -131,10 +132,12 @@ public sealed class SerializationTests
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
         PackedRecord value = MemoryMarshal.Read<PackedRecord>(view.Value);
-        PackedRecord optionalValue = MemoryMarshal.Read<PackedRecord>(view.OptionalValue!.Value);
-
-        var randomValueBytes = new byte[sizeof(long)];
-        for (int elementIndex = 0; elementIndex < elementCount; elementIndex++)
+        var integerBytes = new byte[elementCount * sizeof(int)];
+        var longBytes = new byte[elementCount * sizeof(long)];
+        random.NextBytes(integerBytes);
+        random.NextBytes(longBytes);
+            integers[elementIndex] = BinaryPrimitives.ReadInt32LittleEndian(integerBytes.AsSpan(elementIndex * sizeof(int)));
+            longs[elementIndex] = BinaryPrimitives.ReadInt64LittleEndian(longBytes.AsSpan(elementIndex * sizeof(long)));
         {
             random.NextBytes(randomValueBytes);
             longs[elementIndex] = BinaryPrimitives.ReadInt64LittleEndian(randomValueBytes);
@@ -579,8 +582,8 @@ public sealed class SerializationTests
         Action<ReadOnlyMemory<byte>> readAllProperties,
         string modelName)
     {
-        // The .NET 8 raw-write API accepts readonly input, allowing large struct receivers to remain readonly references.
-        // Earlier raw-write APIs require a writable ref, so the generated method must receive the struct by value.
+        // MemoryMarshal.Write accepts a readonly input from .NET 8, allowing large struct receivers to remain readonly references.
+        // MemoryMarshal.Write requires a writable ref through .NET 7, so the generated method must receive the struct by value.
         {
             ReadOnlyMemory<byte> truncatedSerializedMemory = completeSerializedBuffer.AsMemory(0, availableByteLength);
             TestAssert.ThrowsStandardBoundsException(
@@ -886,9 +889,21 @@ public sealed class SerializationTests
             TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
         }
 
-        // 3. Read the serialized values through the generated view API.
+        // 3. Read through the View; Materialize would bypass the generated getters under test.
         TestAssert.Equal(source.Number, view.Number, "View Number matches source");
         TestAssert.Equal(source.State, view.State, "View State matches source");
+
+        // Check non-blittable views do not have a Materialize extension method
+        // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
+        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
+        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name == "Materialize")
+            .ToList();
+
+        // Materialize should only be defined for blittable views, e.g., PackedRecordView, etc.
+        // It shouldn't be defined for VariableRecordView, etc.
+        bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
+        TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
         TestAssert.True(!VariableRecordView.IsBlittable, "VariableRecordView is NOT blittable");
         TestAssert.True(!PrimitiveRecordView.IsBlittable, "PrimitiveRecordView is NOT blittable");
 
