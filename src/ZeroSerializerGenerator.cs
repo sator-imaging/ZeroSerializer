@@ -349,7 +349,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             ITypeSymbol checkType = serializableProperty.Type;
-            if (checkType is INamedTypeSymbol nullableType
+            if (checkType is IArrayTypeSymbol arrayType)
+            {
+                checkType = arrayType.ElementType;
+            }
+            else if (checkType is INamedTypeSymbol nullableType
                 && nullableType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
             {
                 checkType = nullableType.TypeArguments[0];

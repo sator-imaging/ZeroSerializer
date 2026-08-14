@@ -66,6 +66,7 @@ public class TopLevelInner
     public async Task ZEROS009_Violation_UnmarkedTypeReturnedByProperty()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 public class UnmarkedClass
@@ -73,10 +74,19 @@ public class UnmarkedClass
     public int Value { get; set; }
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct UnmarkedStruct
+{
+    public int Value;
+}
+
 [ZeroSerializer]
 public class Container
 {
     public {|#0:UnmarkedClass|} {|#1:Value|} { get; set; }
+    public {|#2:UnmarkedStruct|} {|#3:StructValue|} { get; set; }
+    public {|#4:UnmarkedStruct?|} {|#5:NullableStructValue|} { get; set; }
+    public {|#6:UnmarkedStruct[]|} {|#7:StructArrayValue|} { get; set; }
 }
 ";
 
@@ -87,7 +97,28 @@ public class Container
                 .WithMessage("Property 'Value' returns type 'UnmarkedClass' that is not marked with [ZeroSerializer]"),
             new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
                 .WithLocation(1)
-                .WithMessage("Field 'Value' has unsupported type 'UnmarkedClass'")
+                .WithMessage("Field 'Value' has unsupported type 'UnmarkedClass'"),
+
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(2)
+                .WithMessage("Property 'StructValue' returns type 'UnmarkedStruct' that is not marked with [ZeroSerializer]"),
+            new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
+                .WithLocation(3)
+                .WithMessage("Field 'StructValue' has unsupported type 'UnmarkedStruct'"),
+
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(4)
+                .WithMessage("Property 'NullableStructValue' returns type 'UnmarkedStruct' that is not marked with [ZeroSerializer]"),
+            new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
+                .WithLocation(5)
+                .WithMessage("Field 'NullableStructValue' has unsupported type 'UnmarkedStruct?'"),
+
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(6)
+                .WithMessage("Property 'StructArrayValue' returns type 'UnmarkedStruct' that is not marked with [ZeroSerializer]"),
+            new DiagnosticResult("ZEROS004", DiagnosticSeverity.Error)
+                .WithLocation(7)
+                .WithMessage("Array field 'StructArrayValue' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)")
         );
     }
 
@@ -95,6 +126,7 @@ public class Container
     public async Task ZEROS009_Compliant_MarkedTypeReturnedByProperty()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 [ZeroSerializer]
@@ -104,9 +136,19 @@ public class MarkedClass
 }
 
 [ZeroSerializer]
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct MarkedStruct
+{
+    public int Value;
+}
+
+[ZeroSerializer]
 public class Container
 {
     public MarkedClass Value { get; set; }
+    public MarkedStruct StructValue { get; set; }
+    public MarkedStruct? NullableStructValue { get; set; }
+    public MarkedStruct[] StructArrayValue { get; set; }
 }
 ";
 
@@ -215,12 +257,15 @@ public struct PackedValue
 [ZeroSerializer]
 public class Container
 {
-    public PackedValue[] {|#0:Values|} { get; set; }
+    public {|#1:PackedValue[]|} {|#0:Values|} { get; set; }
 }
 ";
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(1)
+                .WithMessage("Property 'Values' returns type 'PackedValue' that is not marked with [ZeroSerializer]"),
             new DiagnosticResult("ZEROS004", DiagnosticSeverity.Error)
                 .WithLocation(0)
                 .WithMessage("Array field 'Values' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)")
