@@ -318,7 +318,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (serializableType.TypeKind == TypeKind.Struct && !isBlittableStruct)
         {
-            var packOneAttr = GetStructLayoutPackOneAttribute(serializableType);
+            var packOneAttr = GetSequentialPackOneAttribute(serializableType);
             if (packOneAttr is not null)
             {
                 Location? location = packOneAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
@@ -631,11 +631,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             out byteCount);
     }
 
-    private static AttributeData? GetStructLayoutPackOneAttribute(INamedTypeSymbol structType)
+    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
     {
-        foreach (AttributeData attribute in structType.GetAttributes())
+        AttributeData? structLayoutAttribute = null;
+        foreach (AttributeData candidateAttribute in structType.GetAttributes())
         {
-            if (attribute.AttributeClass is INamedTypeSymbol
+            if (candidateAttribute.AttributeClass is INamedTypeSymbol
                 {
                     Name: "StructLayoutAttribute", ContainingNamespace: INamespaceSymbol
                     {
@@ -652,17 +653,31 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     }
                 })
             {
-                foreach (var namedArg in attribute.NamedArguments)
-                {
-                    if (namedArg.Key == "Pack"
-                        && namedArg.Value.Value is int pack
-                        && pack == 1)
-                    {
-                        return attribute;
-                    }
-                }
+                structLayoutAttribute = candidateAttribute;
+                break;
             }
         }
+        if (structLayoutAttribute is null
+            || structLayoutAttribute.ConstructorArguments.Length != 1
+            || structLayoutAttribute.ConstructorArguments[0].Value is not int layoutKind
+            || layoutKind != 0)
+        {
+            return null;
+        }
+
+        if (structLayoutAttribute.NamedArguments.Length != 1)
+        {
+            return null;
+        }
+
+        var namedArgument = structLayoutAttribute.NamedArguments[0];
+        if (namedArgument.Key == "Pack"
+            && namedArgument.Value.Value is int pack
+            && pack == 1)
+        {
+            return structLayoutAttribute;
+        }
+
         return null;
     }
 
@@ -696,52 +711,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool HasSequentialPackOneLayout(INamedTypeSymbol structType)
     {
-        AttributeData? structLayoutAttribute = null;
-        foreach (AttributeData candidateAttribute in structType.GetAttributes())
-        {
-            if (candidateAttribute.AttributeClass is INamedTypeSymbol
-                {
-                    Name: "StructLayoutAttribute", ContainingNamespace: INamespaceSymbol
-                    {
-                        Name: "InteropServices", ContainingNamespace: INamespaceSymbol
-                        {
-                            Name: "Runtime", ContainingNamespace: INamespaceSymbol
-                            {
-                                Name: "System", ContainingNamespace: INamespaceSymbol
-                                {
-                                    IsGlobalNamespace: true
-                                }
-                            }
-                        }
-                    }
-                })
-            {
-                structLayoutAttribute = candidateAttribute;
-                break;
-            }
-        }
-        if (structLayoutAttribute is null
-            || structLayoutAttribute.ConstructorArguments.Length != 1
-            || structLayoutAttribute.ConstructorArguments[0].Value is not int layoutKind
-            || layoutKind != 0)
-        {
-            return false;
-        }
-
-        if (structLayoutAttribute.NamedArguments.Length != 1)
-        {
-            return false;
-        }
-
-        var namedArgument = structLayoutAttribute.NamedArguments[0];
-        if (namedArgument.Key == "Pack"
-            && namedArgument.Value.Value is int pack
-            && pack == 1)
-        {
-            return true;
-        }
-
-        return false;
+        return GetSequentialPackOneAttribute(structType) is not null;
     }
 
     private static bool HasBlittableCompatibleFieldShape(INamedTypeSymbol candidateStruct)
