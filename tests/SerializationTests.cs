@@ -582,8 +582,8 @@ public sealed class SerializationTests
         Action<ReadOnlyMemory<byte>> readAllProperties,
         string modelName)
     {
-        // MemoryMarshal.Write accepts a readonly input from .NET 8, allowing large struct receivers to remain readonly references.
-        // MemoryMarshal.Write requires a writable ref through .NET 7, so the generated method must receive the struct by value.
+        // The generated write operation accepts readonly input from .NET 8, allowing large struct receivers to remain readonly references.
+        // The generated write operation requires a writable ref through .NET 7, so the generated method must receive the struct by value.
         {
             ReadOnlyMemory<byte> truncatedSerializedMemory = completeSerializedBuffer.AsMemory(0, availableByteLength);
             TestAssert.ThrowsStandardBoundsException(
