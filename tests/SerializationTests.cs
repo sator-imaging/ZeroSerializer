@@ -109,11 +109,12 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedRecordView(buffer);
+        PackedRecord materialized = view.Materialize();
 
         TestAssert.Equal(6, PackedRecordView.RequiredByteLength, nameof(PackedRecordView.RequiredByteLength));
         TestAssert.Equal(PackedRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
-        TestAssert.Equal(source.Number, view.Number, nameof(view.Number));
-        TestAssert.Equal(source.State, view.State, nameof(view.State));
+        TestAssert.Equal(source.Number, materialized.Number, nameof(materialized.Number));
+        TestAssert.Equal(source.State, materialized.State, nameof(materialized.State));
     }
 
     [Fact]
@@ -131,9 +132,11 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
+        PackedRecord value = view.Value.Materialize();
+        PackedRecord optionalValue = view.OptionalValue!.Value.Materialize();
 
-        TestAssert.Equal(first.Number, view.Value.Number, nameof(view.Value));
-        TestAssert.Equal(second.Number, view.OptionalValue!.Value.Number, nameof(view.OptionalValue));
+        TestAssert.Equal(first.Number, value.Number, nameof(view.Value));
+        TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
         TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
