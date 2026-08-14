@@ -1199,9 +1199,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         var propertyReturnType
             = field.Kind is FieldSerializationKind.BlittableStruct or FieldSerializationKind.Nested
+              && field.NestedSerializableType is { } nestedSerializableType
             ? field.NullableUnderlyingType is not null
-                ? GetQualifiedViewName(field.NestedSerializableType) + "?"
-                : GetQualifiedViewName(field.NestedSerializableType)
+              || field.Symbol.NullableAnnotation == NullableAnnotation.Annotated
+                ? GetQualifiedViewName(nestedSerializableType) + "?"
+                : GetQualifiedViewName(nestedSerializableType)
             : propertyType;
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(field.Symbol.Name)}");
         sourceBuilder.OpenBlock();

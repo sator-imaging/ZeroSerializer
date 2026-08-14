@@ -249,8 +249,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child.Identifier, nameof(view.Child.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child.State, nameof(view.Child.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(view.Child));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(view.Child));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
         int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
         int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
@@ -284,8 +284,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child.Identifier, nameof(view.Child.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child.State, nameof(view.Child.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(view.Child));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(view.Child));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
 
         ReadOnlyMemory<byte> borrowedSerializedMemory = view;
@@ -312,6 +312,7 @@ public sealed class SerializationTests
         TestAssert.Equal(0, view.Text.Length, nameof(view.Text.Length));
         TestAssert.Equal(0, view.Values.Length, nameof(view.Values.Length));
         TestAssert.Equal<int?>(null, view.OptionalNumber, nameof(view.OptionalNumber));
+        Assert.Null(view.Child);
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Null string offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4)), "Null array offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4)), "Null nullable offset");
@@ -521,7 +522,7 @@ public sealed class SerializationTests
                 _ = view.Text.Length;
                 _ = view.Values.Length;
                 _ = view.OptionalNumber;
-                FixedClassView childView = view.Child;
+                FixedClassView childView = view.Child!.Value;
                 _ = childView.Identifier;
                 _ = childView.State;
                 _ = view.Tail;
