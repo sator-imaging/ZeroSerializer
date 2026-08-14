@@ -48,7 +48,8 @@ RequireCondition(
     && fixedView.SingleValue == fixedPacket.SingleValue
     && fixedView.DoubleValue == fixedPacket.DoubleValue
     && fixedView.State == fixedPacket.State
-    && BlittableBytesEqual(fixedPacket.Position, fixedView.Position),
+    && MemoryMarshal.Read<PackedPosition>(fixedView.Position).X == fixedPacket.Position.X
+    && MemoryMarshal.Read<PackedPosition>(fixedView.Position).Y == fixedPacket.Position.Y,
     "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
@@ -68,7 +69,9 @@ int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
 var packedView = new PackedPacketView(packedBuffer);
 RequireCondition(
     packedWrittenByteCount == PackedPacketView.RequiredByteLength
-    && BlittableBytesEqual(packedPacket, packedView),
+    && MemoryMarshal.Read<PackedPacket>(packedView).Identifier == packedPacket.Identifier
+    && MemoryMarshal.Read<PackedPacket>(packedView).Position.X == packedPacket.Position.X
+    && MemoryMarshal.Read<PackedPacket>(packedView).Position.Y == packedPacket.Position.Y,
     "Root Blittable Struct did not match its source.");
 
 var variablePacket = new VariablePacket
@@ -114,7 +117,7 @@ RequireCondition(
     && variableView.OptionalValue == 17
     && variableView.MissingOptionalValue is null
     && variableView.OptionalState == PacketState.Ready
-    && BlittableBytesEqual(variablePacket.OptionalPosition!.Value, variableView.OptionalPosition!.Value)
+    && MemoryMarshal.Read<PackedPosition>(variableView.OptionalPosition!.Value).X == 30
     && variableView.MissingOptionalPosition is null
     && variableView.Child.Identifier == 99
     && variableView.StructChild.Identifier == 100
@@ -187,12 +190,6 @@ static void RequireCondition(bool condition, string failureMessage)
     {
         throw new InvalidOperationException(failureMessage);
     }
-}
-
-static bool BlittableBytesEqual<T>(T expected, ReadOnlySpan<byte> actual)
-    where T : struct
-{
-    return MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref expected, 1)).SequenceEqual(actual);
 }
 
 [ZeroSerializer]

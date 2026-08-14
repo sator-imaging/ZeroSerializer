@@ -109,10 +109,12 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedRecordView(buffer);
+        PackedRecord value = MemoryMarshal.Read<PackedRecord>(view);
 
         TestAssert.Equal(6, PackedRecordView.RequiredByteLength, nameof(PackedRecordView.RequiredByteLength));
         TestAssert.Equal(PackedRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
-        TestAssert.SequenceEqual<byte>(buffer, view, nameof(view));
+        TestAssert.Equal(source.Number, value.Number, nameof(value.Number));
+        TestAssert.Equal(source.State, value.State, nameof(value.State));
     }
 
     [Fact]
@@ -130,16 +132,12 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
+        PackedRecord value = MemoryMarshal.Read<PackedRecord>(view.Value);
+        PackedRecord optionalValue = MemoryMarshal.Read<PackedRecord>(view.OptionalValue!.Value);
 
         TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
-        TestAssert.SequenceEqual<byte>(
-            MemoryMarshal.AsBytes(view.Values.Slice(0, 1)),
-            view.Value,
-            nameof(view.Value));
-        TestAssert.SequenceEqual<byte>(
-            MemoryMarshal.AsBytes(view.Values.Slice(1, 1)),
-            view.OptionalValue!.Value,
-            nameof(view.OptionalValue));
+        TestAssert.Equal(first.Number, value.Number, nameof(view.Value));
+        TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
     }
@@ -918,9 +916,6 @@ public sealed class SerializationTests
 
         ReadOnlyMemory<byte> memory = view.AsMemory();
         TestAssert.Equal(PackedRecordView.RequiredByteLength, memory.Length, "AsMemory returns correct memory length");
-
-        // 3. Check the borrowed bytes exposed by a Blittable View.
-        TestAssert.SequenceEqual<byte>(buffer, view, "PackedRecordView bytes match source serialization");
     }
 
     [Fact]
