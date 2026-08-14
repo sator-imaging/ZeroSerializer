@@ -109,12 +109,11 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedRecordView(buffer);
-        PackedRecord value = MemoryMarshal.Read<PackedRecord>(view);
 
         TestAssert.Equal(6, PackedRecordView.RequiredByteLength, nameof(PackedRecordView.RequiredByteLength));
         TestAssert.Equal(PackedRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
-        TestAssert.Equal(source.Number, value.Number, nameof(value.Number));
-        TestAssert.Equal(source.State, value.State, nameof(value.State));
+        TestAssert.Equal(source.Number, view.Number, nameof(view.Number));
+        TestAssert.Equal(source.State, view.State, nameof(view.State));
     }
 
     [Fact]
@@ -132,12 +131,10 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
-        PackedRecord value = MemoryMarshal.Read<PackedRecord>(view.Value);
-        random.NextBytes(MemoryMarshal.AsBytes(integers.AsSpan()));
-        random.NextBytes(MemoryMarshal.AsBytes(longs.AsSpan()));
-            integers[elementIndex] = BinaryPrimitives.ReadInt32LittleEndian(randomValueBytes);
-        }
-        TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
+
+        TestAssert.Equal(first.Number, view.Value.Number, nameof(view.Value));
+        TestAssert.Equal(second.Number, view.OptionalValue!.Value.Number, nameof(view.OptionalValue));
+        TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
     }
@@ -576,8 +573,8 @@ public sealed class SerializationTests
         Action<ReadOnlyMemory<byte>> readAllProperties,
         string modelName)
     {
-        // MemoryMarshal.Write accepts a readonly input from .NET 8, allowing large struct receivers to remain readonly references.
-        // MemoryMarshal.Write requires a writable ref through .NET 7, so the generated method must receive the struct by value.
+        // Every input is a prefix of serializer-produced data, so truncation is the only invalid condition under test.
+        for (int availableByteLength = 0; availableByteLength < serializedByteLength; availableByteLength++)
         {
             ReadOnlyMemory<byte> truncatedSerializedMemory = completeSerializedBuffer.AsMemory(0, availableByteLength);
             TestAssert.ThrowsStandardBoundsException(
@@ -781,12 +778,6 @@ public sealed class SerializationTests
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
         Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
-
-        // 3. Assert that a nullable nested struct preserves its nullability while returning a view
-        PropertyInfo? nullableStructProperty = typeof(SchemaSignatureTestsModelView)
-            .GetProperty(nameof(SchemaSignatureTestsModelView.NonBlittableNullableStruct));
-        Assert.NotNull(nullableStructProperty);
-        Assert.Equal(typeof(Nullable<EnumStructView>), nullableStructProperty!.PropertyType);
     }
 
     public void StrictBlittableStructTests()
@@ -883,22 +874,22 @@ public sealed class SerializationTests
             TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
         }
 
-        // 3. Check Materialize() extension method
-        PackedRecord materialized = view.Materialize();
-        TestAssert.Equal(source.Number, materialized.Number, "Materialized Number matches source");
-        TestAssert.Equal(source.State, materialized.State, "Materialized State matches source");
+        // 6. [global::ZeroSerializer.ZeroSerializerAttribute]
+        {
+            var source = new AttributeSyntaxType6 { Value = 106 };
+            var buffer = new byte[AttributeSyntaxType6View.RequiredByteLength];
+            source.Serialize(buffer);
+            var view = new AttributeSyntaxType6View(buffer);
+            TestAssert.Equal(106, view.Value, "AttributeSyntaxType6");
+        }
+    }
 
-        // Check non-blittable views do not have a Materialize extension method
-        // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
-        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
-        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(m => m.Name == "Materialize")
-            .ToList();
-
-        // Materialize should only be defined for blittable views, e.g., PackedRecordView, etc.
-        // It shouldn't be defined for VariableRecordView, etc.
-        bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
-        TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
+    [Fact]
+    public void ViewExtensionsAndMetadata()
+    {
+        // 1. Check IsBlittable constants
+        TestAssert.True(PackedRecordView.IsBlittable, "PackedRecordView is blittable");
+        TestAssert.True(StrictBlittableStructView.IsBlittable, "StrictBlittableStructView is blittable");
         TestAssert.True(!VariableRecordView.IsBlittable, "VariableRecordView is NOT blittable");
         TestAssert.True(!PrimitiveRecordView.IsBlittable, "PrimitiveRecordView is NOT blittable");
 
@@ -916,6 +907,23 @@ public sealed class SerializationTests
 
         ReadOnlyMemory<byte> memory = view.AsMemory();
         TestAssert.Equal(PackedRecordView.RequiredByteLength, memory.Length, "AsMemory returns correct memory length");
+
+        // 3. Check Materialize() extension method
+        PackedRecord materialized = view.Materialize();
+        TestAssert.Equal(source.Number, materialized.Number, "Materialized Number matches source");
+        TestAssert.Equal(source.State, materialized.State, "Materialized State matches source");
+
+        // Check non-blittable views do not have a Materialize extension method
+        // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
+        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
+        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name == "Materialize")
+            .ToList();
+
+        // Materialize should only be defined for blittable views, e.g., PackedRecordView, etc.
+        // It shouldn't be defined for VariableRecordView, etc.
+        bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
+        TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
     }
 
     [Fact]

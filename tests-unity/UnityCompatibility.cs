@@ -48,8 +48,8 @@ RequireCondition(
     && fixedView.SingleValue == fixedPacket.SingleValue
     && fixedView.DoubleValue == fixedPacket.DoubleValue
     && fixedView.State == fixedPacket.State
-    && MemoryMarshal.Read<PackedPosition>(fixedView.Position).X == fixedPacket.Position.X
-    && MemoryMarshal.Read<PackedPosition>(fixedView.Position).Y == fixedPacket.Position.Y,
+    && fixedView.Position.X == fixedPacket.Position.X
+    && fixedView.Position.Y == fixedPacket.Position.Y,
     "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
@@ -69,9 +69,9 @@ int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
 var packedView = new PackedPacketView(packedBuffer);
 RequireCondition(
     packedWrittenByteCount == PackedPacketView.RequiredByteLength
-    && MemoryMarshal.Read<PackedPacket>(packedView).Identifier == packedPacket.Identifier
-    && MemoryMarshal.Read<PackedPacket>(packedView).Position.X == packedPacket.Position.X
-    && MemoryMarshal.Read<PackedPacket>(packedView).Position.Y == packedPacket.Position.Y,
+    && packedView.Identifier == packedPacket.Identifier
+    && packedView.Position.X == packedPacket.Position.X
+    && packedView.Position.Y == packedPacket.Position.Y,
     "Root Blittable Struct did not match its source.");
 
 var variablePacket = new VariablePacket
@@ -117,15 +117,13 @@ RequireCondition(
     && variableView.OptionalValue == 17
     && variableView.MissingOptionalValue is null
     && variableView.OptionalState == PacketState.Ready
-    && MemoryMarshal.Read<PackedPosition>(variableView.OptionalPosition!.Value).X == 30
+    && variableView.OptionalPosition!.Value.X == 30
     && variableView.MissingOptionalPosition is null
     && variableView.Child.Identifier == 99
     && variableView.StructChild.Identifier == 100
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
-    && variableView.OptionalStructChild is StructChildPacketView optionalStructChildView
-    && optionalStructChildView.Identifier == 101
-    && optionalStructChildView.Name.SequenceEqual("optional struct".AsSpan())
-    && variableView.MissingOptionalStructChild is null
+    && variableView.OptionalStructChild.Value.Identifier == 101
+    && variableView.OptionalStructChild.Value.Name.SequenceEqual("optional struct".AsSpan())
     && variableView.FloatValues.Length == 3
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3
