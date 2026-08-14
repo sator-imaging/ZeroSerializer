@@ -328,6 +328,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
+        int blittableByteOffset = 0;
         foreach (ISymbol declaredMember in serializableType.GetMembers())
         {
             // Only public getter properties define the wire contract; fields, setters, and indexers must never leak into it.
@@ -362,7 +363,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 continue;
             }
 
+            propertyModel.BlittableByteOffset = blittableByteOffset;
             generationModel.Fields.Add(propertyModel);
+            blittableByteOffset += propertyModel.ElementByteCount;
         }
 
         return generationModel;
@@ -1204,6 +1207,23 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
+        if (containingModel.IsBlittableStruct)
+        {
+            if (field.Kind == FieldSerializationKind.BlittableStruct
+                && field.NestedSerializableType is not null)
+            {
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            }
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+            return;
+        }
+
         sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
         sourceBuilder.AppendLine($"int fieldDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({fieldIndex * 4}, 4));");
         if (IsNullRepresentedByZeroFieldOffset(field))
