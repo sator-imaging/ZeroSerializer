@@ -3,6 +3,7 @@
 
 using System;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 #pragma warning disable CS1591  // Missing XML comment for publicly visible type or member

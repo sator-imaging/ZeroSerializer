@@ -5,6 +5,7 @@ using System;
 using System.Buffers.Binary;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
 using ZeroSerializer;
@@ -132,15 +133,8 @@ public sealed class SerializationTests
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
         PackedRecord value = MemoryMarshal.Read<PackedRecord>(view.Value);
-        var integerBytes = new byte[elementCount * sizeof(int)];
-        var longBytes = new byte[elementCount * sizeof(long)];
-        random.NextBytes(integerBytes);
-        random.NextBytes(longBytes);
-            integers[elementIndex] = BinaryPrimitives.ReadInt32LittleEndian(integerBytes.AsSpan(elementIndex * sizeof(int)));
-            longs[elementIndex] = BinaryPrimitives.ReadInt64LittleEndian(longBytes.AsSpan(elementIndex * sizeof(long)));
-        {
-            random.NextBytes(randomValueBytes);
-            longs[elementIndex] = BinaryPrimitives.ReadInt64LittleEndian(randomValueBytes);
+        random.NextBytes(MemoryMarshal.AsBytes(integers.AsSpan()));
+        random.NextBytes(MemoryMarshal.AsBytes(longs.AsSpan()));
             integers[elementIndex] = BinaryPrimitives.ReadInt32LittleEndian(randomValueBytes);
         }
         TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
@@ -582,8 +576,8 @@ public sealed class SerializationTests
         Action<ReadOnlyMemory<byte>> readAllProperties,
         string modelName)
     {
-        // The generated write operation accepts readonly input from .NET 8, allowing large struct receivers to remain readonly references.
-        // The generated write operation requires a writable ref through .NET 7, so the generated method must receive the struct by value.
+        // MemoryMarshal.Write accepts a readonly input from .NET 8, allowing large struct receivers to remain readonly references.
+        // MemoryMarshal.Write requires a writable ref through .NET 7, so the generated method must receive the struct by value.
         {
             ReadOnlyMemory<byte> truncatedSerializedMemory = completeSerializedBuffer.AsMemory(0, availableByteLength);
             TestAssert.ThrowsStandardBoundsException(
@@ -889,9 +883,10 @@ public sealed class SerializationTests
             TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
         }
 
-        // 3. Read through the View; Materialize would bypass the generated getters under test.
-        TestAssert.Equal(source.Number, view.Number, "View Number matches source");
-        TestAssert.Equal(source.State, view.State, "View State matches source");
+        // 3. Check Materialize() extension method
+        PackedRecord materialized = view.Materialize();
+        TestAssert.Equal(source.Number, materialized.Number, "Materialized Number matches source");
+        TestAssert.Equal(source.State, materialized.State, "Materialized State matches source");
 
         // Check non-blittable views do not have a Materialize extension method
         // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
