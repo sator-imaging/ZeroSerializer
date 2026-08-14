@@ -328,6 +328,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
+        int blittableByteOffset = 0;
         foreach (ISymbol declaredMember in serializableType.GetMembers())
         {
             // Only public getter properties define the wire contract; fields, setters, and indexers must never leak into it.
@@ -362,7 +363,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 continue;
             }
 
+            propertyModel.BlittableByteOffset = blittableByteOffset;
             generationModel.Fields.Add(propertyModel);
+            blittableByteOffset += propertyModel.ElementByteCount;
         }
 
         return generationModel;
@@ -1209,13 +1212,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             if (field.Kind == FieldSerializationKind.BlittableStruct
                 && field.NestedSerializableType is not null)
             {
-                int fieldByteOffset = 0;
-                for (int precedingFieldIndex = 0; precedingFieldIndex < fieldIndex; precedingFieldIndex++)
-                {
-                    fieldByteOffset += containingModel.Fields[precedingFieldIndex].ElementByteCount;
-                }
-
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({fieldByteOffset}, {field.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
             }
             else
             {
