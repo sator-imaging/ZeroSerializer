@@ -32,7 +32,6 @@ var fixedPacket = new FixedPacket
 var fixedBuffer = new byte[FixedPacketView.RequiredByteLength];
 int fixedWrittenByteCount = fixedPacket.Serialize(fixedBuffer);
 var fixedView = new FixedPacketView(fixedBuffer);
-PackedPosition fixedPosition = fixedView.Position.Materialize();
 
 RequireCondition(
     fixedWrittenByteCount == FixedPacketView.RequiredByteLength
@@ -49,8 +48,7 @@ RequireCondition(
     && fixedView.SingleValue == fixedPacket.SingleValue
     && fixedView.DoubleValue == fixedPacket.DoubleValue
     && fixedView.State == fixedPacket.State
-    && fixedPosition.X == fixedPacket.Position.X
-    && fixedPosition.Y == fixedPacket.Position.Y,
+    && BlittableBytesEqual(fixedPacket.Position, fixedView.Position),
     "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
@@ -68,12 +66,9 @@ var packedPacket = new PackedPacket
 var packedBuffer = new byte[PackedPacketView.RequiredByteLength];
 int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
 var packedView = new PackedPacketView(packedBuffer);
-PackedPacket materializedPackedPacket = packedView.Materialize();
 RequireCondition(
     packedWrittenByteCount == PackedPacketView.RequiredByteLength
-    && materializedPackedPacket.Identifier == packedPacket.Identifier
-    && materializedPackedPacket.Position.X == packedPacket.Position.X
-    && materializedPackedPacket.Position.Y == packedPacket.Position.Y,
+    && BlittableBytesEqual(packedPacket, packedView),
     "Root Blittable Struct did not match its source.");
 
 var variablePacket = new VariablePacket
@@ -102,7 +97,6 @@ var variablePacket = new VariablePacket
 var variableBuffer = new byte[1024];
 int variableWrittenByteCount = variablePacket.Serialize(variableBuffer);
 var variableView = new VariablePacketView(variableBuffer.AsMemory(0, variableWrittenByteCount));
-PackedPosition optionalPosition = variableView.OptionalPosition!.Value.Materialize();
 
 RequireCondition(
     VariablePacketView.RequiredByteLength < 0
@@ -120,7 +114,7 @@ RequireCondition(
     && variableView.OptionalValue == 17
     && variableView.MissingOptionalValue is null
     && variableView.OptionalState == PacketState.Ready
-    && optionalPosition.X == 30
+    && BlittableBytesEqual(variablePacket.OptionalPosition!.Value, variableView.OptionalPosition!.Value)
     && variableView.MissingOptionalPosition is null
     && variableView.Child.Identifier == 99
     && variableView.StructChild.Identifier == 100
@@ -193,6 +187,12 @@ static void RequireCondition(bool condition, string failureMessage)
     {
         throw new InvalidOperationException(failureMessage);
     }
+}
+
+static bool BlittableBytesEqual<T>(T expected, ReadOnlySpan<byte> actual)
+    where T : struct
+{
+    return MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref expected, 1)).SequenceEqual(actual);
 }
 
 [ZeroSerializer]

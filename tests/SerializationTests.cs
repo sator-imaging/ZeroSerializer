@@ -109,12 +109,10 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedRecordView(buffer);
-        PackedRecord materialized = view.Materialize();
 
         TestAssert.Equal(6, PackedRecordView.RequiredByteLength, nameof(PackedRecordView.RequiredByteLength));
         TestAssert.Equal(PackedRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
-        TestAssert.Equal(source.Number, materialized.Number, nameof(materialized.Number));
-        TestAssert.Equal(source.State, materialized.State, nameof(materialized.State));
+        TestAssert.SequenceEqual<byte>(buffer, view, nameof(view));
     }
 
     [Fact]
@@ -132,12 +130,16 @@ public sealed class SerializationTests
 
         int writtenBytes = source.Serialize(buffer);
         var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
-        PackedRecord value = view.Value.Materialize();
-        PackedRecord optionalValue = view.OptionalValue!.Value.Materialize();
 
-        TestAssert.Equal(first.Number, value.Number, nameof(view.Value));
-        TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
         TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
+        TestAssert.SequenceEqual<byte>(
+            MemoryMarshal.AsBytes(view.Values.Slice(0, 1)),
+            view.Value,
+            nameof(view.Value));
+        TestAssert.SequenceEqual<byte>(
+            MemoryMarshal.AsBytes(view.Values.Slice(1, 1)),
+            view.OptionalValue!.Value,
+            nameof(view.OptionalValue));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
     }
@@ -917,22 +919,8 @@ public sealed class SerializationTests
         ReadOnlyMemory<byte> memory = view.AsMemory();
         TestAssert.Equal(PackedRecordView.RequiredByteLength, memory.Length, "AsMemory returns correct memory length");
 
-        // 3. Check Materialize() extension method
-        PackedRecord materialized = view.Materialize();
-        TestAssert.Equal(source.Number, materialized.Number, "Materialized Number matches source");
-        TestAssert.Equal(source.State, materialized.State, "Materialized State matches source");
-
-        // Check non-blittable views do not have a Materialize extension method
-        // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
-        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
-        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(m => m.Name == "Materialize")
-            .ToList();
-
-        // Materialize should only be defined for blittable views, e.g., PackedRecordView, etc.
-        // It shouldn't be defined for VariableRecordView, etc.
-        bool hasVariableRecordViewMaterialize = materializeMethods.Any(m => m.GetParameters()[0].ParameterType == typeof(VariableRecordView));
-        TestAssert.True(!hasVariableRecordViewMaterialize, "VariableRecordView must not have Materialize()");
+        // 3. Check the borrowed bytes exposed by a Blittable View.
+        TestAssert.SequenceEqual<byte>(buffer, view, "PackedRecordView bytes match source serialization");
     }
 
     [Fact]
