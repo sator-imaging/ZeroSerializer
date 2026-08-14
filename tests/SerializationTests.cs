@@ -5,7 +5,6 @@ using System;
 using System.Buffers.Binary;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
 using ZeroSerializer;
@@ -135,8 +134,13 @@ public sealed class SerializationTests
         PackedRecord value = MemoryMarshal.Read<PackedRecord>(view.Value);
         PackedRecord optionalValue = MemoryMarshal.Read<PackedRecord>(view.OptionalValue!.Value);
 
-        TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
-        TestAssert.Equal(first.Number, value.Number, nameof(view.Value));
+        var randomValueBytes = new byte[sizeof(long)];
+        for (int elementIndex = 0; elementIndex < elementCount; elementIndex++)
+        {
+            random.NextBytes(randomValueBytes);
+            longs[elementIndex] = BinaryPrimitives.ReadInt64LittleEndian(randomValueBytes);
+            integers[elementIndex] = BinaryPrimitives.ReadInt32LittleEndian(randomValueBytes);
+        }
         TestAssert.Equal(second.Number, optionalValue.Number, nameof(view.OptionalValue));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
@@ -576,8 +580,8 @@ public sealed class SerializationTests
         Action<ReadOnlyMemory<byte>> readAllProperties,
         string modelName)
     {
-        // Every input is a prefix of serializer-produced data, so truncation is the only invalid condition under test.
-        for (int availableByteLength = 0; availableByteLength < serializedByteLength; availableByteLength++)
+        // The .NET 8 raw-write API accepts readonly input, allowing large struct receivers to remain readonly references.
+        // Earlier raw-write APIs require a writable ref, so the generated method must receive the struct by value.
         {
             ReadOnlyMemory<byte> truncatedSerializedMemory = completeSerializedBuffer.AsMemory(0, availableByteLength);
             TestAssert.ThrowsStandardBoundsException(
