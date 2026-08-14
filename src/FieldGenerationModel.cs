@@ -33,6 +33,8 @@ internal sealed class FieldGenerationModel
 
     internal int ElementByteCount { get; }
 
+    internal int BlittableByteOffset { get; set; }
+
     internal ITypeSymbol? ArrayElementType { get; }
 
     internal INamedTypeSymbol? NestedSerializableType { get; }
