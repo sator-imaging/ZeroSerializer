@@ -1204,6 +1204,29 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
+        if (containingModel.IsBlittableStruct)
+        {
+            if (field.Kind == FieldSerializationKind.BlittableStruct
+                && field.NestedSerializableType is not null)
+            {
+                int fieldByteOffset = 0;
+                for (int precedingFieldIndex = 0; precedingFieldIndex < fieldIndex; precedingFieldIndex++)
+                {
+                    fieldByteOffset += containingModel.Fields[precedingFieldIndex].ElementByteCount;
+                }
+
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({fieldByteOffset}, {field.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            }
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+            return;
+        }
+
         sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
         sourceBuilder.AppendLine($"int fieldDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({fieldIndex * 4}, 4));");
         if (IsNullRepresentedByZeroFieldOffset(field))
