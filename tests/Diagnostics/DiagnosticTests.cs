@@ -63,6 +63,69 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS002_Violation_NonBlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct MyNonBlittableStruct
+{
+    private int _value;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'MyNonBlittableStruct' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Compliant_BlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyBlittableStruct
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Compliant_NonBlittableStructWithoutLayout()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public struct MyNonBlittableStructWithoutLayout
+{
+    private int _value;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Compliant_InaccessibleField()
     {
         string source = @"
@@ -124,7 +187,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -179,7 +242,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -242,7 +305,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
