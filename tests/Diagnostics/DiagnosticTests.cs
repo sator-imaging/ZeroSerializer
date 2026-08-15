@@ -160,7 +160,8 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct StructWithNonPublicGetter
 {
-    public int Value { private get; set; }
+    public int PrivateGetter { private get; set; }
+    public int Value { get; set; }
 }
 ";
 
