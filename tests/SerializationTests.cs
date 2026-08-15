@@ -1119,4 +1119,113 @@ public sealed class SerializationTests
                     || receiverType.IsByRef && receiverType.GetElementType() == sourceType;
             });
     }
+
+    [Fact]
+    public void RecordClassRoundTrip()
+    {
+        var source = new SimpleCsharpRecord
+        {
+            IntValue = 123,
+            DoubleValue = 456.78
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleCsharpRecordView(buffer);
+
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(!SimpleCsharpRecordView.IsBlittable, "SimpleCsharpRecordView is not blittable");
+    }
+
+    [Fact]
+    public void RecordStructRoundTrip()
+    {
+        var source = new SimpleRecordStruct
+        {
+            IntValue = 789,
+            DoubleValue = 1011.12
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleRecordStructView(buffer);
+
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(!SimpleRecordStructView.IsBlittable, "SimpleRecordStructView is not blittable");
+    }
+
+    [Fact]
+    public void BlittableRecordStructRoundTrip()
+    {
+        var source = new SimpleBlittableRecordStruct
+        {
+            IntValue = 1314,
+            DoubleValue = 1516.17
+        };
+        var buffer = new byte[128];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new SimpleBlittableRecordStructView(buffer);
+
+        TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
+        TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
+        TestAssert.True(SimpleBlittableRecordStructView.IsBlittable, "SimpleBlittableRecordStructView is blittable");
+        TestAssert.Equal(12, SimpleBlittableRecordStructView.RequiredByteLength, "SimpleBlittableRecordStructView.RequiredByteLength");
+        TestAssert.Equal(12, writtenBytes, "SimpleBlittableRecordStructView writtenBytes");
+    }
+
+    [Fact]
+    public void BlittableRecordStructNestedPropertyRoundTrip()
+    {
+        // 1. Verify view property types via reflection
+        PropertyInfo? valueProperty = typeof(BlittableRecordStructContainerView).GetProperty(nameof(BlittableRecordStructContainerView.Value));
+        Assert.NotNull(valueProperty);
+        Assert.Equal(typeof(SimpleBlittableRecordStructView), valueProperty!.PropertyType);
+
+        PropertyInfo? optionalValueProperty = typeof(BlittableRecordStructContainerView).GetProperty(nameof(BlittableRecordStructContainerView.OptionalValue));
+        Assert.NotNull(optionalValueProperty);
+        Assert.Equal(typeof(Nullable<SimpleBlittableRecordStructView>), optionalValueProperty!.PropertyType);
+
+        // 2. Non-null roundtrip
+        var first = new SimpleBlittableRecordStruct { IntValue = 100, DoubleValue = 200.5 };
+        var second = new SimpleBlittableRecordStruct { IntValue = 300, DoubleValue = 400.25 };
+        var source = new BlittableRecordStructContainer
+        {
+            Value = first,
+            OptionalValue = second,
+            Values = new[] { first, second }
+        };
+        var buffer = new byte[256];
+        int writtenBytes = source.Serialize(buffer);
+        var view = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(first.IntValue, view.Value.IntValue, nameof(view.Value.IntValue));
+        TestAssert.Equal(first.DoubleValue, view.Value.DoubleValue, nameof(view.Value.DoubleValue));
+
+        Assert.NotNull(view.OptionalValue);
+        TestAssert.Equal(second.IntValue, view.OptionalValue!.Value.IntValue, nameof(view.OptionalValue.Value.IntValue));
+        TestAssert.Equal(second.DoubleValue, view.OptionalValue!.Value.DoubleValue, nameof(view.OptionalValue.Value.DoubleValue));
+
+        TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
+        TestAssert.Equal(first.IntValue, view.Values[0].IntValue, "Values[0].IntValue");
+        TestAssert.Equal(first.DoubleValue, view.Values[0].DoubleValue, "Values[0].DoubleValue");
+        TestAssert.Equal(second.IntValue, view.Values[1].IntValue, "Values[1].IntValue");
+        TestAssert.Equal(second.DoubleValue, view.Values[1].DoubleValue, "Values[1].DoubleValue");
+
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "Non-null GetByteLength");
+
+        // 3. Null optional & array roundtrip
+        var sourceNulls = new BlittableRecordStructContainer
+        {
+            Value = first,
+            OptionalValue = null,
+            Values = null
+        };
+        int writtenBytesNulls = sourceNulls.Serialize(buffer);
+        var viewNulls = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytesNulls));
+
+        TestAssert.Equal(first.IntValue, viewNulls.Value.IntValue, nameof(viewNulls.Value.IntValue));
+        Assert.Null(viewNulls.OptionalValue);
+        TestAssert.True(viewNulls.Values.IsEmpty, nameof(viewNulls.Values.IsEmpty));
+        TestAssert.Equal(writtenBytesNulls, viewNulls.GetByteLength(), "Nulls GetByteLength");
+    }
 }
