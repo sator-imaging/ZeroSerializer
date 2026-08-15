@@ -98,6 +98,14 @@ using ZeroSerializer;
 public struct MyBlittableStruct
 {
     public int Value { get; set; }
+
+    public MyBlittableStruct(int value) => Value = value;
+    internal MyBlittableStruct(int value, int dummy) => Value = value;
+    private MyBlittableStruct(string s) => Value = 0;
+
+    public void PublicMethod() { }
+    internal void InternalMethod() { }
+    private void PrivateMethod() { }
 }
 ";
 
@@ -170,6 +178,57 @@ public struct StructWithNonPublicGetter
             new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
                 .WithLocation(0)
                 .WithMessage("Struct 'StructWithNonPublicGetter' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_PublicSetterOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithSetterOnlyProperty
+{
+    public int Value { set { } }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithSetterOnlyProperty' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_PublicInitOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit { }
+}
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithInitOnlyProperty
+{
+    public int Value { init { } }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithInitOnlyProperty' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
         );
     }
 
