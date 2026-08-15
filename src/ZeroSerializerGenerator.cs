@@ -1734,22 +1734,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         shapeTagBuilder.Append(UnknownShapeTagType);
     }
 
-    private static bool IsInSystemOrMicrosoftNamespace(ITypeSymbol typeSymbol)
-    {
-        for (INamespaceSymbol? ns = typeSymbol.ContainingNamespace; ns is not null; ns = ns.ContainingNamespace)
-        {
-            if (ns.IsGlobalNamespace)
-            {
-                break;
-            }
-            if (ns.Name == "System" || ns.Name == "Microsoft")
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static bool ShouldWarnForUnmarkedType(ITypeSymbol typeSymbol, HashSet<INamedTypeSymbol> allSerializableTypes)
     {
         if (typeSymbol.SpecialType != SpecialType.None)
@@ -1758,11 +1742,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         if (typeSymbol.TypeKind != TypeKind.Class && typeSymbol.TypeKind != TypeKind.Struct)
-        {
-            return false;
-        }
-
-        if (IsInSystemOrMicrosoftNamespace(typeSymbol))
         {
             return false;
         }
