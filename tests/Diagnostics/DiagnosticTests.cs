@@ -126,21 +126,49 @@ public struct MyNonBlittableStructWithoutLayout
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_InaccessibleField()
+    public async Task ZEROS002_Violation_PublicField()
     {
         string source = @"
+using System.Runtime.InteropServices;
 using ZeroSerializer;
 
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
 [ZeroSerializer]
-public class ClassWithPrivateField
+public struct StructWithPublicField
 {
-    private int _value;
+    public int Field;
     public int Value { get; set; }
 }
 ";
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithPublicField' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_NonPublicGetterProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithNonPublicGetter
+{
+    public int Value { private get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithNonPublicGetter' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
         );
     }
 
