@@ -304,7 +304,11 @@ public record SimpleCsharpRecord
 [ZeroSerializer]
 public sealed class BlittableRecordStructContainer
 {
-    public SimpleBlittableRecordStruct Nested { get; init; }
+    public SimpleBlittableRecordStruct Value { get; init; }
+
+    public SimpleBlittableRecordStruct? OptionalValue { get; init; }
+
+    public SimpleBlittableRecordStruct[]? Values { get; init; }
 }
 
 [ZeroSerializer]
