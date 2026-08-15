@@ -192,7 +192,8 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct StructWithSetterOnlyProperty
 {
-    public int Value { set { } }
+    public int SetterOnly { set { } }
+    public int Value { get; set; }
 }
 ";
 
@@ -220,7 +221,8 @@ namespace System.Runtime.CompilerServices
 [ZeroSerializer]
 public struct StructWithInitOnlyProperty
 {
-    public int Value { init { } }
+    public int InitOnly { init { } }
+    public int Value { get; init; }
 }
 ";
 
