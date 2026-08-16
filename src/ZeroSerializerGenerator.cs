@@ -36,12 +36,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InaccessibleSerializableField = new(
+    private static readonly DiagnosticDescriptor InvalidStructLayoutAttribute = new(
         "ZEROS002",
-        "Inaccessible serializable field",
-        "Field '{0}' must not be private or private protected because generated serializers preserve every declared instance field",
+        "Invalid StructLayout attribute",
+        "Struct '{0}' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct",
         SerializerName,
-        DiagnosticSeverity.Error,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor UnsupportedSerializableField = new(
@@ -316,15 +316,26 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return generationModel;
         }
 
-        if (serializableType.TypeKind == TypeKind.Struct
-            && !isBlittableStruct
-            && HasBlittableCompatibleFieldShape(serializableType))
+        if (serializableType.TypeKind == TypeKind.Struct && !isBlittableStruct)
         {
-            // Report on the declaration identifier so the layout optimization is actionable without highlighting the whole type.
-            executionContext.ReportDiagnostic(Diagnostic.Create(
-                BlittableCompatibleStructMissingLayout,
-                GetTypeIdentifierLocation(serializableType),
-                serializableType.Name));
+            var packOneAttr = GetSequentialPackOneAttribute(serializableType);
+            if (packOneAttr is not null)
+            {
+                Location? location = packOneAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                    ?? GetTypeIdentifierLocation(serializableType);
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    InvalidStructLayoutAttribute,
+                    location,
+                    serializableType.Name));
+            }
+            else if (HasBlittableCompatibleFieldShape(serializableType))
+            {
+                // Report on the declaration identifier so the layout optimization is actionable without highlighting the whole type.
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    BlittableCompatibleStructMissingLayout,
+                    GetTypeIdentifierLocation(serializableType),
+                    serializableType.Name));
+            }
         }
 
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
@@ -566,6 +577,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             || structType.TypeKind != TypeKind.Struct
             || structType.IsRefLikeType
             || !HasSequentialPackOneLayout(structType)
+            || !IsEligibleForBlittable(structType)
             || !typesBeingInspected.Add(candidateType))
         {
             byteCount = 0;
@@ -619,7 +631,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             out byteCount);
     }
 
-    private static bool HasSequentialPackOneLayout(INamedTypeSymbol structType)
+    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
     {
         AttributeData? structLayoutAttribute = null;
         foreach (AttributeData candidateAttribute in structType.GetAttributes())
@@ -650,12 +662,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             || structLayoutAttribute.ConstructorArguments[0].Value is not int layoutKind
             || layoutKind != 0)
         {
-            return false;
+            return null;
         }
 
         if (structLayoutAttribute.NamedArguments.Length != 1)
         {
-            return false;
+            return null;
         }
 
         var namedArgument = structLayoutAttribute.NamedArguments[0];
@@ -663,15 +675,53 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             && namedArgument.Value.Value is int pack
             && pack == 1)
         {
-            return true;
+            return structLayoutAttribute;
         }
 
-        return false;
+        return null;
+    }
+
+    private static bool IsEligibleForBlittable(INamedTypeSymbol structType)
+    {
+        foreach (ISymbol member in structType.GetMembers())
+        {
+            if (member is IFieldSymbol field)
+            {
+                if (!field.IsStatic)
+                {
+                    if (field.AssociatedSymbol is not IPropertySymbol)
+                    {
+                        return false;
+                    }
+                }
+            }
+            else if (member is IPropertySymbol property)
+            {
+                if (!property.IsStatic)
+                {
+                    if (property.GetMethod == null || property.GetMethod.DeclaredAccessibility != Accessibility.Public)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private static bool HasSequentialPackOneLayout(INamedTypeSymbol structType)
+    {
+        return GetSequentialPackOneAttribute(structType) is not null;
     }
 
     private static bool HasBlittableCompatibleFieldShape(INamedTypeSymbol candidateStruct)
     {
         if (candidateStruct.TypeKind != TypeKind.Struct || candidateStruct.IsRefLikeType)
+        {
+            return false;
+        }
+
+        if (!IsEligibleForBlittable(candidateStruct))
         {
             return false;
         }

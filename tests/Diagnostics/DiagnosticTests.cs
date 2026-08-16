@@ -63,13 +63,65 @@ public class TopLevelInner
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_InaccessibleField()
+    public async Task ZEROS002_Violation_NonBlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct MyNonBlittableStruct
+{
+    private int _value;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'MyNonBlittableStruct' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Compliant_BlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyBlittableStruct
+{
+    public int Value { get; set; }
+
+    public MyBlittableStruct(int value) => Value = value;
+    internal MyBlittableStruct(int value, int dummy) => Value = value;
+    private MyBlittableStruct(string s) => Value = 0;
+
+    public void PublicMethod() { }
+    internal void InternalMethod() { }
+    private void PrivateMethod() { }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Compliant_NonBlittableStructWithoutLayout()
     {
         string source = @"
 using ZeroSerializer;
 
 [ZeroSerializer]
-public class ClassWithPrivateField
+public struct MyNonBlittableStructWithoutLayout
 {
     private int _value;
     public int Value { get; set; }
@@ -78,6 +130,107 @@ public class ClassWithPrivateField
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_PublicField()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithPublicField
+{
+    public int Field;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithPublicField' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_NonPublicGetterProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithNonPublicGetter
+{
+    public int PrivateGetter { private get; set; }
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithNonPublicGetter' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_PublicSetterOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithSetterOnlyProperty
+{
+    public int SetterOnly { set { } }
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithSetterOnlyProperty' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS002_Violation_PublicInitOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit { }
+}
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithInitOnlyProperty
+{
+    public int InitOnly { init { } }
+    public int Value { get; init; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'StructWithInitOnlyProperty' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
         );
     }
 
@@ -124,7 +277,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -179,7 +332,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -242,7 +395,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
