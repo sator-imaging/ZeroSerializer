@@ -114,6 +114,32 @@ public class Container
     }
 
     [Fact]
+    public async Task ZEROS003_Violation_UnmarkedNestedClass()
+    {
+        string source = @"
+using ZeroSerializer;
+
+public class UnmarkedClass
+{
+    public int Value { get; set; }
+}
+
+[ZeroSerializer]
+public class Container
+{
+    public UnmarkedClass {|#0:Value|} { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS003", DiagnosticSeverity.Error)
+                .WithLocation(0)
+                .WithMessage("Field 'Value' has unsupported type 'UnmarkedClass'")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS003_Compliant_SupportedFields()
     {
         string source = @"
