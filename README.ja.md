@@ -73,7 +73,7 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 `[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の field offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
 
-全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。その struct が有効な `[ZeroSerializer]` ネスト型として使われている場合は、raw payload 化による性能改善を案内する `ZEROS007` info もネスト型の identifier へ1回だけ出します。`[ZeroSerializer]` がない間は親型に `ZEROS003` error が発生し、`ZEROS007` は生成エラーが解消されるまで出ません。
+全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。また、`bool` 型のプロパティーに対しては、flags enum (byte) の使用によるペイロードサイズの削減を促す `ZEROS007` info をプロパティーの型位置に出します。
 
 ネストした class/struct にも `[ZeroSerializer]` が必要です。未修飾の型は `ZEROS003` error になります。
 
