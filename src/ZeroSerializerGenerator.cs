@@ -357,7 +357,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 generationModel.IsValid = false;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
                     UnsupportedSerializableField,
-                    serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
+                    GetPropertyTypeLocation(serializableProperty),
                     serializableProperty.Name,
                     serializableProperty.Type.ToDisplayString()));
                 continue;
@@ -368,7 +368,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 generationModel.IsValid = false;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
                     InvalidBlittableArrayElement,
-                    serializableProperty.Locations.IsDefaultOrEmpty ? null : serializableProperty.Locations[0],
+                    GetPropertyTypeLocation(serializableProperty),
                     serializableProperty.Name));
                 continue;
             }
@@ -788,6 +788,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         return declaredType.Locations.IsDefaultOrEmpty ? null : declaredType.Locations[0];
+    }
+
+    private static Location? GetPropertyTypeLocation(IPropertySymbol propertySymbol)
+    {
+        foreach (SyntaxReference declaringSyntaxReference in propertySymbol.DeclaringSyntaxReferences)
+        {
+            if (declaringSyntaxReference.GetSyntax() is PropertyDeclarationSyntax propertyDeclaration)
+            {
+                return propertyDeclaration.Type.GetLocation();
+            }
+        }
+
+        return propertySymbol.Locations.IsDefaultOrEmpty ? null : propertySymbol.Locations[0];
     }
 
     private static bool TryGetPrimitiveByteCount(ITypeSymbol candidateType, out int byteCount)
