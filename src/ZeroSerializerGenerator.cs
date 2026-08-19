@@ -79,7 +79,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor BoolPropertyTypeUseFlagsEnum = new(
         "ZEROS007",
         "Use flags enum to reduce payload size",
-        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size",
+        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
         SerializerName,
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);

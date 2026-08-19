@@ -500,7 +500,7 @@ public class BoolPropertyContainer
             source,
             new DiagnosticResult("ZEROS007", DiagnosticSeverity.Info)
                 .WithLocation(0)
-                .WithMessage("Property 'IsActive' uses bool type; consider using a flags enum (byte) to reduce payload size")
+                .WithMessage("Property 'IsActive' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte")
         );
     }
 
