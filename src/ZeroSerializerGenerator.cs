@@ -683,6 +683,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool IsEligibleForBlittable(INamedTypeSymbol structType)
     {
+        foreach (SyntaxReference syntaxReference in structType.DeclaringSyntaxReferences)
+        {
+            if (syntaxReference.GetSyntax() is TypeDeclarationSyntax declaration)
+            {
+                foreach (SyntaxToken modifier in declaration.Modifiers)
+                {
+                    if (modifier.IsKind(SyntaxKind.PartialKeyword))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
         foreach (ISymbol member in structType.GetMembers())
         {
             if (member is IFieldSymbol field)

@@ -235,6 +235,29 @@ public struct StructWithInitOnlyProperty
     }
 
     [Fact]
+    public async Task ZEROS002_Violation_PartialStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public partial struct MyPartialStruct
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS002", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("Struct 'MyPartialStruct' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS003_Violation_UnmarkedBlittableNestedStruct()
     {
         string source = @"
