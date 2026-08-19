@@ -39,4 +39,6 @@ jobs:
 
       - if: failure()
         name: TEST FAILURE LOG
-        run: cat test-output.txt
+        run: |
+          cat test-output.txt
+          exit 1
