@@ -55,7 +55,9 @@ jobs:
 
       - if: failure()
         name: TEST FAILURE LOG
-        run: cat test-output.txt
+        run: |
+          cat test-output.txt
+          exit 1
 
 
   # Place after test to make step summary order better (test -> code preview)

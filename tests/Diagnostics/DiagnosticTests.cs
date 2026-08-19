@@ -250,8 +250,8 @@ public struct PackedValue
 [ZeroSerializer]
 public class Container
 {
-    public PackedValue {|#0:Value|} { get; set; }
-    public PackedValue? {|#1:OptionalValue|} { get; set; }
+    public {|#0:PackedValue|} Value { get; set; }
+    public {|#1:PackedValue?|} OptionalValue { get; set; }
 }
 ";
 
@@ -280,7 +280,7 @@ public class UnmarkedClass
 [ZeroSerializer]
 public class Container
 {
-    public UnmarkedClass {|#0:Value|} { get; set; }
+    public {|#0:UnmarkedClass|} Value { get; set; }
 }
 ";
 
@@ -335,7 +335,7 @@ public struct PackedValue
 [ZeroSerializer]
 public class Container
 {
-    public PackedValue[] {|#0:Values|} { get; set; }
+    public {|#0:PackedValue[]|} Values { get; set; }
 }
 ";
 
@@ -389,7 +389,7 @@ public struct PackedValue
 [ZeroSerializer]
 public class InvalidType
 {
-    public PackedValue {|#0:Value|} { get; set; }
+    public {|#0:PackedValue|} Value { get; set; }
 }
 
 [ZeroSerializer]
