@@ -49,7 +49,7 @@ public class Packet
 
 // Serializing data into a buffer using generated 'Serialize' extension method.
 var packet = new Packet { Id = 1, Name = "John", Values = new[] { 10, 20 } };
-var buffer = new byte[256];
+Span<byte> buffer = stackalloc byte[256];
 int writtenBytes = packet.Serialize(buffer);
 ```
 
@@ -68,8 +68,8 @@ ReadOnlyMemory<byte> retainedData = packetView;
 Structs marked with both `[ZeroSerializer]` and `[StructLayout(LayoutKind.Sequential, Pack = 1)]` are recognized as blittable structs.
 
 Blittable structs provide significant benefits:
-- **No Offset Table**: Serialized directly as raw memory payloads without field offset overhead.
-- **Maximum Performance**: Fast direct memory copy operations with zero serialization/deserialization overhead.
+- **No Offset Table**: Serialized directly as raw memory payloads without field offset table.
+- **Maximum Performance**: Fast direct memory copy operations with zero overhead.
 
 ```csharp
 [ZeroSerializer]
