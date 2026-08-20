@@ -46,6 +46,11 @@ public class Packet
     public string Name { get; }
     public int[] Values { get; }
 }
+
+// Serializing data into a buffer using generated 'Serialize' extension method.
+var packet = new Packet { Id = 1, Name = "John", Values = new[] { 10, 20 } };
+var buffer = new byte[256];
+int writtenBytes = packet.Serialize(buffer);
 ```
 
 View construction does not read every property. Values are decoded directly from the original memory only on access.
@@ -55,6 +60,36 @@ The complete serialized region is also available through implicit conversion:
 ```csharp
 ReadOnlySpan<byte> serializedData = packetView;
 ReadOnlyMemory<byte> retainedData = packetView;
+```
+
+
+## Blittable Structs
+
+Structs marked with both `[ZeroSerializer]` and `[StructLayout(LayoutKind.Sequential, Pack = 1)]` are recognized as blittable structs.
+
+Blittable structs provide significant benefits:
+- **No Offset Table**: Serialized directly as raw memory payloads without field offset overhead.
+- **Instant Materialization**: Convert a View directly back to the original struct using the `.Materialize()` extension method.
+- **Maximum Performance**: Fast direct memory copy operations with zero deserialization overhead.
+
+```csharp
+[ZeroSerializer]
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Transform
+{
+    public float PositionX;
+    public float PositionY;
+    public float PositionZ;
+}
+
+// Serializing a blittable struct (exact fixed byte size available via RequiredByteLength)
+var transform = new Transform { PositionX = 1.0f, PositionY = 2.0f, PositionZ = 3.0f };
+var buffer = new byte[TransformView.RequiredByteLength];
+int writtenBytes = transform.Serialize(buffer);
+
+// Reading via View or materializing back to the original struct
+var view = new TransformView(buffer);
+Transform original = view.Materialize();
 ```
 
 
