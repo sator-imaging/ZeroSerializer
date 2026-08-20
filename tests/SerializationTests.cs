@@ -1234,49 +1234,28 @@ public sealed class SerializationTests
     {
         var sharedNested = new SharedClassNested { NestedValue = 42 };
         var sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
-
-        // 1. Foo, Bar, and Baz all share the same SharedClassItem instance
-        var allSharedContainer = new DuplicateInstanceContainer
-        {
-            Foo = sharedItem,
-            Bar = sharedItem,
-            Baz = sharedItem,
-        };
-
-        var buffer = new byte[256];
-        int writtenBytes = allSharedContainer.Serialize(buffer);
-        var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
-
-        TestAssert.Equal(100, view.Foo.Value, nameof(view.Foo.Value));
-        TestAssert.Equal(100, view.Bar.Value, nameof(view.Bar.Value));
-        TestAssert.Equal(100, view.Baz.Value, nameof(view.Baz.Value));
-
-        TestAssert.Equal(42, view.Foo.Nested.NestedValue, nameof(view.Foo.Nested.NestedValue));
-        TestAssert.Equal(42, view.Bar.Nested.NestedValue, nameof(view.Bar.Nested.NestedValue));
-        TestAssert.Equal(42, view.Baz.Nested.NestedValue, nameof(view.Baz.Nested.NestedValue));
-
-        TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
-
-        // 2. Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassNested instance
         var distinctItemWithSharedNested = new SharedClassItem { Value = 200, Nested = sharedNested };
-        var complexContainer = new DuplicateInstanceContainer
+
+        // Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassNested instance
+        var container = new DuplicateInstanceContainer
         {
             Foo = sharedItem,
             Bar = sharedItem,
             Baz = distinctItemWithSharedNested,
         };
 
-        int complexWrittenBytes = complexContainer.Serialize(buffer);
-        var complexView = new DuplicateInstanceContainerView(buffer.AsMemory(0, complexWrittenBytes));
+        var buffer = new byte[256];
+        int writtenBytes = container.Serialize(buffer);
+        var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(100, complexView.Foo.Value, nameof(complexView.Foo.Value));
-        TestAssert.Equal(100, complexView.Bar.Value, nameof(complexView.Bar.Value));
-        TestAssert.Equal(200, complexView.Baz.Value, nameof(complexView.Baz.Value));
+        TestAssert.Equal(100, view.Foo.Value, nameof(view.Foo.Value));
+        TestAssert.Equal(100, view.Bar.Value, nameof(view.Bar.Value));
+        TestAssert.Equal(200, view.Baz.Value, nameof(view.Baz.Value));
 
-        TestAssert.Equal(42, complexView.Foo.Nested.NestedValue, nameof(complexView.Foo.Nested.NestedValue));
-        TestAssert.Equal(42, complexView.Bar.Nested.NestedValue, nameof(complexView.Bar.Nested.NestedValue));
-        TestAssert.Equal(42, complexView.Baz.Nested.NestedValue, nameof(complexView.Baz.Nested.NestedValue));
+        TestAssert.Equal(42, view.Foo.Nested.NestedValue, nameof(view.Foo.Nested.NestedValue));
+        TestAssert.Equal(42, view.Bar.Nested.NestedValue, nameof(view.Bar.Nested.NestedValue));
+        TestAssert.Equal(42, view.Baz.Nested.NestedValue, nameof(view.Baz.Nested.NestedValue));
 
-        TestAssert.Equal(complexWrittenBytes, complexView.GetByteLength(), "ComplexSharedReferenceInstances GetByteLength");
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
 }
