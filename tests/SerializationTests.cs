@@ -1228,4 +1228,44 @@ public sealed class SerializationTests
         TestAssert.True(viewNulls.Values.IsEmpty, nameof(viewNulls.Values.IsEmpty));
         TestAssert.Equal(writtenBytesNulls, viewNulls.GetByteLength(), "Nulls GetByteLength");
     }
+
+    [Fact]
+    public void BadlyAlignedStructWithPackOneRoundTrip()
+    {
+        TestAssert.Equal(3, BadlyAlignedStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedStructWithPackOneView.RequiredByteLength));
+        TestAssert.Equal(31, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
+
+        var foo = new BadlyAlignedContainerStructWithPackOne
+        {
+            A = 0x12,
+            B = 0x123456789ABCDEF0,
+            C = 0x34,
+            D = 0x56789ABC,
+            E = -1234,
+            F = 3.141592653589793,
+            G = 0x77,
+            H = new BadlyAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
+            I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
+        };
+
+        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength];
+        int writtenBytes = foo.Serialize(buffer);
+
+        TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
+
+        var view = new BadlyAlignedContainerStructWithPackOneView(buffer);
+
+        TestAssert.Equal(foo.A, view.A, nameof(view.A));
+        TestAssert.Equal(foo.B, view.B, nameof(view.B));
+        TestAssert.Equal(foo.C, view.C, nameof(view.C));
+        TestAssert.Equal(foo.D, view.D, nameof(view.D));
+        TestAssert.Equal(foo.E, view.E, nameof(view.E));
+        TestAssert.Equal(foo.F, view.F, nameof(view.F));
+        TestAssert.Equal(foo.G, view.G, nameof(view.G));
+        TestAssert.Equal(foo.H.A, view.H.A, nameof(view.H.A));
+        TestAssert.Equal(foo.H.B, view.H.B, nameof(view.H.B));
+        TestAssert.Equal(foo.I.A, view.I.A, nameof(view.I.A));
+        TestAssert.Equal(foo.I.B, view.I.B, nameof(view.I.B));
+        TestAssert.True(foo == view.Materialize(), nameof(view));
+    }
 }
