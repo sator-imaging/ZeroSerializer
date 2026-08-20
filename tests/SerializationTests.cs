@@ -1228,4 +1228,34 @@ public sealed class SerializationTests
         TestAssert.True(viewNulls.Values.IsEmpty, nameof(viewNulls.Values.IsEmpty));
         TestAssert.Equal(writtenBytesNulls, viewNulls.GetByteLength(), "Nulls GetByteLength");
     }
+
+    [Fact]
+    public void SharedReferenceInstancesRoundTrip()
+    {
+        var sharedNested = new SharedClassNested { NestedValue = 42 };
+        var sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
+        var distinctItemWithSharedNested = new SharedClassItem { Value = 200, Nested = sharedNested };
+
+        // Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassNested instance
+        var container = new DuplicateInstanceContainer
+        {
+            Foo = sharedItem,
+            Bar = sharedItem,
+            Baz = distinctItemWithSharedNested,
+        };
+
+        var buffer = new byte[256];
+        int writtenBytes = container.Serialize(buffer);
+        var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
+
+        TestAssert.Equal(100, view.Foo.Value, nameof(view.Foo.Value));
+        TestAssert.Equal(100, view.Bar.Value, nameof(view.Bar.Value));
+        TestAssert.Equal(200, view.Baz.Value, nameof(view.Baz.Value));
+
+        TestAssert.Equal(42, view.Foo.Nested.NestedValue, nameof(view.Foo.Nested.NestedValue));
+        TestAssert.Equal(42, view.Bar.Nested.NestedValue, nameof(view.Bar.Nested.NestedValue));
+        TestAssert.Equal(42, view.Baz.Nested.NestedValue, nameof(view.Baz.Nested.NestedValue));
+
+        TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
+    }
 }
