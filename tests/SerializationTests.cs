@@ -1230,12 +1230,12 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BadAlignedStructWithPackOneRoundTrip()
+    public void BadlyAlignedStructWithPackOneRoundTrip()
     {
-        TestAssert.Equal(3, BadAlignedStructWithPackOneView.RequiredByteLength, nameof(BadAlignedStructWithPackOneView.RequiredByteLength));
-        TestAssert.Equal(31, BadAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadAlignedContainerStructWithPackOneView.RequiredByteLength));
+        TestAssert.Equal(3, BadlyAlignedStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedStructWithPackOneView.RequiredByteLength));
+        TestAssert.Equal(31, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
 
-        var foo = new BadAlignedContainerStructWithPackOne
+        var foo = new BadlyAlignedContainerStructWithPackOne
         {
             A = 0x12,
             B = 0x123456789ABCDEF0,
@@ -1244,16 +1244,16 @@ public sealed class SerializationTests
             E = -1234,
             F = 3.141592653589793,
             G = 0x77,
-            H = new BadAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
-            I = new BadAlignedStructWithPackOne { A = 0xCD, B = -4321 }
+            H = new BadlyAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
+            I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
-        var buffer = new byte[BadAlignedContainerStructWithPackOneView.RequiredByteLength];
+        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength];
         int writtenBytes = foo.Serialize(buffer);
 
         TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
 
-        var view = new BadAlignedContainerStructWithPackOneView(buffer);
+        var view = new BadlyAlignedContainerStructWithPackOneView(buffer);
 
         TestAssert.Equal(foo.A, view.A, nameof(view.A));
         TestAssert.Equal(foo.B, view.B, nameof(view.B));
@@ -1266,5 +1266,6 @@ public sealed class SerializationTests
         TestAssert.Equal(foo.H.B, view.H.B, nameof(view.H.B));
         TestAssert.Equal(foo.I.A, view.I.A, nameof(view.I.A));
         TestAssert.Equal(foo.I.B, view.I.B, nameof(view.I.B));
+        TestAssert.True(foo == view.Materialize(), nameof(view));
     }
 }
