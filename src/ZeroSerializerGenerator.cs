@@ -92,6 +92,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
+        "ZEROS009",
+        "StructLayout attribute on class",
+        "StructLayout attribute on class '{0}' has no effect",
+        SerializerName,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(GeneratorInitializationContext initializationContext)
     {
         // Unity is pinned to Roslyn 3.8, so discovery must stay on the classic syntax-receiver API.
@@ -314,6 +322,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 serializableType.Locations.IsDefaultOrEmpty ? null : serializableType.Locations[0],
                 serializableType.ToDisplayString()));
             return generationModel;
+        }
+
+        if (serializableType.TypeKind != TypeKind.Struct)
+        {
+            var structLayoutAttr = GetStructLayoutAttribute(serializableType);
+            if (structLayoutAttr is not null)
+            {
+                Location? location = structLayoutAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                    ?? GetTypeIdentifierLocation(serializableType);
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    InvalidClassStructLayoutAttribute,
+                    location,
+                    serializableType.Name));
+            }
         }
 
         if (serializableType.TypeKind == TypeKind.Struct && !isBlittableStruct)
@@ -631,10 +653,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             out byteCount);
     }
 
-    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
+    private static AttributeData? GetStructLayoutAttribute(INamedTypeSymbol typeSymbol)
     {
-        AttributeData? structLayoutAttribute = null;
-        foreach (AttributeData candidateAttribute in structType.GetAttributes())
+        foreach (AttributeData candidateAttribute in typeSymbol.GetAttributes())
         {
             if (candidateAttribute.AttributeClass is INamedTypeSymbol
                 {
@@ -653,10 +674,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     }
                 })
             {
-                structLayoutAttribute = candidateAttribute;
-                break;
+                return candidateAttribute;
             }
         }
+        return null;
+    }
+
+    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
+    {
+        AttributeData? structLayoutAttribute = GetStructLayoutAttribute(structType);
         if (structLayoutAttribute is null
             || structLayoutAttribute.ConstructorArguments.Length != 1
             || structLayoutAttribute.ConstructorArguments[0].Value is not int layoutKind

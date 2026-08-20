@@ -63,6 +63,67 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS009_Violation_ClassWithStructLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public class MyClassWithStructLayout
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("StructLayout attribute on class 'MyClassWithStructLayout' has no effect")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS009_Compliant_StructWithAttributes()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyStructWithAttributes
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS009_Compliant_ClassWithoutZeroSerializer()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public class MyClassWithoutZeroSerializer
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Violation_NonBlittableStructWithLayout()
     {
         string source = @"
