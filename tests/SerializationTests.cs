@@ -249,8 +249,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(view.Child?.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(view.Child?.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(view.Child!.Value.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(view.Child!.Value.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
         int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
         int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
@@ -284,8 +284,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(view.Child?.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(view.Child?.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(view.Child!.Value.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(view.Child!.Value.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
 
         ReadOnlyMemory<byte> borrowedSerializedMemory = view;
