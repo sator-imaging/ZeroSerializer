@@ -318,6 +318,12 @@ public record struct BadlyAlignedContainerStructWithPackOne
 }
 
 [ZeroSerializer]
+public sealed class BadlyAlignedContainerArrayStructWithPackOne
+{
+    public BadlyAlignedContainerStructWithPackOne[] Values { get; set; } = Array.Empty<BadlyAlignedContainerStructWithPackOne>();
+}
+
+[ZeroSerializer]
 public record SimpleCsharpRecord
 {
     public int IntValue { get; init; }

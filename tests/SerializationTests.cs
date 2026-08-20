@@ -1248,12 +1248,25 @@ public sealed class SerializationTests
             I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
-        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength];
-        int writtenBytes = foo.Serialize(buffer);
+        var array = new BadlyAlignedContainerArrayStructWithPackOne();
+        array.Values = new[] { default, foo, default };
+
+        var arrayBuffer = new byte[1024];
+        int arrayWrittenBytes = array.Serialize(arrayBuffer);
+        TestAssert.Equal(101, arrayWrittenBytes, nameof(arrayWrittenBytes));
+
+        var arrayView = new BadlyAlignedContainerArrayStructWithPackOneView(arrayBuffer);
+        TestAssert.True(arrayView.Values[0] == default, "1st item");
+        TestAssert.True(arrayView.Values[1] == foo, "2nd item");
+        TestAssert.True(arrayView.Values[2] == default, "3rd item");
+
+        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength * 3];
+        int writtenBytes = foo.Serialize(buffer.AsSpan(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
 
         TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
 
-        var view = new BadlyAlignedContainerStructWithPackOneView(buffer);
+        var second = buffer.AsMemory().Slice(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength);
+        var view = new BadlyAlignedContainerStructWithPackOneView(second);
 
         TestAssert.Equal(foo.A, view.A, nameof(view.A));
         TestAssert.Equal(foo.B, view.B, nameof(view.B));
