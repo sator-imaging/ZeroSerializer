@@ -312,8 +312,9 @@ public struct Foo
     public int D { get; set; }
     public short E { get; set; }
     public double F { get; set; }
-    public Bar G { get; set; }
+    public byte G { get; set; }
     public Bar H { get; set; }
+    public Bar I { get; set; }
 }
 
 [ZeroSerializer]
