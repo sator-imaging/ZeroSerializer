@@ -294,6 +294,28 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct Bar
+{
+    public byte A { get; set; }
+    public short B { get; set; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct Foo
+{
+    public byte A { get; set; }
+    public long B { get; set; }
+    public byte C { get; set; }
+    public int D { get; set; }
+    public short E { get; set; }
+    public double F { get; set; }
+    public Bar G { get; set; }
+    public Bar H { get; set; }
+}
+
 [ZeroSerializer]
 public record SimpleCsharpRecord
 {

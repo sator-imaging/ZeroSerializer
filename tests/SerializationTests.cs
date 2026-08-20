@@ -1228,4 +1228,41 @@ public sealed class SerializationTests
         TestAssert.True(viewNulls.Values.IsEmpty, nameof(viewNulls.Values.IsEmpty));
         TestAssert.Equal(writtenBytesNulls, viewNulls.GetByteLength(), "Nulls GetByteLength");
     }
+
+    [Fact]
+    public void SequentialPackOneFooBarRoundTrip()
+    {
+        TestAssert.Equal(3, BarView.RequiredByteLength, nameof(BarView.RequiredByteLength));
+        TestAssert.Equal(30, FooView.RequiredByteLength, nameof(FooView.RequiredByteLength));
+
+        var foo = new Foo
+        {
+            A = 0x12,
+            B = 0x123456789ABCDEF0,
+            C = 0x34,
+            D = 0x56789ABC,
+            E = -1234,
+            F = 3.141592653589793,
+            G = new Bar { A = 0xAB, B = 0x5678 },
+            H = new Bar { A = 0xCD, B = -4321 }
+        };
+
+        var buffer = new byte[FooView.RequiredByteLength];
+        int writtenBytes = foo.Serialize(buffer);
+
+        TestAssert.Equal(30, writtenBytes, nameof(writtenBytes));
+
+        var view = new FooView(buffer);
+
+        TestAssert.Equal(foo.A, view.A, nameof(view.A));
+        TestAssert.Equal(foo.B, view.B, nameof(view.B));
+        TestAssert.Equal(foo.C, view.C, nameof(view.C));
+        TestAssert.Equal(foo.D, view.D, nameof(view.D));
+        TestAssert.Equal(foo.E, view.E, nameof(view.E));
+        TestAssert.Equal(foo.F, view.F, nameof(view.F));
+        TestAssert.Equal(foo.G.A, view.G.A, nameof(view.G.A));
+        TestAssert.Equal(foo.G.B, view.G.B, nameof(view.G.B));
+        TestAssert.Equal(foo.H.A, view.H.A, nameof(view.H.A));
+        TestAssert.Equal(foo.H.B, view.H.B, nameof(view.H.B));
+    }
 }
