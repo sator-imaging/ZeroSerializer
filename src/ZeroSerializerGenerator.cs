@@ -94,7 +94,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
         "ZEROS009",
-        "StructLayout attribute has no effect on class",
+        "StructLayout attribute on class",
         "StructLayout attribute on class '{0}' has no effect",
         SerializerName,
         DiagnosticSeverity.Warning,
