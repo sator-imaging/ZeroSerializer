@@ -1230,9 +1230,9 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void SequentialPackOneFooBarRoundTrip()
+    public void BadAlignedStructWithPackOneRoundTrip()
     {
-        TestAssert.Equal(3, BarView.RequiredByteLength, nameof(BarView.RequiredByteLength));
+        TestAssert.Equal(3, BadAlignedStructWithPackOneView.RequiredByteLength, nameof(BadAlignedStructWithPackOneView.RequiredByteLength));
         TestAssert.Equal(31, FooView.RequiredByteLength, nameof(FooView.RequiredByteLength));
 
         var foo = new Foo
@@ -1244,8 +1244,8 @@ public sealed class SerializationTests
             E = -1234,
             F = 3.141592653589793,
             G = 0x77,
-            H = new Bar { A = 0xAB, B = 0x5678 },
-            I = new Bar { A = 0xCD, B = -4321 }
+            H = new BadAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
+            I = new BadAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
         var buffer = new byte[FooView.RequiredByteLength];

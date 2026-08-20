@@ -296,7 +296,7 @@ public struct StrictBlittableStruct
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
-public struct Bar
+public struct BadAlignedStructWithPackOne
 {
     public byte A { get; set; }
     public short B { get; set; }
@@ -313,8 +313,8 @@ public struct Foo
     public short E { get; set; }
     public double F { get; set; }
     public byte G { get; set; }
-    public Bar H { get; set; }
-    public Bar I { get; set; }
+    public BadAlignedStructWithPackOne H { get; set; }
+    public BadAlignedStructWithPackOne I { get; set; }
 }
 
 [ZeroSerializer]
