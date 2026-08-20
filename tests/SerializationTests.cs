@@ -1233,9 +1233,9 @@ public sealed class SerializationTests
     public void BadAlignedStructWithPackOneRoundTrip()
     {
         TestAssert.Equal(3, BadAlignedStructWithPackOneView.RequiredByteLength, nameof(BadAlignedStructWithPackOneView.RequiredByteLength));
-        TestAssert.Equal(31, FooView.RequiredByteLength, nameof(FooView.RequiredByteLength));
+        TestAssert.Equal(31, BadAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadAlignedContainerStructWithPackOneView.RequiredByteLength));
 
-        var foo = new Foo
+        var foo = new BadAlignedContainerStructWithPackOne
         {
             A = 0x12,
             B = 0x123456789ABCDEF0,
@@ -1248,12 +1248,12 @@ public sealed class SerializationTests
             I = new BadAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
-        var buffer = new byte[FooView.RequiredByteLength];
+        var buffer = new byte[BadAlignedContainerStructWithPackOneView.RequiredByteLength];
         int writtenBytes = foo.Serialize(buffer);
 
         TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
 
-        var view = new FooView(buffer);
+        var view = new BadAlignedContainerStructWithPackOneView(buffer);
 
         TestAssert.Equal(foo.A, view.A, nameof(view.A));
         TestAssert.Equal(foo.B, view.B, nameof(view.B));

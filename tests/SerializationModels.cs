@@ -304,7 +304,7 @@ public struct BadAlignedStructWithPackOne
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
-public struct Foo
+public struct BadAlignedContainerStructWithPackOne
 {
     public byte A { get; set; }
     public long B { get; set; }
