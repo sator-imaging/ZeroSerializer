@@ -128,7 +128,7 @@ namespace ZeroSerializer.Benchmarks
             ReadOnlySpan<PackedBenchmarkValue> packedValues = view.PackedValues;
             NestedPayloadView? nested = view.Nested;
             int nestedVersion = nested?.Version ?? -1;
-            ReadOnlySpan<char> nestedLabel = nested?.Label ?? default;
+            ReadOnlySpan<char> nestedLabel = (nested ?? new()).Label;  // Nullable<ReadOnlySpan<char>> is invalid
             PackedBenchmarkValueView nestedSummary = nested?.Summary ?? new();
             NestedStructPayloadView nestedStruct = view.NestedStruct;
             int nestedStructCode = nestedStruct.Code;
