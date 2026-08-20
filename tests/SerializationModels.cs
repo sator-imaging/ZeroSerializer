@@ -295,6 +295,27 @@ public struct StrictBlittableStruct
 }
 
 [ZeroSerializer]
+public class DuplicateInstanceContainer
+{
+    public SharedClassItem? Foo { get; set; }
+    public SharedClassItem? Bar { get; set; }
+    public SharedClassItem? Baz { get; set; }
+}
+
+[ZeroSerializer]
+public class SharedClassItem
+{
+    public int Value { get; set; }
+    public SharedClassNested? Nested { get; set; }
+}
+
+[ZeroSerializer]
+public class SharedClassNested
+{
+    public int NestedValue { get; set; }
+}
+
+[ZeroSerializer]
 public record SimpleCsharpRecord
 {
     public int IntValue { get; init; }
