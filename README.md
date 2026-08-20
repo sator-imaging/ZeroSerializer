@@ -69,8 +69,7 @@ Structs marked with both `[ZeroSerializer]` and `[StructLayout(LayoutKind.Sequen
 
 Blittable structs provide significant benefits:
 - **No Offset Table**: Serialized directly as raw memory payloads without field offset overhead.
-- **Instant Materialization**: Convert a View directly back to the original struct using the `.Materialize()` extension method.
-- **Maximum Performance**: Fast direct memory copy operations with zero deserialization overhead.
+- **Maximum Performance**: Fast direct memory copy operations with zero serialization/deserialization overhead.
 
 ```csharp
 [ZeroSerializer]
@@ -84,7 +83,7 @@ public struct Transform
 
 // Serializing a blittable struct (exact fixed byte size available via RequiredByteLength)
 var transform = new Transform { PositionX = 1.0f, PositionY = 2.0f, PositionZ = 3.0f };
-var buffer = new byte[TransformView.RequiredByteLength];
+var buffer = new byte[TransformView.RequiredByteLength];  // 12 bytes
 int writtenBytes = transform.Serialize(buffer);
 
 // Reading via View or materializing back to the original struct
