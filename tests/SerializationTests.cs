@@ -246,12 +246,12 @@ public sealed class SerializationTests
 
         int expectedRequiredByteLength = -(24 + (4 * IntPtr.Size));
         TestAssert.Equal(expectedRequiredByteLength, VariableRecordView.RequiredByteLength, nameof(VariableRecordView.RequiredByteLength));
-        TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
-        TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
-        TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(FixedClassView.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(FixedClassView.State));
-        TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
+TestAssert.Equal(source.Text, view.Text.ToString(), nameof(source.Text));
+TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(source.Values));
+TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(source.OptionalNumber));
+        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(source.Child.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(source.Child.State));
+TestAssert.Equal(source.Tail, view.Tail, nameof(source.Tail));
         int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
         int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
         int optionalNumberFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4));
