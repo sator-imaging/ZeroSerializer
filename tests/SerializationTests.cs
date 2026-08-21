@@ -777,7 +777,7 @@ TestAssert.Equal(source.Tail, view.Tail, nameof(source.Tail));
         // 2. Assert that nested non-blittable type returns view
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
-        Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
+        Assert.Equal(typeof(FixedClassView?), childProperty!.PropertyType);
     }
 
     public void StrictBlittableStructTests()
