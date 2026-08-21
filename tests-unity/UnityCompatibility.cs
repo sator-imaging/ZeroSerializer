@@ -119,11 +119,11 @@ RequireCondition(
     && variableView.OptionalState == PacketState.Ready
     && variableView.OptionalPosition!.Value.X == 30
     && variableView.MissingOptionalPosition is null
-    && variableView.Child.Identifier == 99
+    && variableView.Child?.Identifier == 99
     && variableView.StructChild.Identifier == 100
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
-    && variableView.OptionalStructChild.Identifier == 101
-    && variableView.OptionalStructChild.Name.SequenceEqual("optional struct".AsSpan())
+    && variableView.OptionalStructChild?.Identifier == 101
+    && variableView.OptionalStructChild?.Name.SequenceEqual("optional struct".AsSpan()) == true
     && variableView.FloatValues.Length == 3
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3
