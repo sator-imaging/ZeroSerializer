@@ -53,14 +53,8 @@ Span<byte> buffer = stackalloc byte[256];
 int writtenBytes = packet.Serialize(buffer);
 ```
 
-View construction does not read every property. Values are decoded directly from the original memory only on access.
-
-The complete serialized region is also available through implicit conversion:
-
-```csharp
-ReadOnlySpan<byte> serializedData = packetView;
-ReadOnlyMemory<byte> retainedData = packetView;
-```
+> [!TIP]
+> View construction does not read every property. Values are decoded directly from the original memory only on access.
 
 
 ## Blittable Structs
