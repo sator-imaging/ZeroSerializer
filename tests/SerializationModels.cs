@@ -318,7 +318,7 @@ public record struct BadlyAlignedContainerStructWithPackOne
 }
 
 [ZeroSerializer]
-public sealed class BadlyAlignedContainerArrayStructWithPackOne
+public sealed class BadlyAlignedContainerArrayStruct
 {
     public BadlyAlignedContainerStructWithPackOne[] Values { get; set; } = Array.Empty<BadlyAlignedContainerStructWithPackOne>();
 }

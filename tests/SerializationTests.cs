@@ -1248,14 +1248,14 @@ public sealed class SerializationTests
             I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
-        var array = new BadlyAlignedContainerArrayStructWithPackOne();
+        var array = new BadlyAlignedContainerArrayStruct();
         array.Values = new[] { default, foo, default };
 
         var arrayBuffer = new byte[1024];
         int arrayWrittenBytes = array.Serialize(arrayBuffer);
         TestAssert.Equal(101, arrayWrittenBytes, nameof(arrayWrittenBytes));
 
-        var arrayView = new BadlyAlignedContainerArrayStructWithPackOneView(arrayBuffer);
+        var arrayView = new BadlyAlignedContainerArrayStructView(arrayBuffer);
         TestAssert.True(arrayView.Values[0] == default, "1st item");
         TestAssert.True(arrayView.Values[1] == foo, "2nd item");
         TestAssert.True(arrayView.Values[2] == default, "3rd item");
