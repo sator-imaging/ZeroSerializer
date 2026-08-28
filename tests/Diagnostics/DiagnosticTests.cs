@@ -63,6 +63,67 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS009_Violation_ClassWithStructLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public class MyClassWithStructLayout
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS009", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithMessage("StructLayout attribute on class 'MyClassWithStructLayout' has no effect")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS009_Compliant_StructWithAttributes()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyStructWithAttributes
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS009_Compliant_ClassWithoutZeroSerializer()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public class MyClassWithoutZeroSerializer
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Violation_NonBlittableStructWithLayout()
     {
         string source = @"
@@ -507,53 +568,36 @@ public struct MyStructWithLayout
     }
 
     [Fact]
-    public async Task ZEROS007_Violation_BlittableCompatibleNestedStruct()
+    public async Task ZEROS007_Violation_BoolProperty()
     {
         string source = @"
 using ZeroSerializer;
 
 [ZeroSerializer]
-public struct {|#0:NestedStruct|}
+public class MyBoolClass
 {
-    public int Value { get; set; }
-}
-
-[ZeroSerializer]
-public class ParentClass
-{
-    public NestedStruct Child { get; set; }
+    public {|#0:bool|} IsActive { get; set; }
 }
 ";
 
         await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
             source,
-            new DiagnosticResult("ZEROS006", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithMessage("Struct 'NestedStruct' has a Blittable-compatible field shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization"),
             new DiagnosticResult("ZEROS007", DiagnosticSeverity.Info)
                 .WithLocation(0)
-                .WithMessage("Nested struct 'NestedStruct' can use StructLayout(LayoutKind.Sequential, Pack = 1) to improve serialization performance with raw payload serialization")
+                .WithMessage("Property 'IsActive' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte")
         );
     }
 
     [Fact]
-    public async Task ZEROS007_Compliant_BlittableNestedStructWithLayout()
+    public async Task ZEROS007_Compliant_NonBoolProperty()
     {
         string source = @"
-using System.Runtime.InteropServices;
 using ZeroSerializer;
 
 [ZeroSerializer]
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct NestedStructWithLayout
+public class MyNonBoolClass
 {
     public int Value { get; set; }
-}
-
-[ZeroSerializer]
-public class ParentClassWithBlittable
-{
-    public NestedStructWithLayout Child { get; set; }
 }
 ";
 

@@ -1230,6 +1230,59 @@ public sealed class SerializationTests
     }
 
     [Fact]
+    public void BadlyAlignedStructWithPackOneRoundTrip()
+    {
+        TestAssert.Equal(3, BadlyAlignedStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedStructWithPackOneView.RequiredByteLength));
+        TestAssert.Equal(31, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
+
+        var foo = new BadlyAlignedContainerStructWithPackOne
+        {
+            A = 0x12,
+            B = 0x123456789ABCDEF0,
+            C = 0x34,
+            D = 0x56789ABC,
+            E = -1234,
+            F = 3.141592653589793,
+            G = 0x77,
+            H = new BadlyAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
+            I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
+        };
+
+        var array = new BadlyAlignedContainerArrayStruct();
+        array.Values = new[] { default, foo, default };
+
+        var arrayBuffer = new byte[1024];
+        int arrayWrittenBytes = array.Serialize(arrayBuffer);
+        TestAssert.Equal(101, arrayWrittenBytes, nameof(arrayWrittenBytes));
+
+        var arrayView = new BadlyAlignedContainerArrayStructView(arrayBuffer);
+        TestAssert.True(arrayView.Values[0] == default, "1st item");
+        TestAssert.True(arrayView.Values[1] == foo, "2nd item");
+        TestAssert.True(arrayView.Values[2] == default, "3rd item");
+
+        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength * 3];
+        int writtenBytes = foo.Serialize(buffer.AsSpan(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
+
+        TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
+
+        var second = buffer.AsMemory().Slice(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength);
+        var view = new BadlyAlignedContainerStructWithPackOneView(second);
+
+        TestAssert.Equal(foo.A, view.A, nameof(view.A));
+        TestAssert.Equal(foo.B, view.B, nameof(view.B));
+        TestAssert.Equal(foo.C, view.C, nameof(view.C));
+        TestAssert.Equal(foo.D, view.D, nameof(view.D));
+        TestAssert.Equal(foo.E, view.E, nameof(view.E));
+        TestAssert.Equal(foo.F, view.F, nameof(view.F));
+        TestAssert.Equal(foo.G, view.G, nameof(view.G));
+        TestAssert.Equal(foo.H.A, view.H.A, nameof(view.H.A));
+        TestAssert.Equal(foo.H.B, view.H.B, nameof(view.H.B));
+        TestAssert.Equal(foo.I.A, view.I.A, nameof(view.I.A));
+        TestAssert.Equal(foo.I.B, view.I.B, nameof(view.I.B));
+        TestAssert.True(foo == view.Materialize(), nameof(view));
+    }
+
+    [Fact]
     public void SharedReferenceInstancesRoundTrip()
     {
         var sharedNested = new SharedClassNested { NestedValue = 42 };

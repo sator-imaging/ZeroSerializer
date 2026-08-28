@@ -76,10 +76,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor BlittableCompatibleNestedStruct = new(
+    private static readonly DiagnosticDescriptor UseFlagsEnumToReducePayloadSize = new(
         "ZEROS007",
-        "Nested struct can use faster Blittable serialization",
-        "Nested struct '{0}' can use StructLayout(LayoutKind.Sequential, Pack = 1) to improve serialization performance with raw payload serialization",
+        "Use flags enum to reduce payload size",
+        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
         SerializerName,
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
@@ -90,6 +90,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         "Generic type '{0}' is not allowed for ZeroSerializer",
         SerializerName,
         DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
+        "ZEROS009",
+        "StructLayout attribute on class",
+        "StructLayout attribute on class '{0}' has no effect",
+        SerializerName,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     public void Initialize(GeneratorInitializationContext initializationContext)
@@ -249,11 +257,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return;
         }
 
-        ReportBlittableCompatibleNestedStructDiagnostics(
-            executionContext,
-            validModels,
-            generationModels);
-
         var modelLookup = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
         // Each type owns one generated file and contributes one method to its namespace-local partial extension class.
         foreach (TypeGenerationModel validModel in validModels)
@@ -316,6 +319,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return generationModel;
         }
 
+        if (serializableType.TypeKind != TypeKind.Struct)
+        {
+            var structLayoutAttr = GetStructLayoutAttribute(serializableType);
+            if (structLayoutAttr is not null)
+            {
+                Location? location = structLayoutAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                    ?? GetTypeIdentifierLocation(serializableType);
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    InvalidClassStructLayoutAttribute,
+                    location,
+                    serializableType.Name));
+            }
+        }
+
         if (serializableType.TypeKind == TypeKind.Struct && !isBlittableStruct)
         {
             var packOneAttr = GetSequentialPackOneAttribute(serializableType);
@@ -372,6 +389,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     GetPropertyTypeLocation(serializableProperty),
                     serializableProperty.Name));
                 continue;
+            }
+
+            if (serializableProperty.Type.SpecialType == SpecialType.System_Boolean)
+            {
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    UseFlagsEnumToReducePayloadSize,
+                    GetPropertyTypeLocation(serializableProperty),
+                    serializableProperty.Name));
             }
 
             propertyModel.BlittableByteOffset = blittableByteOffset;
@@ -634,10 +659,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             out byteCount);
     }
 
-    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
+    private static AttributeData? GetStructLayoutAttribute(INamedTypeSymbol typeSymbol)
     {
-        AttributeData? structLayoutAttribute = null;
-        foreach (AttributeData candidateAttribute in structType.GetAttributes())
+        foreach (AttributeData candidateAttribute in typeSymbol.GetAttributes())
         {
             if (candidateAttribute.AttributeClass is INamedTypeSymbol
                 {
@@ -656,10 +680,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     }
                 })
             {
-                structLayoutAttribute = candidateAttribute;
-                break;
+                return candidateAttribute;
             }
         }
+        return null;
+    }
+
+    private static AttributeData? GetSequentialPackOneAttribute(INamedTypeSymbol structType)
+    {
+        AttributeData? structLayoutAttribute = GetStructLayoutAttribute(structType);
         if (structLayoutAttribute is null
             || structLayoutAttribute.ConstructorArguments.Length != 1
             || structLayoutAttribute.ConstructorArguments[0].Value is not int layoutKind
@@ -762,36 +791,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         return true;
-    }
-
-    private static void ReportBlittableCompatibleNestedStructDiagnostics(
-        GeneratorExecutionContext executionContext,
-        IReadOnlyList<TypeGenerationModel> validGenerationModels,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> generationModels)
-    {
-        var reportedNestedStructs = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (TypeGenerationModel containingGenerationModel in validGenerationModels)
-        {
-            foreach (FieldGenerationModel nestedField in containingGenerationModel.Fields)
-            {
-                if (nestedField.Kind != FieldSerializationKind.Nested
-                    || nestedField.NestedSerializableType is not INamedTypeSymbol nestedSerializableStruct
-                    || nestedSerializableStruct.TypeKind != TypeKind.Struct
-                    || !generationModels.TryGetValue(nestedSerializableStruct, out TypeGenerationModel? nestedGenerationModel)
-                    || nestedGenerationModel.IsBlittableStruct
-                    || !HasBlittableCompatibleFieldShape(nestedSerializableStruct)
-                    || !reportedNestedStructs.Add(nestedSerializableStruct))
-                {
-                    continue;
-                }
-
-                // Report only after dependency validation so this performance advice never replaces ZEROS003 or another generation error.
-                executionContext.ReportDiagnostic(Diagnostic.Create(
-                    BlittableCompatibleNestedStruct,
-                    GetTypeIdentifierLocation(nestedSerializableStruct),
-                    nestedSerializableStruct.ToDisplayString()));
-            }
-        }
     }
 
     private static Location? GetTypeIdentifierLocation(INamedTypeSymbol declaredType)
