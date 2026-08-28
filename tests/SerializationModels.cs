@@ -214,9 +214,9 @@ public sealed class ZeroLengthNestedStructContainer
 }
 
 [ZeroSerializer]
-public sealed class FieldsOnlyClass
+public sealed class IgnoredPropertiesClass
 {
-    public int IgnoredField;
+    public int IgnoredProperty { private get; set; }
 }
 
 [ZeroSerializer]
@@ -405,7 +405,7 @@ public sealed class VariableStructWithPrimitiveAtEnd
 }
 
 [ZeroSerializer]
-public sealed class VariableStructWithAllNullableFields
+public sealed class VariableStructWithAllNullableProperties
 {
     public string? Text { get; init; }
     public int[]? Values { get; init; }

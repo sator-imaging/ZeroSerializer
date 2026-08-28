@@ -252,14 +252,14 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(source.Child.Identifier));
         TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(source.Child.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(source.Tail));
-        int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
-        int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
-        int optionalNumberFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4));
-        int childFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(12, 4));
-        TestAssert.Equal(source.Text.Length * sizeof(char), BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(textFieldOffset, 4)), "String payload byte length");
-        TestAssert.Equal(source.Values.Length * sizeof(int), BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(valuesFieldOffset, 4)), "Array payload byte length");
-        TestAssert.Equal(source.OptionalNumber.Value, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(optionalNumberFieldOffset, 4)), "Nullable payload without marker");
-        TestAssert.Equal(8, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(childFieldOffset, 4)), "Reference payload without marker");
+        int textPropertyOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
+        int valuesPropertyOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
+        int optionalNumberPropertyOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4));
+        int childPropertyOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(12, 4));
+        TestAssert.Equal(source.Text.Length * sizeof(char), BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(textPropertyOffset, 4)), "String payload byte length");
+        TestAssert.Equal(source.Values.Length * sizeof(int), BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(valuesPropertyOffset, 4)), "Array payload byte length");
+        TestAssert.Equal(source.OptionalNumber.Value, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(optionalNumberPropertyOffset, 4)), "Nullable payload without marker");
+        TestAssert.Equal(8, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(childPropertyOffset, 4)), "Reference payload without marker");
     }
 
     [Fact]
@@ -382,15 +382,15 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void PublicFieldsAreIgnored()
+    public void NonSerializablePropertiesAreIgnored()
     {
-        var source = new FieldsOnlyClass { IgnoredField = 123 };
+        var source = new IgnoredPropertiesClass { IgnoredProperty = 123 };
 
         int writtenBytes = source.Serialize(Span<byte>.Empty);
 
-        TestAssert.Equal(0, FieldsOnlyClassView.RequiredByteLength, nameof(FieldsOnlyClassView.RequiredByteLength));
+        TestAssert.Equal(0, IgnoredPropertiesClassView.RequiredByteLength, nameof(IgnoredPropertiesClassView.RequiredByteLength));
         TestAssert.Equal(0, writtenBytes, nameof(writtenBytes));
-        TestAssert.Equal(0, typeof(FieldsOnlyClassView).GetProperties().Length, "Generated property count");
+        TestAssert.Equal(0, typeof(IgnoredPropertiesClassView).GetProperties().Length, "Generated property count");
     }
 
     [Fact]
@@ -791,7 +791,7 @@ public sealed class SerializationTests
         int strictWrittenBytes = strictObj.Serialize(strictBuffer);
         // Size should be exactly 4 bytes (sizeof(int)) because it has no offset table.
         TestAssert.Equal(4, strictWrittenBytes, nameof(strictWrittenBytes));
-        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(strictBuffer.AsSpan(0, 4)), "Value field at offset 0");
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(strictBuffer.AsSpan(0, 4)), "Value property at offset 0");
 
         // SequentialPackOneWithCharSetStruct has Sequential, Pack=1, AND CharSet=CharSet.Ansi.
         // It must have an offset table (is serialized with property offset table, checking that its serialized size is larger).
@@ -801,7 +801,7 @@ public sealed class SerializationTests
         // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
         TestAssert.Equal(8, charSetWrittenBytes, nameof(charSetWrittenBytes));
         TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
-        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(4, 4)), "Value field at offset 4");
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(charSetBuffer.AsSpan(4, 4)), "Value property at offset 4");
 
         // SequentialPackOneWithSizeStruct has Sequential, Pack=1, AND Size=7.
         // It must have an offset table.
@@ -811,7 +811,7 @@ public sealed class SerializationTests
         // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
         TestAssert.Equal(8, sizeWrittenBytes, nameof(sizeWrittenBytes));
         TestAssert.Equal(4, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(0, 4)), "Offset table at offset 0 points to 4");
-        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(4, 4)), "Value field at offset 4");
+        TestAssert.Equal(42, BinaryPrimitives.ReadInt32LittleEndian(sizeBuffer.AsSpan(4, 4)), "Value property at offset 4");
     }
 
     [Fact]
@@ -1022,7 +1022,7 @@ public sealed class SerializationTests
         var view = new VariableStructWithArrayAtEndView(buffer);
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength");
 
-        // with null values (array is null, last field with non-null value is ID)
+        // with null values (array is null, last property with non-null value is ID)
         var sourceNull = new VariableStructWithArrayAtEnd { ID = 42, Values = null };
         int writtenBytesNull = sourceNull.Serialize(buffer);
         var viewNull = new VariableStructWithArrayAtEndView(buffer);
@@ -1078,9 +1078,9 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_AllNullableFieldsAreNull()
+    public void GetByteLength_VariableStruct_AllNullablePropertiesAreNull()
     {
-        // 1. One nullable property with null (fieldCount = 1)
+        // 1. One nullable property with null (propertyCount = 1)
         {
             var source = new StringOnlyRecord { Text = null };
             var buffer = new byte[16];
@@ -1090,18 +1090,18 @@ public sealed class SerializationTests
             TestAssert.Equal(writtenBytes, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null matches writtenBytes");
         }
 
-        // 2. Multiple nullable properties all null (fieldCount > 1)
+        // 2. Multiple nullable properties all null (propertyCount > 1)
         {
-            var source = new VariableStructWithAllNullableFields
+            var source = new VariableStructWithAllNullableProperties
             {
                 Text = null,
                 Values = null
             };
             var buffer = new byte[16];
             int writtenBytes = source.Serialize(buffer);
-            var view = new VariableStructWithAllNullableFieldsView(buffer);
-            TestAssert.Equal(8, view.GetByteLength(), "VariableStructWithAllNullableFieldsView.GetByteLength with all nulls");
-            TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithAllNullableFieldsView.GetByteLength with all nulls matches writtenBytes");
+            var view = new VariableStructWithAllNullablePropertiesView(buffer);
+            TestAssert.Equal(8, view.GetByteLength(), "VariableStructWithAllNullablePropertiesView.GetByteLength with all nulls");
+            TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithAllNullablePropertiesView.GetByteLength with all nulls matches writtenBytes");
         }
     }
 

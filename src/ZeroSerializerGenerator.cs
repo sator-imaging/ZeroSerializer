@@ -44,10 +44,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor UnsupportedSerializableField = new(
+    private static readonly DiagnosticDescriptor UnsupportedSerializableProperty = new(
         "ZEROS002",
-        "Unsupported serializable field",
-        "Field '{0}' has unsupported type '{1}'",
+        "Unsupported serializable property",
+        "Property '{0}' has unsupported type '{1}'",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -55,7 +55,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor InvalidBlittableArrayElement = new(
         "ZEROS003",
         "Invalid blittable array element",
-        "Array field '{0}' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)",
+        "Array property '{0}' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -63,7 +63,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor InvalidSerializableDependency = new(
         "ZEROS004",
         "Invalid nested serializable type",
-        "Field '{0}' refers to serializable type '{1}', but that type contains errors",
+        "Property '{0}' refers to serializable type '{1}', but that type contains errors",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -71,7 +71,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static readonly DiagnosticDescriptor BlittableCompatibleStructMissingLayout = new(
         "ZEROS102",
         "Struct can use Blittable serialization",
-        "Struct '{0}' has a Blittable-compatible field shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization",
+        "Struct '{0}' has a Blittable-compatible property shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization",
         SerializerName,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
@@ -120,7 +120,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         injectedAttributeSourceBuilder.AppendLine($"internal sealed class {SerializerAttributeName} : Attribute");
         injectedAttributeSourceBuilder.OpenBlock();
         injectedAttributeSourceBuilder.AppendLine("[Obsolete(\"Emitting string representation of the type will expose internal details in the resulting assembly. Consider using `ShapeHash` instead, or using `#if DEBUG` directive to prevent emitting on release build.\")]");
-        injectedAttributeSourceBuilder.AppendLine("public bool EmitShapeTag;");
+        injectedAttributeSourceBuilder.AppendLine("public bool EmitShapeTag { get; set; }");
         injectedAttributeSourceBuilder.AppendLine();
         injectedAttributeSourceBuilder.AppendLine($"public {SerializerAttributeName}() {{ }}");
         injectedAttributeSourceBuilder.CloseBlock();
@@ -213,20 +213,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     continue;
                 }
 
-                FieldGenerationModel? invalidNestedField = null;
-                foreach (FieldGenerationModel nestedFieldCandidate in generationModel.Fields)
+                PropertyGenerationModel? invalidNestedProperty = null;
+                foreach (PropertyGenerationModel nestedPropertyCandidate in generationModel.Properties)
                 {
-                    if (nestedFieldCandidate.NestedSerializableType is not null
+                    if (nestedPropertyCandidate.NestedSerializableType is not null
                         && generationModels.TryGetValue(
-                            nestedFieldCandidate.NestedSerializableType,
+                            nestedPropertyCandidate.NestedSerializableType,
                             out TypeGenerationModel? nestedModel)
                         && !nestedModel.IsValid)
                     {
-                        invalidNestedField = nestedFieldCandidate;
+                        invalidNestedProperty = nestedPropertyCandidate;
                         break;
                     }
                 }
-                if (invalidNestedField is null)
+                if (invalidNestedProperty is null)
                 {
                     continue;
                 }
@@ -235,11 +235,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 invalidDependencyFound = true;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
                     InvalidSerializableDependency,
-                    invalidNestedField.Symbol.Locations.IsDefaultOrEmpty
+                    invalidNestedProperty.Symbol.Locations.IsDefaultOrEmpty
                         ? null
-                        : invalidNestedField.Symbol.Locations[0],
-                    invalidNestedField.Symbol.Name,
-                    invalidNestedField.NestedSerializableType!.ToDisplayString()));
+                        : invalidNestedProperty.Symbol.Locations[0],
+                    invalidNestedProperty.Symbol.Name,
+                    invalidNestedProperty.NestedSerializableType!.ToDisplayString()));
             }
         }
         while (invalidDependencyFound);
@@ -345,7 +345,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     location,
                     serializableType.Name));
             }
-            else if (HasBlittableCompatibleFieldShape(serializableType))
+            else if (HasBlittableCompatiblePropertyShape(serializableType))
             {
                 // Report on the declaration identifier so the layout optimization is actionable without highlighting the whole type.
                 executionContext.ReportDiagnostic(Diagnostic.Create(
@@ -369,19 +369,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 continue;
             }
 
-            FieldGenerationModel? propertyModel = CreatePropertyGenerationModel(serializableProperty, allSerializableTypes);
+            PropertyGenerationModel? propertyModel = CreatePropertyGenerationModel(serializableProperty, allSerializableTypes);
             if (propertyModel is null)
             {
                 generationModel.IsValid = false;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
-                    UnsupportedSerializableField,
+                    UnsupportedSerializableProperty,
                     GetPropertyTypeLocation(serializableProperty),
                     serializableProperty.Name,
                     serializableProperty.Type.ToDisplayString()));
                 continue;
             }
 
-            if (propertyModel.Kind == FieldSerializationKind.InvalidArray)
+            if (propertyModel.Kind == PropertySerializationKind.InvalidArray)
             {
                 generationModel.IsValid = false;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
@@ -400,7 +400,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
 
             propertyModel.BlittableByteOffset = blittableByteOffset;
-            generationModel.Fields.Add(propertyModel);
+            generationModel.Properties.Add(propertyModel);
             blittableByteOffset += propertyModel.ElementByteCount;
         }
 
@@ -447,7 +447,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return false;
     }
 
-    private static FieldGenerationModel? CreatePropertyGenerationModel(
+    private static PropertyGenerationModel? CreatePropertyGenerationModel(
         IPropertySymbol serializableProperty,
         HashSet<INamedTypeSymbol> allSerializableTypes)
     {
@@ -457,9 +457,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             ITypeSymbol nullableUnderlyingType = nullableType.TypeArguments[0];
             if (TryGetPrimitiveByteCount(nullableUnderlyingType, out int nullablePrimitiveByteCount))
             {
-                return new FieldGenerationModel(
+                return new PropertyGenerationModel(
                     serializableProperty,
-                    FieldSerializationKind.Primitive,
+                    PropertySerializationKind.Primitive,
                     nullablePrimitiveByteCount,
                     null,
                     null,
@@ -472,9 +472,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && nullableEnumType.EnumUnderlyingType is not null
                 && TryGetPrimitiveByteCount(nullableEnumType.EnumUnderlyingType, out int nullableEnumByteCount))
             {
-                return new FieldGenerationModel(
+                return new PropertyGenerationModel(
                     serializableProperty,
-                    FieldSerializationKind.Primitive,
+                    PropertySerializationKind.Primitive,
                     nullableEnumByteCount,
                     null,
                     null,
@@ -487,9 +487,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && TryGetBlittableStructByteCount(namedUnderlying, out int nullableStructByteCount))
             {
                 // Blittable structs stay raw even when annotated, otherwise array Cast would see per-value metadata.
-                return new FieldGenerationModel(
+                return new PropertyGenerationModel(
                     serializableProperty,
-                    FieldSerializationKind.BlittableStruct,
+                    PropertySerializationKind.BlittableStruct,
                     nullableStructByteCount,
                     null,
                     namedUnderlying,
@@ -500,9 +500,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             if (nullableUnderlyingType is INamedTypeSymbol namedNullableUnderlyingType
                 && IsSerializableType(namedNullableUnderlyingType, allSerializableTypes))
             {
-                return new FieldGenerationModel(
+                return new PropertyGenerationModel(
                     serializableProperty,
-                    FieldSerializationKind.Nested,
+                    PropertySerializationKind.Nested,
                     0,
                     null,
                     namedNullableUnderlyingType,
@@ -515,31 +515,31 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (serializableProperty.Type.SpecialType == SpecialType.System_String)
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.String, 2, null, null);
+            return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.String, 2, null, null);
         }
 
         if (serializableProperty.Type is IArrayTypeSymbol arrayType)
         {
             if (!arrayType.IsSZArray || arrayType.Rank != 1)
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.InvalidArray, 0, null, null);
             }
 
             if (arrayType.ElementType is INamedTypeSymbol { TypeKind: TypeKind.Struct } arrayElementStruct
                 && arrayElementStruct.SpecialType == SpecialType.None
                 && !IsSerializableType(arrayElementStruct, allSerializableTypes))
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.InvalidArray, 0, null, null);
             }
 
             if (!TryGetFixedTypeByteCount(arrayType.ElementType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out int elementByteCount))
             {
-                return new FieldGenerationModel(serializableProperty, FieldSerializationKind.InvalidArray, 0, null, null);
+                return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.InvalidArray, 0, null, null);
             }
 
-            return new FieldGenerationModel(
+            return new PropertyGenerationModel(
                 serializableProperty,
-                FieldSerializationKind.Array,
+                PropertySerializationKind.Array,
                 elementByteCount,
                 arrayType.ElementType,
                 null,
@@ -549,7 +549,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (TryGetPrimitiveByteCount(serializableProperty.Type, out int primitiveByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, primitiveByteCount, null, null);
+            return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.Primitive, primitiveByteCount, null, null);
         }
 
         if (serializableProperty.Type.TypeKind == TypeKind.Enum
@@ -557,7 +557,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             && enumType.EnumUnderlyingType is not null
             && TryGetPrimitiveByteCount(enumType.EnumUnderlyingType, out int enumByteCount))
         {
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.Primitive, enumByteCount, null, null);
+            return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.Primitive, enumByteCount, null, null);
         }
 
         if (serializableProperty.Type is INamedTypeSymbol namedFixedType
@@ -565,14 +565,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             && TryGetBlittableStructByteCount(namedFixedType, out int fixedStructByteCount))
         {
             // Blittable structs are copied as one contiguous value and never receive their own offset table.
-            return new FieldGenerationModel(serializableProperty, FieldSerializationKind.BlittableStruct, fixedStructByteCount, null, namedFixedType);
+            return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.BlittableStruct, fixedStructByteCount, null, namedFixedType);
         }
 
         if (serializableProperty.Type is INamedTypeSymbol namedPropertyType && IsSerializableType(namedPropertyType, allSerializableTypes))
         {
-            return new FieldGenerationModel(
+            return new PropertyGenerationModel(
                 serializableProperty,
-                FieldSerializationKind.Nested,
+                PropertySerializationKind.Nested,
                 0,
                 null,
                 namedPropertyType,
@@ -631,7 +631,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 accumulatedByteCount = checked(accumulatedByteCount + nestedFieldByteCount);
             }
-            // Ignore exception: an overflowing field total means the struct cannot have a supported fixed byte count.
+            // Ignore exception: an overflowing property total means the struct cannot have a supported fixed byte count.
             catch (OverflowException)
             {
                 typesBeingInspected.Remove(candidateType);
@@ -731,11 +731,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         foreach (ISymbol member in structType.GetMembers())
         {
-            if (member is IFieldSymbol field)
+            if (member is IFieldSymbol fieldSymbol)
             {
-                if (!field.IsStatic)
+                if (!fieldSymbol.IsStatic)
                 {
-                    if (field.AssociatedSymbol is not IPropertySymbol)
+                    if (fieldSymbol.AssociatedSymbol is not IPropertySymbol)
                     {
                         return false;
                     }
@@ -760,7 +760,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return GetSequentialPackOneAttribute(structType) is not null;
     }
 
-    private static bool HasBlittableCompatibleFieldShape(INamedTypeSymbol candidateStruct)
+    private static bool HasBlittableCompatiblePropertyShape(INamedTypeSymbol candidateStruct)
     {
         if (candidateStruct.TypeKind != TypeKind.Struct || candidateStruct.IsRefLikeType)
         {
@@ -912,13 +912,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         string localNamePrefix)
     {
         string serializedTypeStartOffsetName = CreateLocalName(localNamePrefix, "StartOffset");
-        // The field-offset table begins at the serialized type start, so one local owns header writes and relative payload offsets.
+        // The property-offset table begins at the serialized type start, so one local owns header writes and relative payload offsets.
         sourceBuilder.AppendLine($"int {serializedTypeStartOffsetName} = writtenBytes;");
-        int propertyCount = generationModel.Fields.Count;
+        int propertyCount = generationModel.Properties.Count;
         sourceBuilder.AppendLine($"writtenBytes += {propertyCount * 4};");
         for (int propertyIndex = 0; propertyIndex < propertyCount; propertyIndex++)
         {
-            FieldGenerationModel propertyModel = generationModel.Fields[propertyIndex];
+            PropertyGenerationModel propertyModel = generationModel.Properties[propertyIndex];
             // Preserve a visible boundary for every property while keeping the generated writes linear.
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine($"// {propertyModel.Symbol.Name}");
@@ -926,7 +926,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             string propertyAccess = sourceExpression + "." + EscapeIdentifier(propertyModel.Symbol.Name);
             string propertyValueName = CreateLocalName(propertyLocalNamePrefix, "PropertyValue");
             sourceBuilder.AppendLine($"var {propertyValueName} = {propertyAccess};");
-            if (IsNullRepresentedByZeroFieldOffset(propertyModel))
+            if (IsNullRepresentedByZeroPropertyOffset(propertyModel))
             {
                 // Offset zero is reserved for null; non-null string and array offsets point to their length header.
                 sourceBuilder.AppendLine($"if ({propertyValueName} is null)");
@@ -936,7 +936,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine("else");
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian(destination.Slice({serializedTypeStartOffsetName} + {propertyIndex * 4}, 4), writtenBytes - {serializedTypeStartOffsetName});");
-                EmitWriteField(
+                EmitWriteProperty(
                     sourceBuilder,
                     propertyModel,
                     propertyValueName,
@@ -947,7 +947,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             else
             {
                 sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian(destination.Slice({serializedTypeStartOffsetName} + {propertyIndex * 4}, 4), writtenBytes - {serializedTypeStartOffsetName});");
-                EmitWriteField(
+                EmitWriteProperty(
                     sourceBuilder,
                     propertyModel,
                     propertyValueName,
@@ -957,19 +957,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
     }
 
-    private static void EmitWriteField(
+    private static void EmitWriteProperty(
         GeneratedSourceBuilder sourceBuilder,
-        FieldGenerationModel field,
+        PropertyGenerationModel property,
         string propertyValueName,
         string localNamePrefix,
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
-        string fieldAccess = propertyValueName;
-        string serializationValueExpression = GetSerializationValueExpression(field, fieldAccess);
-        ITypeSymbol serializedPropertyType = GetSerializedPropertyType(field);
-        switch (field.Kind)
+        string propertyAccess = propertyValueName;
+        string serializationValueExpression = GetSerializationValueExpression(property, propertyAccess);
+        ITypeSymbol serializedPropertyType = GetSerializedPropertyType(property);
+        switch (property.Kind)
         {
-            case FieldSerializationKind.Primitive:
+            case PropertySerializationKind.Primitive:
                 EmitPrimitiveWrite(
                     sourceBuilder,
                     serializedPropertyType,
@@ -977,10 +977,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "destination",
                     "writtenBytes");
                 break;
-            case FieldSerializationKind.BlittableStruct:
+            case PropertySerializationKind.BlittableStruct:
                 string blittableValueName = CreateLocalName(localNamePrefix, "Value");
                 sourceBuilder.AppendLine($"{serializedPropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {blittableValueName} = {serializationValueExpression};");
-                if (field.NestedSerializableType is not null)
+                if (property.NestedSerializableType is not null)
                 {
                     sourceBuilder.AppendLine($"global::ZeroSerializer.ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
                 }
@@ -989,22 +989,22 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached.");
                     // MemoryMarshal.Write changed its value parameter from ref to in in .NET 8; generated source follows the target framework directly.
                     sourceBuilder.AppendDirective("#if NET8_0_OR_GREATER");
-                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {field.ElementByteCount}), {blittableValueName});");
+                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), {blittableValueName});");
                     sourceBuilder.AppendDirective("#else");
-                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {field.ElementByteCount}), ref {blittableValueName});");
+                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), ref {blittableValueName});");
                     sourceBuilder.AppendDirective("#endif");
                 }
-                sourceBuilder.AppendLine($"writtenBytes += {field.ElementByteCount};");
+                sourceBuilder.AppendLine($"writtenBytes += {property.ElementByteCount};");
                 break;
-            case FieldSerializationKind.String:
-                sourceBuilder.AppendLine($"ReadOnlySpan<byte> {CreateLocalName(localNamePrefix, "Payload")} = MemoryMarshal.AsBytes({fieldAccess}.AsSpan());");
+            case PropertySerializationKind.String:
+                sourceBuilder.AppendLine($"ReadOnlySpan<byte> {CreateLocalName(localNamePrefix, "Payload")} = MemoryMarshal.AsBytes({propertyAccess}.AsSpan());");
                 sourceBuilder.AppendLine($"int {CreateLocalName(localNamePrefix, "PayloadByteLength")} = {CreateLocalName(localNamePrefix, "Payload")}.Length;");
                 sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian(destination.Slice(writtenBytes, 4), {CreateLocalName(localNamePrefix, "PayloadByteLength")});");
                 sourceBuilder.AppendLine("writtenBytes += 4;");
                 sourceBuilder.AppendLine($"{CreateLocalName(localNamePrefix, "Payload")}.CopyTo(destination.Slice(writtenBytes));");
                 sourceBuilder.AppendLine($"writtenBytes += {CreateLocalName(localNamePrefix, "Payload")}.Length;");
                 break;
-            case FieldSerializationKind.Array:
+            case PropertySerializationKind.Array:
                 sourceBuilder.AppendLine($"ReadOnlySpan<byte> {CreateLocalName(localNamePrefix, "Payload")} = MemoryMarshal.AsBytes({serializationValueExpression}.AsSpan());");
                 sourceBuilder.AppendLine($"int {CreateLocalName(localNamePrefix, "PayloadByteLength")} = {CreateLocalName(localNamePrefix, "Payload")}.Length;");
                 sourceBuilder.AppendLine($"BinaryPrimitives.WriteInt32LittleEndian(destination.Slice(writtenBytes, 4), {CreateLocalName(localNamePrefix, "PayloadByteLength")});");
@@ -1012,10 +1012,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"{CreateLocalName(localNamePrefix, "Payload")}.CopyTo(destination.Slice(writtenBytes));");
                 sourceBuilder.AppendLine($"writtenBytes += {CreateLocalName(localNamePrefix, "Payload")}.Length;");
                 break;
-            case FieldSerializationKind.Nested:
+            case PropertySerializationKind.Nested:
                 string nestedSourceExpression;
-                if (field.NestedSerializableType!.TypeKind == TypeKind.Struct
-                    && field.NullableUnderlyingType is not null)
+                if (property.NestedSerializableType!.TypeKind == TypeKind.Struct
+                    && property.NullableUnderlyingType is not null)
                 {
                     string nullableStructValueName = CreateLocalName(localNamePrefix, "NullableStructValue");
                     sourceBuilder.AppendLine($"var {nullableStructValueName} = {serializationValueExpression};");
@@ -1027,7 +1027,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 EmitWriteBody(
                     sourceBuilder,
-                    modelLookup[field.NestedSerializableType],
+                    modelLookup[property.NestedSerializableType],
                     modelLookup,
                     nestedSourceExpression,
                     localNamePrefix);
@@ -1099,7 +1099,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine("/// Gets the actual total serialized length; non-blittable layouts include the offset table.");
         sourceBuilder.AppendLine("/// </summary>");
-        int fieldCount = generationModel.Fields.Count;
+        int propertyCount = generationModel.Properties.Count;
         if (requiredByteLength >= 0)
         {
             sourceBuilder.AppendLine("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
@@ -1109,14 +1109,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine("public int GetByteLength()");
             sourceBuilder.OpenBlock();
-            if (fieldCount > 0)
+            if (propertyCount > 0)
             {
-                var lastField = generationModel.Fields[fieldCount - 1];
+                var lastProperty = generationModel.Properties[propertyCount - 1];
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> span = serializedMemory.Span;");
-                sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(span.Slice({(fieldCount - 1) * 4}, 4));");
+                sourceBuilder.AppendLine($"int offset = BinaryPrimitives.ReadInt32LittleEndian(span.Slice({(propertyCount - 1) * 4}, 4));");
                 sourceBuilder.AppendLine("if (offset > 0)");
                 sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return offset + {GetFieldLengthExpression(lastField, "offset", "span", "serializedMemory")};");
+                sourceBuilder.AppendLine($"return offset + {GetPropertyLengthExpression(lastProperty, "offset", "span", "serializedMemory")};");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.AppendLine();
                 sourceBuilder.AppendLine("return GetFallbackByteLength(serializedMemory);");
@@ -1125,16 +1125,16 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> s = memory.Span;");
                 sourceBuilder.AppendLine("int fallbackOffset;");
-                for (int i = fieldCount - 2; i >= 0; i--)
+                for (int i = propertyCount - 2; i >= 0; i--)
                 {
-                    var field = generationModel.Fields[i];
+                    var property = generationModel.Properties[i];
                     sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(s.Slice({i * 4}, 4));");
                     sourceBuilder.AppendLine("if (fallbackOffset > 0)");
                     sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return fallbackOffset + {GetFieldLengthExpression(field, "fallbackOffset", "s", "memory")};");
+                    sourceBuilder.AppendLine($"return fallbackOffset + {GetPropertyLengthExpression(property, "fallbackOffset", "s", "memory")};");
                     sourceBuilder.CloseBlock();
                 }
-                sourceBuilder.AppendLine($"return {fieldCount * 4};");
+                sourceBuilder.AppendLine($"return {propertyCount * 4};");
                 sourceBuilder.CloseBlock();
             }
             else
@@ -1143,10 +1143,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
             sourceBuilder.CloseBlock();
         }
-        for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)
+        for (int propertyIndex = 0; propertyIndex < propertyCount; propertyIndex++)
         {
             sourceBuilder.AppendLine();
-            EmitViewProperty(sourceBuilder, generationModel, generationModel.Fields[fieldIndex], fieldIndex, modelLookup);
+            EmitViewProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex, modelLookup);
         }
         sourceBuilder.CloseBlock();
     }
@@ -1181,25 +1181,25 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         // Every type owns one 4-byte relative offset per serialized property before its payload area.
-        int accumulatedBytesLength = generationModel.Fields.Count * 4;
+        int accumulatedBytesLength = generationModel.Properties.Count * 4;
         bool hasOnlyPredictableData = true;
-        foreach (FieldGenerationModel propertyModel in generationModel.Fields)
+        foreach (PropertyGenerationModel propertyModel in generationModel.Properties)
         {
             int propertyBytesLength;
             if (propertyModel.IsNullableType
-                || propertyModel.Kind == FieldSerializationKind.String
-                || propertyModel.Kind == FieldSerializationKind.Array)
+                || propertyModel.Kind == PropertySerializationKind.String
+                || propertyModel.Kind == PropertySerializationKind.Array)
             {
                 // Runtime-sized properties contribute one native pointer so RequiredByteLength retains a CPU-sized estimate.
                 propertyBytesLength = IntPtr.Size;
                 hasOnlyPredictableData = false;
             }
-            else if (propertyModel.Kind == FieldSerializationKind.Primitive
-                || propertyModel.Kind == FieldSerializationKind.BlittableStruct)
+            else if (propertyModel.Kind == PropertySerializationKind.Primitive
+                || propertyModel.Kind == PropertySerializationKind.BlittableStruct)
             {
                 propertyBytesLength = propertyModel.ElementByteCount;
             }
-            else if (propertyModel.Kind == FieldSerializationKind.Nested
+            else if (propertyModel.Kind == PropertySerializationKind.Nested
                 && propertyModel.NestedSerializableType is not null
                 && modelLookup.TryGetValue(propertyModel.NestedSerializableType, out TypeGenerationModel? nestedGenerationModel))
             {
@@ -1245,57 +1245,57 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static void EmitViewProperty(
         GeneratedSourceBuilder sourceBuilder,
         TypeGenerationModel containingModel,
-        FieldGenerationModel field,
-        int fieldIndex,
+        PropertyGenerationModel property,
+        int propertyIndex,
         IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> modelLookup)
     {
-        string propertyAccessibility = IsEffectivelyPublic(field.Symbol.Type) ? "public" : "internal";
+        string propertyAccessibility = IsEffectivelyPublic(property.Symbol.Type) ? "public" : "internal";
         string propertyType;
-        if (field.Kind == FieldSerializationKind.String)
+        if (property.Kind == PropertySerializationKind.String)
         {
             propertyType = "ReadOnlySpan<char>";
         }
-        else if (field.Kind == FieldSerializationKind.Array)
+        else if (property.Kind == PropertySerializationKind.Array)
         {
-            propertyType = $"ReadOnlySpan<{field.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
+            propertyType = $"ReadOnlySpan<{property.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
         }
-        else if (field.Kind == FieldSerializationKind.Nested)
+        else if (property.Kind == PropertySerializationKind.Nested)
         {
-            propertyType = GetQualifiedViewName(field.NestedSerializableType!);
+            propertyType = GetQualifiedViewName(property.NestedSerializableType!);
         }
-        else if (field.Kind == FieldSerializationKind.BlittableStruct
+        else if (property.Kind == PropertySerializationKind.BlittableStruct
                  && !containingModel.IsBlittableStruct
-                 && field.NestedSerializableType is not null)
+                 && property.NestedSerializableType is not null)
         {
-            string viewName = GetQualifiedViewName(field.NestedSerializableType);
-            propertyType = field.IsNullableType ? viewName + "?" : viewName;
+            string viewName = GetQualifiedViewName(property.NestedSerializableType);
+            propertyType = property.IsNullableType ? viewName + "?" : viewName;
         }
         else
         {
-            propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            propertyType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
         var propertyReturnType
-            = field.Kind is FieldSerializationKind.BlittableStruct or FieldSerializationKind.Nested
-            ? (field.NullableUnderlyingType is not null || field.Symbol.Type.TypeKind is TypeKind.Class)
-                ? GetQualifiedViewName(field.NestedSerializableType) + "?"
-                : GetQualifiedViewName(field.NestedSerializableType)
+            = property.Kind is PropertySerializationKind.BlittableStruct or PropertySerializationKind.Nested
+            ? (property.NullableUnderlyingType is not null || property.Symbol.Type.TypeKind is TypeKind.Class)
+                ? GetQualifiedViewName(property.NestedSerializableType!) + "?"
+                : GetQualifiedViewName(property.NestedSerializableType!)
             : propertyType;
-        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(field.Symbol.Name)}");
+        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(property.Symbol.Name)}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
         if (containingModel.IsBlittableStruct)
         {
-            if (field.Kind == FieldSerializationKind.BlittableStruct
-                && field.NestedSerializableType is not null)
+            if (property.Kind == PropertySerializationKind.BlittableStruct
+                && property.NestedSerializableType is not null)
             {
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
             }
             else
             {
                 sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
-                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(property.Symbol.Name)};");
             }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
@@ -1303,56 +1303,56 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
-        sourceBuilder.AppendLine($"int fieldDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({fieldIndex * 4}, 4));");
-        if (IsNullRepresentedByZeroFieldOffset(field))
+        sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
+        if (IsNullRepresentedByZeroPropertyOffset(property))
         {
             // Null is represented entirely by the offset table; no property payload marker is read.
-            sourceBuilder.AppendLine("if (fieldDataOffset == 0)");
+            sourceBuilder.AppendLine("if (propertyDataOffset == 0)");
             sourceBuilder.OpenBlock();
             // Always use 'default' instead of 'null' for reference types.
             sourceBuilder.AppendLine("return default;");
             sourceBuilder.CloseBlock();
         }
 
-        switch (field.Kind)
+        switch (property.Kind)
         {
-            case FieldSerializationKind.Primitive:
+            case PropertySerializationKind.Primitive:
                 EmitPrimitiveRead(
                     sourceBuilder,
-                    GetSerializedPropertyType(field),
+                    GetSerializedPropertyType(property),
                     "serializedData",
-                    "fieldDataOffset");
+                    "propertyDataOffset");
                 break;
-            case FieldSerializationKind.BlittableStruct:
-                if (field.NestedSerializableType is not null)
+            case PropertySerializationKind.BlittableStruct:
+                if (property.NestedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 }
                 else
                 {
                     sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(field).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 }
                 break;
-            case FieldSerializationKind.String:
-                EmitViewCollectionHeader(sourceBuilder, "serializedData", "fieldDataOffset");
+            case PropertySerializationKind.String:
+                EmitViewCollectionHeader(sourceBuilder, "serializedData", "propertyDataOffset");
                 // Keep string payloads borrowed; constructing a string here would allocate on every View access.
-                sourceBuilder.AppendLine("return MemoryMarshal.Cast<byte, char>(serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount));");
+                sourceBuilder.AppendLine("return MemoryMarshal.Cast<byte, char>(serializedData.Slice(propertyDataOffset + 4, propertyPayloadByteCount));");
                 break;
-            case FieldSerializationKind.Array:
-                EmitViewCollectionHeader(sourceBuilder, "serializedData", "fieldDataOffset");
-                if (field.ArrayElementType!.SpecialType == SpecialType.System_Byte)
+            case PropertySerializationKind.Array:
+                EmitViewCollectionHeader(sourceBuilder, "serializedData", "propertyDataOffset");
+                if (property.ArrayElementType!.SpecialType == SpecialType.System_Byte)
                 {
-                    sourceBuilder.AppendLine("return serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount);");
+                    sourceBuilder.AppendLine("return serializedData.Slice(propertyDataOffset + 4, propertyPayloadByteCount);");
                 }
                 else
                 {
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {field.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(fieldDataOffset + 4, fieldPayloadByteCount));");
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {property.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset + 4, propertyPayloadByteCount));");
                 }
                 break;
-            case FieldSerializationKind.Nested:
+            case PropertySerializationKind.Nested:
                 // Nested views receive an already-positioned memory region; their constructor has no offset semantics.
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType!)}(serializedMemory.Slice(fieldDataOffset));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType!)}(serializedMemory.Slice(propertyDataOffset));");
                 break;
         }
 
@@ -1363,10 +1363,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     private static void EmitViewCollectionHeader(
         GeneratedSourceBuilder sourceBuilder,
         string serializedDataName,
-        string fieldDataOffsetName)
+        string propertyDataOffsetName)
     {
-        // Null is handled by the field offset before this point; invalid negative lengths must reach Span.Slice unchanged.
-        sourceBuilder.AppendLine($"int fieldPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({fieldDataOffsetName}, 4));");
+        // Null is handled by the property offset before this point; invalid negative lengths must reach Span.Slice unchanged.
+        sourceBuilder.AppendLine($"int propertyPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({propertyDataOffsetName}, 4));");
     }
 
     private static void EmitExtensionClass(
@@ -1447,46 +1447,46 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.CloseBlock();
     }
 
-    private static ITypeSymbol GetSerializedPropertyType(FieldGenerationModel propertyModel)
+    private static ITypeSymbol GetSerializedPropertyType(PropertyGenerationModel propertyModel)
     {
         return propertyModel.NullableUnderlyingType ?? propertyModel.Symbol.Type;
     }
 
-    private static bool IsNullRepresentedByZeroFieldOffset(FieldGenerationModel propertyModel)
+    private static bool IsNullRepresentedByZeroPropertyOffset(PropertyGenerationModel propertyModel)
     {
-        return propertyModel.IsNullableType || propertyModel.Kind == FieldSerializationKind.String;
+        return propertyModel.IsNullableType || propertyModel.Kind == PropertySerializationKind.String;
     }
 
-    private static string GetFieldLengthExpression(
-        FieldGenerationModel field,
+    private static string GetPropertyLengthExpression(
+        PropertyGenerationModel property,
         string offsetVarName,
         string spanVarName,
         string memoryVarName)
     {
-        switch (field.Kind)
+        switch (property.Kind)
         {
-            case FieldSerializationKind.Primitive:
-            case FieldSerializationKind.BlittableStruct:
-                return $"{field.ElementByteCount}";
-            case FieldSerializationKind.String:
-            case FieldSerializationKind.Array:
+            case PropertySerializationKind.Primitive:
+            case PropertySerializationKind.BlittableStruct:
+                return $"{property.ElementByteCount}";
+            case PropertySerializationKind.String:
+            case PropertySerializationKind.Array:
                 return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanVarName}.Slice({offsetVarName}, 4))";
-            case FieldSerializationKind.Nested:
-                string nestedViewTypeName = GetQualifiedViewName(field.NestedSerializableType!);
+            case PropertySerializationKind.Nested:
+                string nestedViewTypeName = GetQualifiedViewName(property.NestedSerializableType!);
                 return $"new {nestedViewTypeName}({memoryVarName}.Slice({offsetVarName})).GetByteLength()";
             default:
-                throw new InvalidOperationException("Unknown field kind");
+                throw new InvalidOperationException("Unknown property kind");
         }
     }
 
 
     private static string GetSerializationValueExpression(
-        FieldGenerationModel propertyModel,
+        PropertyGenerationModel propertyModel,
         string propertyAccess)
     {
         if (propertyModel.NullableUnderlyingType is not null)
         {
-            // The surrounding non-null field-offset branch guarantees Value is accessed only for a non-null payload.
+            // The surrounding non-null property-offset branch guarantees Value is accessed only for a non-null payload.
             return propertyAccess + ".Value";
         }
 
@@ -1707,14 +1707,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return false;
     }
 
-    private static string CreateLocalName(string fieldName, string suffix)
+    private static string CreateLocalName(string propertyName, string suffix)
     {
-        if (fieldName.Length == 0)
+        if (propertyName.Length == 0)
         {
-            return "serializedField" + suffix;
+            return "serializedProperty" + suffix;
         }
 
-        return char.ToLowerInvariant(fieldName[0]) + fieldName.Substring(1) + suffix;
+        return char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1) + suffix;
     }
 
     private static string EscapeIdentifier(string identifier)
@@ -1776,7 +1776,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
             shapeTagBuilder.Append(prefix);
             shapeTagBuilder.Append('{');
-            bool hasField = false;
+            bool hasProperty = false;
             foreach (ISymbol declaredMember in namedType.GetMembers())
             {
                 if (declaredMember is IPropertySymbol serializableProperty
@@ -1785,12 +1785,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     && serializableProperty.DeclaredAccessibility == Accessibility.Public
                     && serializableProperty.GetMethod?.DeclaredAccessibility == Accessibility.Public)
                 {
-                    if (hasField)
+                    if (hasProperty)
                     {
                         shapeTagBuilder.Append(',');
                     }
                     CreateShapeTag(serializableProperty.Type, shapeTagBuilder);
-                    hasField = true;
+                    hasProperty = true;
                 }
             }
             shapeTagBuilder.Append('}');

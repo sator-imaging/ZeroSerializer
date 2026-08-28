@@ -62,7 +62,7 @@ int writtenBytes = packet.Serialize(buffer);
 Structs marked with both `[ZeroSerializer]` and `[StructLayout(LayoutKind.Sequential, Pack = 1)]` are recognized as blittable structs.
 
 Blittable structs provide significant benefits:
-- **No Offset Table**: Serialized directly as raw memory payloads without field offset table.
+- **No Offset Table**: Serialized directly as raw memory payloads without property offset table.
 - **Maximum Performance**: Fast direct memory copy operations with zero overhead.
 
 ```csharp
@@ -130,4 +130,4 @@ Blittable structs are stored directly as raw struct bytes without an offset tabl
 - The wire format requires a little-endian runtime.
 - View structs expose a compile-time constant `IsBlittable`, indicating whether the underlying serialized type is a blittable struct.
 - You can use `.AsMemory()` extension method (returns `ReadOnlyMemory<byte>`) or `.Materialize()` extension method (for views of blittable structs to convert them back to the original struct).
-- Nested classes and structs must be marked with `[ZeroSerializer]`; otherwise the generator reports an unsupported field diagnostic.
+- Nested classes and structs must be marked with `[ZeroSerializer]`; otherwise the generator reports an unsupported property diagnostic.

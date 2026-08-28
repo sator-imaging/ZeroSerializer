@@ -134,7 +134,7 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct MyNonBlittableStruct
 {
-    private int _value;
+    public int IgnoredProperty { private get; set; }
     public int Value { get; set; }
 }
 ";
@@ -184,7 +184,7 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct MyNonBlittableStructWithoutLayout
 {
-    private int _value;
+    public int IgnoredProperty { private get; set; }
     public int Value { get; set; }
 }
 ";
@@ -195,7 +195,7 @@ public struct MyNonBlittableStructWithoutLayout
     }
 
     [Fact]
-    public async Task ZEROS101_Violation_PublicField()
+    public async Task ZEROS101_Violation_IgnoredProperty()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -203,9 +203,9 @@ using ZeroSerializer;
 
 [{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
 [ZeroSerializer]
-public struct StructWithPublicField
+public struct StructWithIgnoredProperty
 {
-    public int Field;
+    public int IgnoredProperty { private get; set; }
     public int Value { get; set; }
 }
 ";
@@ -214,7 +214,7 @@ public struct StructWithPublicField
             source,
             new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
                 .WithLocation(0)
-                .WithArguments("StructWithPublicField")
+                .WithArguments("StructWithIgnoredProperty")
         );
     }
 
@@ -328,7 +328,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -377,7 +377,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_SupportedFields()
+    public async Task ZEROS002_Compliant_SupportedProperties()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -413,7 +413,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -467,7 +467,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]

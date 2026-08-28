@@ -52,7 +52,7 @@ public class ShapeTagEmissionTests
     }
 
     [Fact]
-    public void InjectedAttributeExposesObsoleteEmitShapeTagField()
+    public void InjectedAttributeExposesObsoleteEmitShapeTagProperty()
     {
         GeneratorDriverRunResult result = RunGenerator("public class Record { }");
         string generatedAttribute = result.Results[0].GeneratedSources
@@ -60,7 +60,7 @@ public class ShapeTagEmissionTests
             .SourceText
             .ToString();
 
-        Assert.Contains("public bool EmitShapeTag;", generatedAttribute);
+        Assert.Contains("public bool EmitShapeTag { get; set; }", generatedAttribute);
         Assert.Contains("[Obsolete(\"Emitting string representation of the type will expose internal details", generatedAttribute);
         Assert.Contains("public ZeroSerializerAttribute() { }", generatedAttribute);
     }
