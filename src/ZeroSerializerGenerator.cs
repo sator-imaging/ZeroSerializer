@@ -111,6 +111,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         // Roslyn 3.8 has no post-initialization hook, so the internal marker attribute is injected here.
         var injectedAttributeSourceBuilder = new GeneratedSourceBuilder();
         AppendGeneratedFileHeader(injectedAttributeSourceBuilder);
+        injectedAttributeSourceBuilder.AppendLine($"// Fallback");
         injectedAttributeSourceBuilder.AppendLine($"namespace {SerializerNamespace}");
         injectedAttributeSourceBuilder.OpenBlock();
         injectedAttributeSourceBuilder.AppendLine("[AttributeUsage(");
