@@ -309,15 +309,17 @@ public sealed class SerializationTests
         int writtenBytes = source.Serialize(buffer);
         var view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(0, view.Text.Length, nameof(view.Text.Length));
-        TestAssert.Equal(0, view.Values.Length, nameof(view.Values.Length));
-        TestAssert.Equal<int?>(null, view.OptionalNumber, nameof(view.OptionalNumber));
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Null string offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4)), "Null array offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4)), "Null nullable offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(12, 4)), "Null reference offset");
         TestAssert.Equal(20, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(16, 4)), "Tail offset");
         TestAssert.Equal(24, writtenBytes, nameof(writtenBytes));
+
+        TestAssert.Equal(0, view.Text.Length, nameof(view.Text.Length));
+        TestAssert.Equal(0, view.Values.Length, nameof(view.Values.Length));
+        TestAssert.Equal<int?>(null, view.OptionalNumber, nameof(view.OptionalNumber));
+        TestAssert.Equal<FixedClassView?>(null, view.Child, nameof(view.Child));
         TestAssert.Equal(5, view.Tail, nameof(view.Tail));
     }
 
