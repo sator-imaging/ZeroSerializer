@@ -36,16 +36,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidStructLayoutAttribute = new(
-        "ZEROS002",
-        "Invalid StructLayout attribute",
-        "Struct '{0}' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct",
-        SerializerName,
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor UnsupportedSerializableField = new(
-        "ZEROS003",
+        "ZEROS002",
         "Unsupported serializable field",
         "Field '{0}' has unsupported type '{1}'",
         SerializerName,
@@ -53,7 +45,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidBlittableArrayElement = new(
-        "ZEROS004",
+        "ZEROS003",
         "Invalid blittable array element",
         "Array field '{0}' requires a primitive, enum, or a [ZeroSerializer] struct recursively marked with StructLayout(LayoutKind.Sequential, Pack = 1)",
         SerializerName,
@@ -61,43 +53,51 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidSerializableDependency = new(
-        "ZEROS005",
+        "ZEROS004",
         "Invalid nested serializable type",
         "Field '{0}' refers to serializable type '{1}', but that type contains errors",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor BlittableCompatibleStructMissingLayout = new(
-        "ZEROS006",
-        "Struct can use Blittable serialization",
-        "Struct '{0}' has a Blittable-compatible field shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization",
-        SerializerName,
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
-    private static readonly DiagnosticDescriptor UseFlagsEnumToReducePayloadSize = new(
-        "ZEROS007",
-        "Use flags enum to reduce payload size",
-        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
-        SerializerName,
-        DiagnosticSeverity.Info,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor UnsupportedGenericSerializableType = new(
-        "ZEROS008",
+        "ZEROS005",
         "Generic type not supported",
         "Generic type '{0}' is not allowed for ZeroSerializer",
         SerializerName,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor InvalidStructLayoutAttribute = new(
+        "ZEROS101",
+        "Invalid StructLayout attribute",
+        "Struct '{0}' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct",
+        SerializerName,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor BlittableCompatibleStructMissingLayout = new(
+        "ZEROS102",
+        "Struct can use Blittable serialization",
+        "Struct '{0}' has a Blittable-compatible field shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization",
+        SerializerName,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
-        "ZEROS009",
+        "ZEROS103",
         "StructLayout attribute on class",
         "StructLayout attribute on class '{0}' has no effect",
         SerializerName,
         DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UseFlagsEnumToReducePayloadSize = new(
+        "ZEROS201",
+        "Use flags enum to reduce payload size",
+        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
+        SerializerName,
+        DiagnosticSeverity.Info,
         isEnabledByDefault: true);
 
     public void Initialize(GeneratorInitializationContext initializationContext)
