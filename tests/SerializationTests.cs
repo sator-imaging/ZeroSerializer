@@ -137,6 +137,46 @@ public sealed class SerializationTests
         TestAssert.Equal(2, view.Values.Length, nameof(view.Values.Length));
         TestAssert.Equal(first.Number, view.Values[0].Number, "Values[0]");
         TestAssert.Equal(second.State, view.Values[1].State, "Values[1]");
+
+        // Test _AsValue property returns value using MemoryMarshal.Read
+        TestAssert.Equal(first, view.Value_AsValue, nameof(view.Value_AsValue));
+        TestAssert.Equal(second, view.OptionalValue_AsValue, nameof(view.OptionalValue_AsValue));
+
+        // Test _AsValue with null optional value
+        var sourceNull = new PackedContainer
+        {
+            Value = first,
+            OptionalValue = null,
+            Values = Array.Empty<PackedRecord>(),
+        };
+        int writtenBytesNull = sourceNull.Serialize(buffer);
+        var viewNull = new PackedContainerView(buffer.AsMemory(0, writtenBytesNull));
+        TestAssert.Equal(first, viewNull.Value_AsValue, nameof(viewNull.Value_AsValue));
+        TestAssert.Equal<PackedRecord?>(null, viewNull.OptionalValue_AsValue, nameof(viewNull.OptionalValue_AsValue));
+    }
+
+    [Fact]
+    public void BlittableParentStructAsValueRoundTrip()
+    {
+        var foo = new BadlyAlignedContainerStructWithPackOne
+        {
+            A = 0x12,
+            B = 0x123456789ABCDEF0,
+            C = 0x34,
+            D = 0x56789ABC,
+            E = -1234,
+            F = 3.141592653589793,
+            G = 0x77,
+            H = new BadlyAlignedStructWithPackOne { A = 0xAB, B = 0x5678 },
+            I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
+        };
+
+        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength];
+        foo.Serialize(buffer);
+        var view = new BadlyAlignedContainerStructWithPackOneView(buffer);
+
+        TestAssert.Equal(foo.H, view.H_AsValue, nameof(view.H_AsValue));
+        TestAssert.Equal(foo.I, view.I_AsValue, nameof(view.I_AsValue));
     }
 
     [Fact]

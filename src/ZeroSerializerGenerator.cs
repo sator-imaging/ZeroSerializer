@@ -1291,15 +1291,29 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && field.NestedSerializableType is not null)
             {
                 sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+
+                sourceBuilder.AppendLine();
+                string rawStructTypeName = field.NestedSerializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                string valueReturnType = field.IsNullableType ? rawStructTypeName + "?" : rawStructTypeName;
+                sourceBuilder.AppendLine($"{propertyAccessibility} {valueReturnType} {EscapeIdentifier(field.Symbol.Name + "_AsValue")}");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("get");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{rawStructTypeName}>(serializedMemory.Span.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+                return;
             }
             else
             {
                 sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
                 sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+                return;
             }
-            sourceBuilder.CloseBlock();
-            sourceBuilder.CloseBlock();
-            return;
         }
 
         sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
@@ -1358,6 +1372,29 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+
+        if (field.Kind == FieldSerializationKind.BlittableStruct && field.NestedSerializableType is not null)
+        {
+            sourceBuilder.AppendLine();
+            string rawStructTypeName = field.NestedSerializableType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            string valueReturnType = field.IsNullableType ? rawStructTypeName + "?" : rawStructTypeName;
+            sourceBuilder.AppendLine($"{propertyAccessibility} {valueReturnType} {EscapeIdentifier(field.Symbol.Name + "_AsValue")}");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("get");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+            sourceBuilder.AppendLine($"int fieldDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({fieldIndex * 4}, 4));");
+            if (IsNullRepresentedByZeroFieldOffset(field))
+            {
+                sourceBuilder.AppendLine("if (fieldDataOffset == 0)");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("return default;");
+                sourceBuilder.CloseBlock();
+            }
+            sourceBuilder.AppendLine($"return MemoryMarshal.Read<{rawStructTypeName}>(serializedData.Slice(fieldDataOffset, {field.ElementByteCount}));");
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+        }
     }
 
     private static void EmitViewCollectionHeader(
