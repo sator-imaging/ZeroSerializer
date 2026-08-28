@@ -284,8 +284,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(FixedClassView.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(FixedClassView.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(FixedClassView.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(FixedClassView.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
 
         ReadOnlyMemory<byte> borrowedSerializedMemory = view;
