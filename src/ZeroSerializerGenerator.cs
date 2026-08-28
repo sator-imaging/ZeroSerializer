@@ -76,10 +76,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor BlittableCompatibleNestedStruct = new(
+    private static readonly DiagnosticDescriptor UseFlagsEnumToReducePayloadSize = new(
         "ZEROS007",
-        "Nested struct can use faster Blittable serialization",
-        "Nested struct '{0}' can use StructLayout(LayoutKind.Sequential, Pack = 1) to improve serialization performance with raw payload serialization",
+        "Use flags enum to reduce payload size",
+        "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
         SerializerName,
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
@@ -249,11 +249,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return;
         }
 
-        ReportBlittableCompatibleNestedStructDiagnostics(
-            executionContext,
-            validModels,
-            generationModels);
-
         var modelLookup = new Dictionary<INamedTypeSymbol, TypeGenerationModel>(SymbolEqualityComparer.Default);
         // Each type owns one generated file and contributes one method to its namespace-local partial extension class.
         foreach (TypeGenerationModel validModel in validModels)
@@ -371,6 +366,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     GetPropertyTypeLocation(serializableProperty),
                     serializableProperty.Name));
                 continue;
+            }
+
+            if (serializableProperty.Type.SpecialType == SpecialType.System_Boolean)
+            {
+                executionContext.ReportDiagnostic(Diagnostic.Create(
+                    UseFlagsEnumToReducePayloadSize,
+                    GetPropertyTypeLocation(serializableProperty),
+                    serializableProperty.Name));
             }
 
             generationModel.Fields.Add(propertyModel);
@@ -759,36 +762,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         return true;
-    }
-
-    private static void ReportBlittableCompatibleNestedStructDiagnostics(
-        GeneratorExecutionContext executionContext,
-        IReadOnlyList<TypeGenerationModel> validGenerationModels,
-        IReadOnlyDictionary<INamedTypeSymbol, TypeGenerationModel> generationModels)
-    {
-        var reportedNestedStructs = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (TypeGenerationModel containingGenerationModel in validGenerationModels)
-        {
-            foreach (FieldGenerationModel nestedField in containingGenerationModel.Fields)
-            {
-                if (nestedField.Kind != FieldSerializationKind.Nested
-                    || nestedField.NestedSerializableType is not INamedTypeSymbol nestedSerializableStruct
-                    || nestedSerializableStruct.TypeKind != TypeKind.Struct
-                    || !generationModels.TryGetValue(nestedSerializableStruct, out TypeGenerationModel? nestedGenerationModel)
-                    || nestedGenerationModel.IsBlittableStruct
-                    || !HasBlittableCompatibleFieldShape(nestedSerializableStruct)
-                    || !reportedNestedStructs.Add(nestedSerializableStruct))
-                {
-                    continue;
-                }
-
-                // Report only after dependency validation so this performance advice never replaces ZEROS003 or another generation error.
-                executionContext.ReportDiagnostic(Diagnostic.Create(
-                    BlittableCompatibleNestedStruct,
-                    GetTypeIdentifierLocation(nestedSerializableStruct),
-                    nestedSerializableStruct.ToDisplayString()));
-            }
-        }
     }
 
     private static Location? GetTypeIdentifierLocation(INamedTypeSymbol declaredType)
