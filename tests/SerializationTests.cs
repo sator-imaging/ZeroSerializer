@@ -384,13 +384,13 @@ public sealed class SerializationTests
     [Fact]
     public void NonSerializablePropertiesAreIgnored()
     {
-        var source = new IgnoredPropertiesClass { IgnoredProperty = 123 };
+        var source = new FieldsOnlyClass { NonSerializedField = 123 };
 
         int writtenBytes = source.Serialize(Span<byte>.Empty);
 
-        TestAssert.Equal(0, IgnoredPropertiesClassView.RequiredByteLength, nameof(IgnoredPropertiesClassView.RequiredByteLength));
+        TestAssert.Equal(0, FieldsOnlyClassView.RequiredByteLength, nameof(FieldsOnlyClassView.RequiredByteLength));
         TestAssert.Equal(0, writtenBytes, nameof(writtenBytes));
-        TestAssert.Equal(0, typeof(IgnoredPropertiesClassView).GetProperties().Length, "Generated property count");
+        TestAssert.Equal(0, typeof(FieldsOnlyClassView).GetProperties().Length, "Generated property count");
     }
 
     [Fact]

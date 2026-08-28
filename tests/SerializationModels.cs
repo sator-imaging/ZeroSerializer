@@ -214,9 +214,9 @@ public sealed class ZeroLengthNestedStructContainer
 }
 
 [ZeroSerializer]
-public sealed class IgnoredPropertiesClass
+public sealed class FieldsOnlyClass
 {
-    public int IgnoredProperty { private get; set; }
+    public int NonSerializedField;
 }
 
 [ZeroSerializer]

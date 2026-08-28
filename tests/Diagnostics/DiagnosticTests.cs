@@ -134,7 +134,7 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct MyNonBlittableStruct
 {
-    public int IgnoredProperty { private get; set; }
+    private int _value;
     public int Value { get; set; }
 }
 ";
@@ -184,7 +184,7 @@ using ZeroSerializer;
 [ZeroSerializer]
 public struct MyNonBlittableStructWithoutLayout
 {
-    public int IgnoredProperty { private get; set; }
+    private int _value;
     public int Value { get; set; }
 }
 ";
@@ -195,7 +195,7 @@ public struct MyNonBlittableStructWithoutLayout
     }
 
     [Fact]
-    public async Task ZEROS101_Violation_IgnoredProperty()
+    public async Task ZEROS101_Violation_PublicFieldPreventsBlittable()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -203,9 +203,9 @@ using ZeroSerializer;
 
 [{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
 [ZeroSerializer]
-public struct StructWithIgnoredProperty
+public struct StructWithPublicField
 {
-    public int IgnoredProperty { private get; set; }
+    public int Field;
     public int Value { get; set; }
 }
 ";
@@ -214,7 +214,7 @@ public struct StructWithIgnoredProperty
             source,
             new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
                 .WithLocation(0)
-                .WithArguments("StructWithIgnoredProperty")
+                .WithArguments("StructWithPublicField")
         );
     }
 
@@ -377,7 +377,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_SupportedProperties()
+    public async Task ZEROS002_Compliant_MarkedBlittableNestedStruct()
     {
         string source = @"
 using System.Runtime.InteropServices;

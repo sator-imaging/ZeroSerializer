@@ -147,7 +147,7 @@ RequireCondition(
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(17 * sizeof(int), sizeof(int))) == 0,
     "Null payloads were not represented by zero property offsets.");
 
-var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9);
+var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
 var ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
 ignoredMembersPacket.Serialize(ignoredMembersBuffer);
 var ignoredMembersView = new IgnoredMembersPacketView(ignoredMembersBuffer);
@@ -397,7 +397,7 @@ public sealed class IgnoredMembersPacket
 
     public int this[int index] => index;
 
-    public int IgnoredProperty { private get; set; }
+    public int IgnoredField;
 }
 
 [ZeroSerializer(EmitShapeTag = true)]
