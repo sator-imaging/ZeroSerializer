@@ -36,6 +36,14 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor InvalidStructLayoutAttribute = new(
+        "ZEROS101",
+        "Invalid StructLayout attribute",
+        "Struct '{0}' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct",
+        SerializerName,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor UnsupportedSerializableField = new(
         "ZEROS002",
         "Unsupported serializable field",
@@ -60,34 +68,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor UnsupportedGenericSerializableType = new(
-        "ZEROS005",
-        "Generic type not supported",
-        "Generic type '{0}' is not allowed for ZeroSerializer",
-        SerializerName,
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    private static readonly DiagnosticDescriptor InvalidStructLayoutAttribute = new(
-        "ZEROS101",
-        "Invalid StructLayout attribute",
-        "Struct '{0}' is marked with StructLayout(LayoutKind.Sequential, Pack = 1) but does not meet the requirements to be a blittable struct",
-        SerializerName,
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor BlittableCompatibleStructMissingLayout = new(
         "ZEROS102",
         "Struct can use Blittable serialization",
         "Struct '{0}' has a Blittable-compatible field shape; use StructLayout(LayoutKind.Sequential, Pack = 1) to enable raw payload serialization",
-        SerializerName,
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
-    private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
-        "ZEROS103",
-        "StructLayout attribute on class",
-        "StructLayout attribute on class '{0}' has no effect",
         SerializerName,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
@@ -98,6 +82,22 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         "Property '{0}' uses bool type; consider using a flags enum (byte) to reduce payload size by combining up to 8 booleans into one byte",
         SerializerName,
         DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnsupportedGenericSerializableType = new(
+        "ZEROS005",
+        "Generic type not supported",
+        "Generic type '{0}' is not allowed for ZeroSerializer",
+        SerializerName,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidClassStructLayoutAttribute = new(
+        "ZEROS103",
+        "StructLayout attribute on class",
+        "StructLayout attribute on class '{0}' has no effect",
+        SerializerName,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     public void Initialize(GeneratorInitializationContext initializationContext)

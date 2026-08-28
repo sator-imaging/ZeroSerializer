@@ -63,6 +63,262 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS103_Violation_ClassWithStructLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public class MyClassWithStructLayout
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS103", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("MyClassWithStructLayout")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS103_Compliant_StructWithAttributes()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyStructWithAttributes
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS103_Compliant_ClassWithoutZeroSerializer()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public class MyClassWithoutZeroSerializer
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_NonBlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct MyNonBlittableStruct
+{
+    private int _value;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("MyNonBlittableStruct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Compliant_BlittableStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[ZeroSerializer]
+public struct MyBlittableStruct
+{
+    public int Value { get; set; }
+
+    public MyBlittableStruct(int value) => Value = value;
+    internal MyBlittableStruct(int value, int dummy) => Value = value;
+    private MyBlittableStruct(string s) => Value = 0;
+
+    public void PublicMethod() { }
+    internal void InternalMethod() { }
+    private void PrivateMethod() { }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Compliant_NonBlittableStructWithoutLayout()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public struct MyNonBlittableStructWithoutLayout
+{
+    private int _value;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_PublicField()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithPublicField
+{
+    public int Field;
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithPublicField")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_NonPublicGetterProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithNonPublicGetter
+{
+    public int PrivateGetter { private get; set; }
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithNonPublicGetter")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_PublicSetterOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithSetterOnlyProperty
+{
+    public int SetterOnly { set { } }
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithSetterOnlyProperty")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_PublicInitOnlyProperty()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit { }
+}
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithInitOnlyProperty
+{
+    public int InitOnly { init { } }
+    public int Value { get; init; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithInitOnlyProperty")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_PartialStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public partial struct MyPartialStruct
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("MyPartialStruct")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Violation_UnmarkedBlittableNestedStruct()
     {
         string source = @"
@@ -271,240 +527,6 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS005_Violation_GenericType()
-    {
-        string source = @"
-using ZeroSerializer;
-
-[ZeroSerializer]
-public class {|#0:MyGenericClass|}<T>
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS005", DiagnosticSeverity.Error)
-                .WithLocation(0)
-                .WithArguments("MyGenericClass<T>")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS005_Compliant_NonGenericType()
-    {
-        string source = @"
-using ZeroSerializer;
-
-[ZeroSerializer]
-public class MyNonGenericClass
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_NonBlittableStructWithLayout()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public struct MyNonBlittableStruct
-{
-    private int _value;
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("MyNonBlittableStruct")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Compliant_BlittableStructWithLayout()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-[ZeroSerializer]
-public struct MyBlittableStruct
-{
-    public int Value { get; set; }
-
-    public MyBlittableStruct(int value) => Value = value;
-    internal MyBlittableStruct(int value, int dummy) => Value = value;
-    private MyBlittableStruct(string s) => Value = 0;
-
-    public void PublicMethod() { }
-    internal void InternalMethod() { }
-    private void PrivateMethod() { }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Compliant_NonBlittableStructWithoutLayout()
-    {
-        string source = @"
-using ZeroSerializer;
-
-[ZeroSerializer]
-public struct MyNonBlittableStructWithoutLayout
-{
-    private int _value;
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_PublicField()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public struct StructWithPublicField
-{
-    public int Field;
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("StructWithPublicField")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_NonPublicGetterProperty()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public struct StructWithNonPublicGetter
-{
-    public int PrivateGetter { private get; set; }
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("StructWithNonPublicGetter")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_PublicSetterOnlyProperty()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public struct StructWithSetterOnlyProperty
-{
-    public int SetterOnly { set { } }
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("StructWithSetterOnlyProperty")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_PublicInitOnlyProperty()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-namespace System.Runtime.CompilerServices
-{
-    internal static class IsExternalInit { }
-}
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public struct StructWithInitOnlyProperty
-{
-    public int InitOnly { init { } }
-    public int Value { get; init; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("StructWithInitOnlyProperty")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS101_Violation_PartialStructWithLayout()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public partial struct MyPartialStruct
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("MyPartialStruct")
-        );
-    }
-
-    [Fact]
     public async Task ZEROS102_Violation_StructWithoutLayout()
     {
         string source = @"
@@ -546,67 +568,6 @@ public struct MyStructWithLayout
     }
 
     [Fact]
-    public async Task ZEROS103_Violation_ClassWithStructLayout()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
-[ZeroSerializer]
-public class MyClassWithStructLayout
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source,
-            new DiagnosticResult("ZEROS103", DiagnosticSeverity.Warning)
-                .WithLocation(0)
-                .WithArguments("MyClassWithStructLayout")
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS103_Compliant_StructWithAttributes()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-using ZeroSerializer;
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-[ZeroSerializer]
-public struct MyStructWithAttributes
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
-        );
-    }
-
-    [Fact]
-    public async Task ZEROS103_Compliant_ClassWithoutZeroSerializer()
-    {
-        string source = @"
-using System.Runtime.InteropServices;
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public class MyClassWithoutZeroSerializer
-{
-    public int Value { get; set; }
-}
-";
-
-        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
-            source
-        );
-    }
-
-    [Fact]
     public async Task ZEROS201_Violation_BoolProperty()
     {
         string source = @"
@@ -635,6 +596,45 @@ using ZeroSerializer;
 
 [ZeroSerializer]
 public class MyNonBoolClass
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS005_Violation_GenericType()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public class {|#0:MyGenericClass|}<T>
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS005", DiagnosticSeverity.Error)
+                .WithLocation(0)
+                .WithArguments("MyGenericClass<T>")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS005_Compliant_NonGenericType()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public class MyNonGenericClass
 {
     public int Value { get; set; }
 }
