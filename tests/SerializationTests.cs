@@ -1301,13 +1301,13 @@ public sealed class SerializationTests
         int writtenBytes = container.Serialize(buffer);
         var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(100, view.Foo.Value, nameof(view.Foo.Value));
-        TestAssert.Equal(100, view.Bar.Value, nameof(view.Bar.Value));
-        TestAssert.Equal(200, view.Baz.Value, nameof(view.Baz.Value));
+        TestAssert.Equal(100, view.Foo?.Value, nameof(container.Foo.Value));
+        TestAssert.Equal(100, view.Bar?.Value, nameof(container.Bar.Value));
+        TestAssert.Equal(200, view.Baz?.Value, nameof(container.Baz.Value));
 
-        TestAssert.Equal(42, view.Foo.Nested.NestedValue, nameof(view.Foo.Nested.NestedValue));
-        TestAssert.Equal(42, view.Bar.Nested.NestedValue, nameof(view.Bar.Nested.NestedValue));
-        TestAssert.Equal(42, view.Baz.Nested.NestedValue, nameof(view.Baz.Nested.NestedValue));
+        TestAssert.Equal(42, view.Foo?.Nested?.NestedValue, nameof(container.Foo.Nested.NestedValue));
+        TestAssert.Equal(42, view.Bar?.Nested?.NestedValue, nameof(container.Bar.Nested.NestedValue));
+        TestAssert.Equal(42, view.Baz?.Nested?.NestedValue, nameof(container.Baz.Nested.NestedValue));
 
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
