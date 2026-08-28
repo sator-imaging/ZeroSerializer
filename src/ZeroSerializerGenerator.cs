@@ -356,6 +356,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         // Roslyn's member order is the wire declaration order; never infer a different order from file paths or spans.
+        int blittableByteOffset = 0;
         foreach (ISymbol declaredMember in serializableType.GetMembers())
         {
             // Only public getter properties define the wire contract; fields, setters, and indexers must never leak into it.
@@ -398,7 +399,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     serializableProperty.Name));
             }
 
+            propertyModel.BlittableByteOffset = blittableByteOffset;
             generationModel.Fields.Add(propertyModel);
+            blittableByteOffset += propertyModel.ElementByteCount;
         }
 
         return generationModel;
@@ -1272,14 +1275,28 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             propertyType = field.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
-        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(field.Symbol.Name)}");
+        var propertyReturnType
+            = field.Kind is FieldSerializationKind.BlittableStruct or FieldSerializationKind.Nested
+            ? (field.NullableUnderlyingType is not null || field.Symbol.Type.TypeKind is TypeKind.Class)
+                ? GetQualifiedViewName(field.NestedSerializableType) + "?"
+                : GetQualifiedViewName(field.NestedSerializableType)
+            : propertyType;
+        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(field.Symbol.Name)}");
         sourceBuilder.OpenBlock();
         sourceBuilder.AppendLine("get");
         sourceBuilder.OpenBlock();
         if (containingModel.IsBlittableStruct)
         {
-            sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
-            sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            if (field.Kind == FieldSerializationKind.BlittableStruct
+                && field.NestedSerializableType is not null)
+            {
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(field.NestedSerializableType)}(serializedMemory.Slice({field.BlittableByteOffset}, {field.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
+                sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(field.Symbol.Name)};");
+            }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
             return;
@@ -1292,14 +1309,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             // Null is represented entirely by the offset table; no property payload marker is read.
             sourceBuilder.AppendLine("if (fieldDataOffset == 0)");
             sourceBuilder.OpenBlock();
-            if (field.NullableUnderlyingType is not null && field.Kind != FieldSerializationKind.Nested)
-            {
-                sourceBuilder.AppendLine("return null;");
-            }
-            else
-            {
-                sourceBuilder.AppendLine("return default;");
-            }
+            // Always use 'default' instead of 'null' for reference types.
+            sourceBuilder.AppendLine("return default;");
             sourceBuilder.CloseBlock();
         }
 

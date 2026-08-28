@@ -246,12 +246,12 @@ public sealed class SerializationTests
 
         int expectedRequiredByteLength = -(24 + (4 * IntPtr.Size));
         TestAssert.Equal(expectedRequiredByteLength, VariableRecordView.RequiredByteLength, nameof(VariableRecordView.RequiredByteLength));
-        TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
-        TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
-        TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child.Identifier, nameof(view.Child.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child.State, nameof(view.Child.State));
-        TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
+        TestAssert.Equal(source.Text, view.Text.ToString(), nameof(source.Text));
+        TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(source.Values));
+        TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(source.OptionalNumber));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(source.Child.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(source.Child.State));
+        TestAssert.Equal(source.Tail, view.Tail, nameof(source.Tail));
         int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
         int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
         int optionalNumberFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4));
@@ -284,8 +284,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(view.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(view.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child.Identifier, nameof(view.Child.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child.State, nameof(view.Child.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(FixedClassView.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(FixedClassView.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(view.Tail));
 
         ReadOnlyMemory<byte> borrowedSerializedMemory = view;
@@ -309,15 +309,17 @@ public sealed class SerializationTests
         int writtenBytes = source.Serialize(buffer);
         var view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(0, view.Text.Length, nameof(view.Text.Length));
-        TestAssert.Equal(0, view.Values.Length, nameof(view.Values.Length));
-        TestAssert.Equal<int?>(null, view.OptionalNumber, nameof(view.OptionalNumber));
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Null string offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4)), "Null array offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(8, 4)), "Null nullable offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(12, 4)), "Null reference offset");
         TestAssert.Equal(20, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(16, 4)), "Tail offset");
         TestAssert.Equal(24, writtenBytes, nameof(writtenBytes));
+
+        TestAssert.Equal(0, view.Text.Length, nameof(view.Text.Length));
+        TestAssert.Equal(0, view.Values.Length, nameof(view.Values.Length));
+        TestAssert.Equal<int?>(null, view.OptionalNumber, nameof(view.OptionalNumber));
+        TestAssert.Equal<FixedClassView?>(null, view.Child, nameof(view.Child));
         TestAssert.Equal(5, view.Tail, nameof(view.Tail));
     }
 
@@ -521,9 +523,9 @@ public sealed class SerializationTests
                 _ = view.Text.Length;
                 _ = view.Values.Length;
                 _ = view.OptionalNumber;
-                FixedClassView childView = view.Child;
-                _ = childView.Identifier;
-                _ = childView.State;
+                FixedClassView? childView = view.Child;
+                _ = childView?.Identifier;
+                _ = childView?.State;
                 _ = view.Tail;
             },
             nameof(VariableRecord));
@@ -777,7 +779,7 @@ public sealed class SerializationTests
         // 2. Assert that nested non-blittable type returns view
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
-        Assert.Equal(typeof(FixedClassView), childProperty!.PropertyType);
+        Assert.Equal(typeof(FixedClassView?), childProperty!.PropertyType);
     }
 
     public void StrictBlittableStructTests()
@@ -1301,13 +1303,13 @@ public sealed class SerializationTests
         int writtenBytes = container.Serialize(buffer);
         var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
 
-        TestAssert.Equal(100, view.Foo.Value, nameof(view.Foo.Value));
-        TestAssert.Equal(100, view.Bar.Value, nameof(view.Bar.Value));
-        TestAssert.Equal(200, view.Baz.Value, nameof(view.Baz.Value));
+        TestAssert.Equal(100, view.Foo?.Value, nameof(container.Foo.Value));
+        TestAssert.Equal(100, view.Bar?.Value, nameof(container.Bar.Value));
+        TestAssert.Equal(200, view.Baz?.Value, nameof(container.Baz.Value));
 
-        TestAssert.Equal(42, view.Foo.Nested.NestedValue, nameof(view.Foo.Nested.NestedValue));
-        TestAssert.Equal(42, view.Bar.Nested.NestedValue, nameof(view.Bar.Nested.NestedValue));
-        TestAssert.Equal(42, view.Baz.Nested.NestedValue, nameof(view.Baz.Nested.NestedValue));
+        TestAssert.Equal(42, view.Foo?.Nested?.NestedValue, nameof(container.Foo.Nested.NestedValue));
+        TestAssert.Equal(42, view.Bar?.Nested?.NestedValue, nameof(container.Bar.Nested.NestedValue));
+        TestAssert.Equal(42, view.Baz?.Nested?.NestedValue, nameof(container.Baz.Nested.NestedValue));
 
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
