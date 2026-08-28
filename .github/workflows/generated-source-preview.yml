@@ -62,3 +62,8 @@ jobs:
               echo
             done
           } >> "$GITHUB_STEP_SUMMARY"
+
+          if grep -rn -i "// fallback" "$generated_source_dir"; then
+            echo "::error title=Fallback Detected::Fallback detected in generated C# sources!"
+            exit 1
+          fi
