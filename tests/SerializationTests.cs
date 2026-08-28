@@ -249,8 +249,8 @@ public sealed class SerializationTests
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(source.Text));
         TestAssert.SequenceEqual<int>(source.Values, view.Values, nameof(source.Values));
         TestAssert.Equal(source.OptionalNumber, view.OptionalNumber, nameof(source.OptionalNumber));
-        TestAssert.Equal(source.Child.Identifier, view.Child?.Identifier ?? -1, nameof(source.Child.Identifier));
-        TestAssert.Equal(source.Child.State, view.Child?.State ?? ByteState.None, nameof(source.Child.State));
+        TestAssert.Equal(source.Child.Identifier, view.Child!.Value.Identifier, nameof(source.Child.Identifier));
+        TestAssert.Equal(source.Child.State, view.Child!.Value.State, nameof(source.Child.State));
         TestAssert.Equal(source.Tail, view.Tail, nameof(source.Tail));
         int textFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4));
         int valuesFieldOffset = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4));
