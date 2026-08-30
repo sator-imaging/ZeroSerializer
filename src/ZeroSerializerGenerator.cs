@@ -1139,23 +1139,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex, modelLookup);
-            PropertyGenerationModel property = generationModel.Properties[propertyIndex];
-            if (generationModel.IsBlittableStruct
-                && property.Kind == PropertySerializationKind.BlittableStruct
-                && property.NestedSerializableType is not null)
-            {
-                string propertyAccessibility = IsEffectivelyPublic(property.Symbol.Type) ? "public" : "internal";
-                string propertyType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                string serializedPropertyType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sourceBuilder.AppendLine();
-                sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(property.Symbol.Name + "_AsValue")}");
-                sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine("get");
-                sourceBuilder.OpenBlock();
-                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
-                sourceBuilder.CloseBlock();
-                sourceBuilder.CloseBlock();
-            }
         }
         sourceBuilder.CloseBlock();
     }
@@ -1300,9 +1283,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 && property.NestedSerializableType is not null)
             {
                 sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine($"{propertyAccessibility} {property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {EscapeIdentifier(property.Symbol.Name + "_AsValue")}");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("get");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+                return;
             }
             else
             {
+                sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
                 sourceBuilder.AppendLine($"{containingModel.QualifiedSourceTypeName} blittableSourceValue = MemoryMarshal.Read<{containingModel.QualifiedSourceTypeName}>(serializedMemory.Span);");
                 sourceBuilder.AppendLine($"return blittableSourceValue.{EscapeIdentifier(property.Symbol.Name)};");
             }
