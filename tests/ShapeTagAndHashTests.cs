@@ -48,7 +48,7 @@ public class ShapeTagAndHashTests
     [Fact]
     public void SchemaSignatureModelEmitsExpectedShapeTagAndHash()
     {
-        string schemaSignatureExpected = "v1/{blittable{int,enum:short},{int,enum:byte},blittable{int,enum:short}[],{},blittable{},{enum:byte,enum:short}?,enum:byte[],enum:ulong[],int?,bool?}";
+        string schemaSignatureExpected = "v1/{blittable{int,enum:short},{int,enum:byte},blittable{int,enum:short}[],{},blittable{},{enum:byte,enum:short},enum:byte[],enum:ulong[],int?,bool?}";
         Assert.Equal(SchemaSignatureTestsModelView.ShapeTag, schemaSignatureExpected);
         Assert.Equal(SchemaSignatureTestsModelView.ShapeHash, XXHash32.HashToUInt32(schemaSignatureExpected));
     }
