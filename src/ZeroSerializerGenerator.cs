@@ -1316,7 +1316,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "propertyDataOffset");
                 break;
             case PropertySerializationKind.BlittableStruct:
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType!)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
+                if (property.NestedSerializableType is not null)
+                {
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
+                }
+                else
+                {
+                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
+                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
+                }
                 break;
             case PropertySerializationKind.String:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "propertyDataOffset");
