@@ -41,7 +41,7 @@ namespace ZeroSerializer.Tests
         public void AlwaysFailHelperThrowsExpectedException()
         {
             // Verify that calling UnityCompatibilityHelper.AlwaysFail() throws the expected exception
-            var exception = Assert.Throws<InvalidOperationException>(() => UnityCompatibility::UnityCompatibilityHelper.AlwaysFail());
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => UnityCompatibility::UnityCompatibilityHelper.AlwaysFail());
             Assert.Equal("Intentional failure for verifying CI workflow correctness.", exception.Message);
         }
 
@@ -52,7 +52,7 @@ namespace ZeroSerializer.Tests
             Assembly unityAssembly = typeof(UnityCompatibility::FixedPacket).Assembly;
 
             // Retrieve TargetFrameworkAttribute
-            var targetFrameworkAttr = unityAssembly.GetCustomAttribute<TargetFrameworkAttribute>();
+            TargetFrameworkAttribute? targetFrameworkAttr = unityAssembly.GetCustomAttribute<TargetFrameworkAttribute>();
 
             Assert.NotNull(targetFrameworkAttr);
             Assert.Equal(".NETStandard,Version=v2.1", targetFrameworkAttr.FrameworkName);

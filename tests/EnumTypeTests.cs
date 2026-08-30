@@ -70,16 +70,18 @@ namespace ZeroSerializer.Tests
         [Fact]
         public void ClassViewPreservesDeclaredEnumTypes()
         {
-            var source = new EnumClassContainer
+            EnumClassContainer source = new EnumClassContainer
             {
                 ByteState = ByteBackedState.Complete,
                 IntMode = IntBackedMode.Passive,
                 UlongOptions = UlongBackedOptions.First | UlongBackedOptions.Audit,
             };
-            var serializedData = new byte[EnumClassContainerView.RequiredByteLength];
+            byte[] serializedData = new byte[EnumClassContainerView.RequiredByteLength];
 
-            source.Serialize(serializedData);
-            var view = new EnumClassContainerView(serializedData);
+            int classWritten = source.Serialize(serializedData);
+            EnumClassContainerView view = new EnumClassContainerView(serializedData);
+
+            TestAssert.Equal(25, classWritten, nameof(classWritten));
 
             // Direct assignments intentionally prevent generated getters from regressing to underlying integer types.
             ByteBackedState byteState = view.ByteState;
@@ -94,14 +96,16 @@ namespace ZeroSerializer.Tests
         [Fact]
         public void StructViewPreservesDeclaredEnumTypes()
         {
-            var source = new EnumStructContainer(
+            EnumStructContainer source = new EnumStructContainer(
                 ByteBackedState.Ready,
                 IntBackedMode.Active,
                 UlongBackedOptions.Second | UlongBackedOptions.Audit);
-            var serializedData = new byte[EnumStructContainerView.RequiredByteLength];
+            byte[] serializedData = new byte[EnumStructContainerView.RequiredByteLength];
 
-            source.Serialize(serializedData);
-            var view = new EnumStructContainerView(serializedData);
+            int structWritten = source.Serialize(serializedData);
+            EnumStructContainerView view = new EnumStructContainerView(serializedData);
+
+            TestAssert.Equal(25, structWritten, nameof(structWritten));
 
             // Direct assignments intentionally prevent generated getters from regressing to underlying integer types.
             ByteBackedState byteState = view.ByteState;
