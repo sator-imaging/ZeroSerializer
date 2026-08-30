@@ -5,7 +5,7 @@
 
 namespace ZeroSerializer.Generator;
 
-internal enum FieldSerializationKind
+internal enum PropertySerializationKind
 {
     Primitive,
     String,

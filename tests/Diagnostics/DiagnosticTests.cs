@@ -195,7 +195,7 @@ public struct MyNonBlittableStructWithoutLayout
     }
 
     [Fact]
-    public async Task ZEROS101_Violation_PublicField()
+    public async Task ZEROS101_Violation_PublicFieldPreventsBlittable()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -328,7 +328,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -377,7 +377,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_SupportedFields()
+    public async Task ZEROS002_Compliant_MarkedBlittableNestedStruct()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -413,7 +413,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]
@@ -467,7 +467,7 @@ using ZeroSerializer;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PackedValue
 {
-    public int Value;
+    public int Value { get; set; }
 }
 
 [ZeroSerializer]

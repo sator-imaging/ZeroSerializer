@@ -42,7 +42,7 @@ internal sealed class TypeGenerationModel
 
     internal int BlittableStructByteCount { get; }
 
-    internal List<FieldGenerationModel> Fields { get; } = new();
+    internal List<PropertyGenerationModel> Properties { get; } = new();
 
     internal bool IsValid { get; set; } = true;
 }
