@@ -1736,7 +1736,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             var underlying = nullableType.TypeArguments[0];
             CreateShapeTag(underlying, shapeTagBuilder);
-            shapeTagBuilder.Append('?');
+            if (underlying is not INamedTypeSymbol namedUnderlying
+                || namedUnderlying.TypeKind != TypeKind.Struct
+                || TryGetBlittableStructByteCount(namedUnderlying, out _))
+            {
+                shapeTagBuilder.Append('?');
+            }
             return;
         }
 
