@@ -294,6 +294,18 @@ public struct StrictBlittableStruct
     public int Value { get; init; }
 }
 
+[ZeroSerializer]
+public sealed class NullableStructContainerModel
+{
+    public PackedRecord BlittableStruct { get; init; }
+
+    public PackedRecord? NullableBlittableStruct { get; init; }
+
+    public EnumStruct NonBlittableStruct { get; init; }
+
+    public EnumStruct? NullableNonBlittableStruct { get; init; }
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 [ZeroSerializer]
 public record struct BadlyAlignedStructWithPackOne

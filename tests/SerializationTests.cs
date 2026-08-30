@@ -1314,4 +1314,66 @@ public sealed class SerializationTests
 
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
+
+    [Fact]
+    public void NullableStructViewsSerializeAndDeserializeCorrectly()
+    {
+        // 1. Verify property return types via reflection:
+        // For non-blittable struct (EnumStruct), NonBlittableStruct returns EnumStructView and NullableNonBlittableStruct returns Nullable<EnumStructView>
+        PropertyInfo nonBlittableProp = typeof(NullableStructContainerModelView).GetProperty(nameof(NullableStructContainerModelView.NonBlittableStruct))!;
+        PropertyInfo nullableNonBlittableProp = typeof(NullableStructContainerModelView).GetProperty(nameof(NullableStructContainerModelView.NullableNonBlittableStruct))!;
+        Assert.Equal(typeof(EnumStructView), nonBlittableProp.PropertyType);
+        Assert.Equal(typeof(EnumStructView?), nullableNonBlittableProp.PropertyType);
+
+        // For blittable struct (PackedRecord), BlittableStruct returns PackedRecordView, and NullableBlittableStruct returns Nullable<PackedRecordView>
+        PropertyInfo blittableProp = typeof(NullableStructContainerModelView).GetProperty(nameof(NullableStructContainerModelView.BlittableStruct))!;
+        PropertyInfo nullableBlittableProp = typeof(NullableStructContainerModelView).GetProperty(nameof(NullableStructContainerModelView.NullableBlittableStruct))!;
+        Assert.Equal(typeof(PackedRecordView), blittableProp.PropertyType);
+        Assert.Equal(typeof(PackedRecordView?), nullableBlittableProp.PropertyType);
+
+        // 2. Roundtrip non-null values
+        var sourceNonNull = new NullableStructContainerModel
+        {
+            BlittableStruct = new PackedRecord { Number = 111, State = SignedState.Positive },
+            NullableBlittableStruct = new PackedRecord { Number = 222, State = SignedState.Negative },
+            NonBlittableStruct = new EnumStruct(ByteState.Ready, SignedState.Positive),
+            NullableNonBlittableStruct = new EnumStruct(ByteState.None, SignedState.Negative)
+        };
+
+        var bufferNonNull = new byte[256];
+        int writtenNonNull = sourceNonNull.Serialize(bufferNonNull);
+        var viewNonNull = new NullableStructContainerModelView(bufferNonNull.AsMemory(0, writtenNonNull));
+
+        TestAssert.Equal(111, viewNonNull.BlittableStruct.Number, "BlittableStruct.Number");
+        TestAssert.Equal(SignedState.Positive, viewNonNull.BlittableStruct.State, "BlittableStruct.State");
+
+        Assert.NotNull(viewNonNull.NullableBlittableStruct);
+        TestAssert.Equal(222, viewNonNull.NullableBlittableStruct!.Value.Number, "NullableBlittableStruct.Number");
+        TestAssert.Equal(SignedState.Negative, viewNonNull.NullableBlittableStruct!.Value.State, "NullableBlittableStruct.State");
+
+        TestAssert.Equal(ByteState.Ready, viewNonNull.NonBlittableStruct.ByteState, "NonBlittableStruct.ByteState");
+        TestAssert.Equal(SignedState.Positive, viewNonNull.NonBlittableStruct.SignedState, "NonBlittableStruct.SignedState");
+
+        Assert.NotNull(viewNonNull.NullableNonBlittableStruct);
+        TestAssert.Equal(ByteState.None, viewNonNull.NullableNonBlittableStruct!.Value.ByteState, "NullableNonBlittableStruct.ByteState");
+        TestAssert.Equal(SignedState.Negative, viewNonNull.NullableNonBlittableStruct!.Value.SignedState, "NullableNonBlittableStruct.SignedState");
+
+        // 3. Roundtrip null values
+        var sourceNull = new NullableStructContainerModel
+        {
+            BlittableStruct = new PackedRecord { Number = 333, State = SignedState.Positive },
+            NullableBlittableStruct = null,
+            NonBlittableStruct = new EnumStruct(ByteState.Ready, SignedState.Negative),
+            NullableNonBlittableStruct = null
+        };
+
+        var bufferNull = new byte[256];
+        int writtenNull = sourceNull.Serialize(bufferNull);
+        var viewNull = new NullableStructContainerModelView(bufferNull.AsMemory(0, writtenNull));
+
+        TestAssert.Equal(333, viewNull.BlittableStruct.Number, "BlittableStruct.Number");
+        Assert.Null(viewNull.NullableBlittableStruct);
+        TestAssert.Equal(ByteState.Ready, viewNull.NonBlittableStruct.ByteState, "NonBlittableStruct.ByteState");
+        Assert.Null(viewNull.NullableNonBlittableStruct);
+    }
 }
