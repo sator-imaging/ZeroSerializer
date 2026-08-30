@@ -765,7 +765,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NestedSerializableTypePropertiesReturnViewStructInstances()
+    public void NestedSerializableTypePropertiesExposeExpectedViewAndValueAccessors()
     {
         // 1. Assert that nested blittable type returns view
         PropertyInfo? valueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value));
@@ -776,13 +776,21 @@ public sealed class SerializationTests
         Assert.NotNull(optionalValueProperty);
         Assert.Equal(typeof(Nullable<PackedRecordView>), optionalValueProperty!.PropertyType);
 
-        PropertyInfo? valueAsValueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value_AsValue));
+        PropertyInfo? valueAsValueProperty = typeof(StrictBlittableStructWithNestedPropertyView).GetProperty(nameof(StrictBlittableStructWithNestedPropertyView.Nested_AsValue));
         Assert.NotNull(valueAsValueProperty);
         Assert.Equal(typeof(PackedRecord), valueAsValueProperty!.PropertyType);
 
-        PropertyInfo? optionalValueAsValueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.OptionalValue_AsValue));
-        Assert.NotNull(optionalValueAsValueProperty);
-        Assert.Equal(typeof(PackedRecord?), optionalValueAsValueProperty!.PropertyType);
+        var source = new StrictBlittableStructWithNestedProperty
+        {
+            Nested = new PackedRecord { Number = 42, State = SignedState.Positive }
+        };
+        byte[] buffer = new byte[StrictBlittableStructWithNestedPropertyView.RequiredByteLength];
+        source.Serialize(buffer);
+        var view = new StrictBlittableStructWithNestedPropertyView(buffer);
+        TestAssert.Equal(42, view.Nested.Number, "Nested view Number");
+        TestAssert.Equal(SignedState.Positive, view.Nested.State, "Nested view State");
+        TestAssert.Equal(42, view.Nested_AsValue.Number, "Nested value Number");
+        TestAssert.Equal(SignedState.Positive, view.Nested_AsValue.State, "Nested value State");
 
         // 2. Assert that nested non-blittable type returns view
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
@@ -791,11 +799,15 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NonBlittableStructPropertiesDoNotExposeAsValueAccessors()
+    public void NonBlittableViewsDoNotExposeAsValueAccessors()
     {
+        PropertyInfo? blittableValueProperty = typeof(PackedContainerView).GetProperty("Value_AsValue");
+        PropertyInfo? nullableBlittableValueProperty = typeof(PackedContainerView).GetProperty("OptionalValue_AsValue");
         PropertyInfo? valueProperty = typeof(NullableStructContainerModelView).GetProperty("NonBlittableStruct_AsValue");
         PropertyInfo? nullableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NullableNonBlittableStruct_AsValue");
 
+        Assert.Null(blittableValueProperty);
+        Assert.Null(nullableBlittableValueProperty);
         Assert.Null(valueProperty);
         Assert.Null(nullableValueProperty);
     }
@@ -1375,15 +1387,10 @@ public sealed class SerializationTests
 
         TestAssert.Equal(111, viewNonNull.BlittableStruct.Number, "BlittableStruct.Number");
         TestAssert.Equal(SignedState.Positive, viewNonNull.BlittableStruct.State, "BlittableStruct.State");
-        TestAssert.Equal(111, viewNonNull.BlittableStruct_AsValue.Number, "BlittableStruct_AsValue.Number");
-        TestAssert.Equal(SignedState.Positive, viewNonNull.BlittableStruct_AsValue.State, "BlittableStruct_AsValue.State");
 
         Assert.NotNull(viewNonNull.NullableBlittableStruct);
         TestAssert.Equal(222, viewNonNull.NullableBlittableStruct!.Value.Number, "NullableBlittableStruct.Number");
         TestAssert.Equal(SignedState.Negative, viewNonNull.NullableBlittableStruct!.Value.State, "NullableBlittableStruct.State");
-        Assert.NotNull(viewNonNull.NullableBlittableStruct_AsValue);
-        TestAssert.Equal(222, viewNonNull.NullableBlittableStruct_AsValue!.Value.Number, "NullableBlittableStruct_AsValue.Number");
-        TestAssert.Equal(SignedState.Negative, viewNonNull.NullableBlittableStruct_AsValue!.Value.State, "NullableBlittableStruct_AsValue.State");
 
         TestAssert.Equal(ByteState.Ready, viewNonNull.NonBlittableStruct.ByteState, "NonBlittableStruct.ByteState");
         TestAssert.Equal(SignedState.Positive, viewNonNull.NonBlittableStruct.SignedState, "NonBlittableStruct.SignedState");
@@ -1406,9 +1413,7 @@ public sealed class SerializationTests
         var viewNull = new NullableStructContainerModelView(bufferNull.AsMemory(0, writtenNull));
 
         TestAssert.Equal(333, viewNull.BlittableStruct.Number, "BlittableStruct.Number");
-        TestAssert.Equal(333, viewNull.BlittableStruct_AsValue.Number, "BlittableStruct_AsValue.Number");
         Assert.Null(viewNull.NullableBlittableStruct);
-        Assert.Null(viewNull.NullableBlittableStruct_AsValue);
         TestAssert.Equal(ByteState.Ready, viewNull.NonBlittableStruct.ByteState, "NonBlittableStruct.ByteState");
         Assert.Null(viewNull.NullableNonBlittableStruct);
     }

@@ -1140,7 +1140,8 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex, modelLookup);
             PropertyGenerationModel property = generationModel.Properties[propertyIndex];
-            if (property.Kind == PropertySerializationKind.BlittableStruct
+            if (generationModel.IsBlittableStruct
+                && property.Kind == PropertySerializationKind.BlittableStruct
                 && property.NestedSerializableType is not null)
             {
                 string propertyAccessibility = IsEffectivelyPublic(property.Symbol.Type) ? "public" : "internal";
@@ -1151,23 +1152,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("get");
                 sourceBuilder.OpenBlock();
-                if (generationModel.IsBlittableStruct)
-                {
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
-                    sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
-                    if (property.IsNullableType)
-                    {
-                        sourceBuilder.AppendLine("if (propertyDataOffset == 0)");
-                        sourceBuilder.OpenBlock();
-                        sourceBuilder.AppendLine("return default;");
-                        sourceBuilder.CloseBlock();
-                    }
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
-                }
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
                 sourceBuilder.CloseBlock();
                 sourceBuilder.CloseBlock();
             }

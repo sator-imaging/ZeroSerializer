@@ -129,6 +129,6 @@ Blittable structs are stored directly as raw struct bytes without an offset tabl
 - Validate integrity or authenticity before creating a View when required.
 - The wire format requires a little-endian runtime.
 - View structs expose a compile-time constant `IsBlittable`, indicating whether the underlying serialized type is a blittable struct.
-- Blittable struct properties expose both a zero-copy View property and a `{PropertyName}_AsValue` property that reads the struct value from serialized memory.
+- Nested blittable struct properties on blittable Views expose both a zero-copy View property and a `{PropertyName}_AsValue` property that reads the struct value from serialized memory.
 - You can use `.AsMemory()` extension method (returns `ReadOnlyMemory<byte>`) or `.Materialize()` extension method (for views of blittable structs to convert them back to the original struct).
 - Nested classes and structs must be marked with `[ZeroSerializer]`; otherwise the generator reports an unsupported property diagnostic.
