@@ -1736,10 +1736,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             var underlying = nullableType.TypeArguments[0];
             CreateShapeTag(underlying, shapeTagBuilder);
-            if (!IsNonBlittableStruct(underlying))
+            if (underlying is INamedTypeSymbol named && named.TypeKind == TypeKind.Struct && !TryGetBlittableStructByteCount(named, out _))
             {
-                shapeTagBuilder.Append('?');
+                return;
             }
+            shapeTagBuilder.Append('?');
             return;
         }
 
@@ -1801,13 +1802,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         shapeTagBuilder.Append(UnknownShapeTagType);
-    }
-
-    private static bool IsNonBlittableStruct(ITypeSymbol typeSymbol)
-    {
-        return typeSymbol.TypeKind == TypeKind.Struct
-            && GetPrimitiveKeyword(typeSymbol).Length == 0
-            && !TryGetFixedTypeByteCount(typeSymbol, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _);
     }
 
     private static string GetPrimitiveKeyword(ITypeSymbol? typeSymbol)
