@@ -1021,12 +1021,14 @@ public sealed class SerializationTests
         byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
         VariableStructWithArrayAtEndView view = new VariableStructWithArrayAtEndView(buffer);
+        TestAssert.Equal(28, view.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength");
 
         // with null values (array is null, last property with non-null value is ID)
         VariableStructWithArrayAtEnd sourceNull = new VariableStructWithArrayAtEnd { ID = 42, Values = null };
         int writtenBytesNull = sourceNull.Serialize(buffer);
         VariableStructWithArrayAtEndView viewNull = new VariableStructWithArrayAtEndView(buffer);
+        TestAssert.Equal(12, viewNull.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength with null values expected length");
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength with null values");
     }
 
@@ -1037,12 +1039,14 @@ public sealed class SerializationTests
         byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
         VariableStructWithStringAtEndView view = new VariableStructWithStringAtEndView(buffer);
+        TestAssert.Equal(26, view.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength");
 
         // with null text
         VariableStructWithStringAtEnd sourceNull = new VariableStructWithStringAtEnd { ID = 12, Text = null };
         int writtenBytesNull = sourceNull.Serialize(buffer);
         VariableStructWithStringAtEndView viewNull = new VariableStructWithStringAtEndView(buffer);
+        TestAssert.Equal(12, viewNull.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength with null text expected length");
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength with null text");
     }
 
@@ -1053,12 +1057,14 @@ public sealed class SerializationTests
         byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
         VariableStructWithBlittableStructAtEndView view = new VariableStructWithBlittableStructAtEndView(buffer);
+        TestAssert.Equal(28, view.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength");
 
         // with null text
         VariableStructWithBlittableStructAtEnd sourceNull = new VariableStructWithBlittableStructAtEnd { Text = null, Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
         int writtenBytesNull = sourceNull.Serialize(buffer);
         VariableStructWithBlittableStructAtEndView viewNull = new VariableStructWithBlittableStructAtEndView(buffer);
+        TestAssert.Equal(14, viewNull.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength with null text expected length");
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength with null text");
     }
 
@@ -1069,12 +1075,14 @@ public sealed class SerializationTests
         byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
         VariableStructWithPrimitiveAtEndView view = new VariableStructWithPrimitiveAtEndView(buffer);
+        TestAssert.Equal(26, view.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength");
 
         // with null text
         VariableStructWithPrimitiveAtEnd sourceNull = new VariableStructWithPrimitiveAtEnd { Text = null, Value = 100 };
         int writtenBytesNull = sourceNull.Serialize(buffer);
         VariableStructWithPrimitiveAtEndView viewNull = new VariableStructWithPrimitiveAtEndView(buffer);
+        TestAssert.Equal(12, viewNull.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength with null text expected length");
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength with null text");
     }
 
@@ -1214,6 +1222,7 @@ public sealed class SerializationTests
         TestAssert.Equal(second.IntValue, view.Values[1].IntValue, "Values[1].IntValue");
         TestAssert.Equal(second.DoubleValue, view.Values[1].DoubleValue, "Values[1].DoubleValue");
 
+        TestAssert.Equal(64, view.GetByteLength(), "Non-null GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "Non-null GetByteLength");
 
         // 3. Null optional & array roundtrip
@@ -1229,6 +1238,7 @@ public sealed class SerializationTests
         TestAssert.Equal(first.IntValue, viewNulls.Value.IntValue, nameof(viewNulls.Value.IntValue));
         Assert.Null(viewNulls.OptionalValue);
         TestAssert.True(viewNulls.Values.IsEmpty, nameof(viewNulls.Values.IsEmpty));
+        TestAssert.Equal(24, viewNulls.GetByteLength(), "Nulls GetByteLength expected length");
         TestAssert.Equal(writtenBytesNulls, viewNulls.GetByteLength(), "Nulls GetByteLength");
     }
 
@@ -1312,6 +1322,7 @@ public sealed class SerializationTests
         TestAssert.Equal(42, view.Bar?.Nested?.NestedValue, nameof(container.Bar.Nested.NestedValue));
         TestAssert.Equal(42, view.Baz?.Nested?.NestedValue, nameof(container.Baz.Nested.NestedValue));
 
+        TestAssert.Equal(72, view.GetByteLength(), "SharedReferenceInstances GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
 

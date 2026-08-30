@@ -238,6 +238,7 @@ RequireCondition(
     && nestedBlittableRecordView.Values[0].DoubleValue == 88.88
     && nestedBlittableRecordView.Values[1].IntValue == 99
     && nestedBlittableRecordView.Values[1].DoubleValue == 99.99
+    && nestedBlittableRecordView.GetByteLength() == 64
     && nestedBlittableRecordView.GetByteLength() == nestedBlittableRecordWritten,
     "UnityBlittableRecordStructContainer non-null roundtrip failed.");
 
@@ -255,6 +256,7 @@ RequireCondition(
     && nestedBlittableRecordNullsView.Value.DoubleValue == 88.88
     && nestedBlittableRecordNullsView.OptionalValue is null
     && nestedBlittableRecordNullsView.Values.IsEmpty
+    && nestedBlittableRecordNullsView.GetByteLength() == 24
     && nestedBlittableRecordNullsView.GetByteLength() == nestedBlittableRecordNullsWritten,
     "UnityBlittableRecordStructContainer nulls roundtrip failed.");
 
