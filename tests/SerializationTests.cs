@@ -19,7 +19,7 @@ namespace ZeroSerializer.Tests;
 public sealed class SerializationTests
 {
     [Fact]
-    public void PrimitiveRoundTrip()
+    public void PrimitiveTypesSerializeAndDeserializeCorrectly()
     {
         var source = new PrimitiveRecord
         {
@@ -57,7 +57,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void EnumClassAndStructRoundTrip()
+    public void EnumPropertiesSerializeAndDeserializeCorrectly()
     {
         var classSource = new EnumClass
         {
@@ -102,7 +102,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BlittableStructRoundTrip()
+    public void BlittableStructSerializesAndDeserializesCorrectly()
     {
         var source = new PackedRecord { Number = 123456, State = SignedState.Negative };
         var buffer = new byte[PackedRecordView.RequiredByteLength];
@@ -117,7 +117,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BlittableNestedNullableAndArrayRoundTrip()
+    public void NestedNullableAndArrayBlittableStructsSerializeAndDeserializeCorrectly()
     {
         var first = new PackedRecord { Number = 10, State = SignedState.Negative };
         var second = new PackedRecord { Number = 20, State = SignedState.Positive };
@@ -140,7 +140,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RandomLength1013BlittableArraysAndStringsRoundTrip()
+    public void LargeRecordWithRandomArraysAndStringsPreservesData()
     {
         // Avoid power-of-two values, which **might** accidentally satisfy test conditions.
         const int elementCount = 1013;
@@ -213,7 +213,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void FixedOffsetTableLayout()
+    public void FixedClassSerializesOffsetTableAndPayloadAtExpectedPositions()
     {
         var source = new FixedClass { Identifier = 0x10203040, State = ByteState.Ready };
         var buffer = new byte[FixedClassView.RequiredByteLength];
@@ -229,7 +229,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void VariableDataRoundTrip()
+    public void VariableLengthRecordPreservesDataAndEmitsCorrectOffsetHeader()
     {
         var source = new VariableRecord
         {
@@ -294,7 +294,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NullValuesRoundTrip()
+    public void NullReferenceAndNullablePropertiesSerializeZeroOffsets()
     {
         var source = new VariableRecord
         {
@@ -338,7 +338,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void EmptyClassAndStruct()
+    public void EmptyClassAndStructSerializeZeroBytesWithoutErrors()
     {
         var emptyClassBuffer = Span<byte>.Empty;
         var emptyStructBuffer = Span<byte>.Empty;
@@ -355,7 +355,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ZeroLengthNestedStructBetweenProperties()
+    public void ZeroLengthNestedStructSharesOffsetWithNextProperty()
     {
         var source = new ZeroLengthNestedStructContainer
         {
@@ -382,7 +382,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void PublicFieldsAreIgnored()
+    public void FieldDeclarationsAreExcludedFromSerializationAndViewGeneration()
     {
         var source = new FieldsOnlyClass { IgnoredField = 123 };
 
@@ -394,7 +394,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void PropertyGetterVariants()
+    public void PropertyAccessModifiersControlInclusionInGeneratedView()
     {
         var source = new PropertyVariants(11, 22, 33);
         var buffer = new byte[PropertyVariantsView.RequiredByteLength];
@@ -592,7 +592,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void SerializeSignatureAndReceiverModifiers()
+    public void SerializeExtensionMethodUsesCorrectReceiverModifiersForClassesAndStructs()
     {
         MethodInfo classSerialize = GetSerializeMethod(typeof(FixedClass));
         MethodInfo smallStructSerialize = GetSerializeMethod(typeof(SmallFixedStruct));
@@ -611,7 +611,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ByteArrayRoundTrip()
+    public void ByteArrayPropertySerializesAndDeserializesCorrectly()
     {
         var source = new ByteArrayRecord
         {
@@ -626,7 +626,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ViewConstructorHasNoOffset()
+    public void ViewConstructorAcceptsOnlySerializedMemoryWithoutOffsetParameter()
     {
         ConstructorInfo constructor = typeof(FixedClassView).GetConstructors().Single();
         ParameterInfo[] parameters = constructor.GetParameters();
@@ -636,7 +636,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void Utf8PayloadRoundTrip()
+    public void Utf8ByteArrayDecodesToOriginalString()
     {
         // 1. Create string
         string originalString = "Hello, UTF-8 World! 世界";
@@ -663,7 +663,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ArrayRoundTripTest()
+    public void PrimitiveAndEnumArraysSerializeAndDeserializeCorrectly()
     {
         // Avoid computer-loving number for the size that **might** accidentally satisfy the test condition.
         const int length = 31;
@@ -765,7 +765,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NestedTypesReturnViewsTest()
+    public void NestedSerializableTypePropertiesReturnViewStructInstances()
     {
         // 1. Assert that nested blittable type returns view
         PropertyInfo? valueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value));
@@ -782,7 +782,8 @@ public sealed class SerializationTests
         Assert.Equal(typeof(FixedClassView?), childProperty!.PropertyType);
     }
 
-    public void StrictBlittableStructTests()
+    [Fact]
+    public void StrictBlittableStructWithoutOffsetTableSerializesAsRawPayload()
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
         // It must have NO offset table (is serialized directly as raw bytes, checking the serialized size).
@@ -829,7 +830,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void AttributeSyntaxVariationsRoundTrip()
+    public void AttributeSyntaxVariationsAreRecognizedByGenerator()
     {
         // 1. [ZeroSerializer]
         {
@@ -887,7 +888,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ViewExtensionsAndMetadata()
+    public void ViewMetadataAndExtensionMethodsProvideIsBlittableAsMemoryAndMaterialize()
     {
         // 1. Check IsBlittable constants
         TestAssert.True(PackedRecordView.IsBlittable, "PackedRecordView is blittable");
@@ -929,7 +930,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void SByteMinValueRoundTripTest()
+    public void SByteMinValueSerializesAndDeserializesAcrossShapes()
     {
         // Tests sbyte min value roundtrip with different shapes:
         // - sbyte value roundtrip
@@ -992,7 +993,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_BlittableStruct()
+    public void GetByteLengthReturnsExactPayloadSizeForBlittableStruct()
     {
         var source = new StrictBlittableStruct { Value = 12345 };
         var buffer = new byte[16];
@@ -1003,7 +1004,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_FixedSizedNonBlittableStruct()
+    public void GetByteLengthReturnsHeaderAndPayloadSizeForFixedNonBlittableClass()
     {
         var source = new FixedClass { Identifier = 9876, State = ByteState.Ready };
         var buffer = new byte[32];
@@ -1014,7 +1015,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_ArrayAtEnd()
+    public void GetByteLengthCalculatesTotalSizeWhenArrayIsLastField()
     {
         var source = new VariableStructWithArrayAtEnd { ID = 1, Values = new int[] { 10, 20, 30 } };
         var buffer = new byte[64];
@@ -1030,7 +1031,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_StringAtEnd()
+    public void GetByteLengthCalculatesTotalSizeWhenStringIsLastField()
     {
         var source = new VariableStructWithStringAtEnd { ID = 2, Text = "hello" };
         var buffer = new byte[64];
@@ -1046,7 +1047,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_BlittableStructAtEnd()
+    public void GetByteLengthCalculatesTotalSizeWhenNestedBlittableStructIsLastField()
     {
         var source = new VariableStructWithBlittableStructAtEnd { Text = "hello", Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
         var buffer = new byte[64];
@@ -1062,7 +1063,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_PrimitiveAtEnd()
+    public void GetByteLengthCalculatesTotalSizeWhenPrimitiveIsLastField()
     {
         var source = new VariableStructWithPrimitiveAtEnd { Text = "world", Value = 100 };
         var buffer = new byte[64];
@@ -1078,7 +1079,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLength_VariableStruct_AllNullableFieldsAreNull()
+    public void GetByteLengthReturnsHeaderSizeWhenAllNullableFieldsAreNull()
     {
         // 1. One nullable property with null (fieldCount = 1)
         {
@@ -1123,7 +1124,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RecordClassRoundTrip()
+    public void CsharpRecordClassSerializesAndDeserializesCorrectly()
     {
         var source = new SimpleCsharpRecord
         {
@@ -1140,7 +1141,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void RecordStructRoundTrip()
+    public void CsharpRecordStructSerializesAndDeserializesCorrectly()
     {
         var source = new SimpleRecordStruct
         {
@@ -1157,7 +1158,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BlittableRecordStructRoundTrip()
+    public void BlittableRecordStructSerializesAsRawPayload()
     {
         var source = new SimpleBlittableRecordStruct
         {
@@ -1176,7 +1177,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BlittableRecordStructNestedPropertyRoundTrip()
+    public void NestedBlittableRecordStructsReturnViewStructs()
     {
         // 1. Verify view property types via reflection
         PropertyInfo? valueProperty = typeof(BlittableRecordStructContainerView).GetProperty(nameof(BlittableRecordStructContainerView.Value));
@@ -1232,7 +1233,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void BadlyAlignedStructWithPackOneRoundTrip()
+    public void UnalignedPackOneStructSerializesWithoutAlignmentPadding()
     {
         TestAssert.Equal(3, BadlyAlignedStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedStructWithPackOneView.RequiredByteLength));
         TestAssert.Equal(31, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
@@ -1285,7 +1286,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void SharedReferenceInstancesRoundTrip()
+    public void SharedReferenceTypeInstancesAreSerializedSequentially()
     {
         var sharedNested = new SharedClassNested { NestedValue = 42 };
         var sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
