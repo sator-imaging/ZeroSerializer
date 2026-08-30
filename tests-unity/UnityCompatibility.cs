@@ -87,6 +87,7 @@ var variablePacket = new VariablePacket
     OptionalValue = 17,
     MissingOptionalValue = null,
     OptionalState = PacketState.Ready,
+    MissingOptionalState = null,
     OptionalPosition = new PackedPosition { X = 30, Y = 40 },
     MissingOptionalPosition = null,
     Child = new ChildPacket { Identifier = 99 },
@@ -117,6 +118,7 @@ RequireCondition(
     && variableView.OptionalValue == 17
     && variableView.MissingOptionalValue is null
     && variableView.OptionalState == PacketState.Ready
+    && variableView.MissingOptionalState is null
     && variableView.OptionalPosition!.Value.X == 30
     && variableView.MissingOptionalPosition is null
     && variableView.Child?.Identifier == 99
@@ -124,6 +126,7 @@ RequireCondition(
     && variableView.StructChild.Name.SequenceEqual("struct".AsSpan())
     && variableView.OptionalStructChild?.Identifier == 101
     && variableView.OptionalStructChild?.Name.SequenceEqual("optional struct".AsSpan()) == true
+    && variableView.MissingOptionalStructChild is null
     && variableView.FloatValues.Length == 3
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3
@@ -142,9 +145,10 @@ RequireCondition(
     BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(2 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(7 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(9 * sizeof(int), sizeof(int))) == 0
-    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(12 * sizeof(int), sizeof(int))) == 0
-    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(14 * sizeof(int), sizeof(int))) == 0
-    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(17 * sizeof(int), sizeof(int))) == 0,
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(11 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(13 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(15 * sizeof(int), sizeof(int))) == 0
+    && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(18 * sizeof(int), sizeof(int))) == 0,
     "Null payloads were not represented by zero property offsets.");
 
 var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
@@ -345,6 +349,8 @@ public sealed class VariablePacket
     public int? MissingOptionalValue { get; init; }
 
     public PacketState? OptionalState { get; init; }
+
+    public PacketState? MissingOptionalState { get; init; }
 
     public PackedPosition? OptionalPosition { get; init; }
 
