@@ -799,17 +799,19 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NonBlittableViewsDoNotExposeAsValueAccessors()
+    public void NonBlittableViewsWithBlittableAndNonBlittablePropertiesDoNotExposeAsValueAccessors()
     {
-        PropertyInfo? blittableValueProperty = typeof(PackedContainerView).GetProperty("Value_AsValue");
-        PropertyInfo? nullableBlittableValueProperty = typeof(PackedContainerView).GetProperty("OptionalValue_AsValue");
-        PropertyInfo? valueProperty = typeof(NullableStructContainerModelView).GetProperty("NonBlittableStruct_AsValue");
-        PropertyInfo? nullableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NullableNonBlittableStruct_AsValue");
+        TestAssert.True(!NullableStructContainerModelView.IsBlittable, "The combined-property View is non-blittable");
+
+        PropertyInfo? blittableValueProperty = typeof(NullableStructContainerModelView).GetProperty("BlittableStruct_AsValue");
+        PropertyInfo? nullableBlittableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NullableBlittableStruct_AsValue");
+        PropertyInfo? nonBlittableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NonBlittableStruct_AsValue");
+        PropertyInfo? nullableNonBlittableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NullableNonBlittableStruct_AsValue");
 
         Assert.Null(blittableValueProperty);
         Assert.Null(nullableBlittableValueProperty);
-        Assert.Null(valueProperty);
-        Assert.Null(nullableValueProperty);
+        Assert.Null(nonBlittableValueProperty);
+        Assert.Null(nullableNonBlittableValueProperty);
     }
 
     [Fact]
