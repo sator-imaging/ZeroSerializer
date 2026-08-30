@@ -980,20 +980,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             case PropertySerializationKind.BlittableStruct:
                 string blittableValueName = CreateLocalName(localNamePrefix, "Value");
                 sourceBuilder.AppendLine($"{serializedPropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {blittableValueName} = {serializationValueExpression};");
-                if (property.NestedSerializableType is not null)
-                {
-                    sourceBuilder.AppendLine($"global::ZeroSerializer.ZeroSerializerExtensions.Serialize({blittableValueName}, destination.Slice(writtenBytes));");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached.");
-                    // MemoryMarshal.Write changed its value parameter from ref to in in .NET 8; generated source follows the target framework directly.
-                    sourceBuilder.AppendDirective("#if NET8_0_OR_GREATER");
-                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), {blittableValueName});");
-                    sourceBuilder.AppendDirective("#else");
-                    sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), ref {blittableValueName});");
-                    sourceBuilder.AppendDirective("#endif");
-                }
+                // MemoryMarshal.Write changed its value parameter from ref to in in .NET 8; generated source follows the target framework directly.
+                sourceBuilder.AppendDirective("#if NET8_0_OR_GREATER");
+                sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), {blittableValueName});");
+                sourceBuilder.AppendDirective("#else");
+                sourceBuilder.AppendLine($"MemoryMarshal.Write(destination.Slice(writtenBytes, {property.ElementByteCount}), ref {blittableValueName});");
+                sourceBuilder.AppendDirective("#endif");
                 sourceBuilder.AppendLine($"writtenBytes += {property.ElementByteCount};");
                 break;
             case PropertySerializationKind.String:
@@ -1324,15 +1316,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "propertyDataOffset");
                 break;
             case PropertySerializationKind.BlittableStruct:
-                if (property.NestedSerializableType is not null)
-                {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
-                }
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType!)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 break;
             case PropertySerializationKind.String:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "propertyDataOffset");
