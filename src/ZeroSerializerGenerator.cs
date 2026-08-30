@@ -1139,6 +1139,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex, modelLookup);
+            if (generationModel.Properties[propertyIndex].Kind == PropertySerializationKind.BlittableStruct
+                && generationModel.Properties[propertyIndex].NestedSerializableType is not null)
+            {
+                sourceBuilder.AppendLine();
+                EmitBlittableValueProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex);
+            }
         }
         sourceBuilder.CloseBlock();
     }
@@ -1359,6 +1365,42 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
     {
         // Null is handled by the property offset before this point; invalid negative lengths must reach Span.Slice unchanged.
         sourceBuilder.AppendLine($"int propertyPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({propertyDataOffsetName}, 4));");
+    }
+
+    private static void EmitBlittableValueProperty(
+        GeneratedSourceBuilder sourceBuilder,
+        TypeGenerationModel containingModel,
+        PropertyGenerationModel property,
+        int propertyIndex)
+    {
+        string propertyAccessibility = IsEffectivelyPublic(property.Symbol.Type) ? "public" : "internal";
+        string propertyType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        string serializedPropertyType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        sourceBuilder.AppendLine($"{propertyAccessibility} {propertyType} {EscapeIdentifier(property.Symbol.Name + "_AsValue")}");
+        sourceBuilder.OpenBlock();
+        sourceBuilder.AppendLine("get");
+        sourceBuilder.OpenBlock();
+
+        if (containingModel.IsBlittableStruct)
+        {
+            sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+        }
+        else
+        {
+            sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+            sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
+            if (property.IsNullableType)
+            {
+                sourceBuilder.AppendLine("if (propertyDataOffset == 0)");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("return default;");
+                sourceBuilder.CloseBlock();
+            }
+            sourceBuilder.AppendLine($"return MemoryMarshal.Read<{serializedPropertyType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
+        }
+
+        sourceBuilder.CloseBlock();
+        sourceBuilder.CloseBlock();
     }
 
     private static void EmitExtensionClass(
