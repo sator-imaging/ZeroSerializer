@@ -1345,7 +1345,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 else
                 {
-                    sourceBuilder.AppendLine("// Unreachable branch. Included for completeness.");
+                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
                     sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 }
                 break;
