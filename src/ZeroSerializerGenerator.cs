@@ -120,7 +120,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         injectedAttributeSourceBuilder.AppendLine($"internal sealed class {SerializerAttributeName} : Attribute");
         injectedAttributeSourceBuilder.OpenBlock();
         injectedAttributeSourceBuilder.AppendLine("[Obsolete(\"Emitting string representation of the type will expose internal details in the resulting assembly. Consider using `ShapeHash` instead, or using `#if DEBUG` directive to prevent emitting on release build.\")]");
-        injectedAttributeSourceBuilder.AppendLine("public bool EmitShapeTag { get; set; }");
+        injectedAttributeSourceBuilder.AppendLine("public bool EmitShapeTag;");
         injectedAttributeSourceBuilder.AppendLine();
         injectedAttributeSourceBuilder.AppendLine($"public {SerializerAttributeName}() {{ }}");
         injectedAttributeSourceBuilder.CloseBlock();
