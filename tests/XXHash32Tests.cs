@@ -16,7 +16,7 @@ public sealed class XXHash32Tests
     private const ulong PRIME64 = 11400714785074694797UL;
 
     [Fact]
-    public void SanityCheck()
+    public void XXHash32ProducesExpectedChecksumForTestVectors()
     {
         byte[] sanityBuffer = new byte[222];
         FillTestBuffer(sanityBuffer);

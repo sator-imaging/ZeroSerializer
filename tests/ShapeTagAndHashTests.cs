@@ -13,7 +13,7 @@ namespace ZeroSerializer.Tests;
 public class ShapeTagAndHashTests
 {
     [Fact]
-    public void PrimitiveRecordViewTest()
+    public void PrimitiveRecordEmitsExpectedShapeTagAndHash()
     {
         string primitiveExpected = "v1/{bool,byte,sbyte,char,short,ushort,int,uint,long,ulong,float,double}";
         Assert.Equal(PrimitiveRecordView.ShapeTag, primitiveExpected);
@@ -21,7 +21,7 @@ public class ShapeTagAndHashTests
     }
 
     [Fact]
-    public void PackedRecordViewTest()
+    public void BlittablePackedRecordEmitsExpectedShapeTagAndHash()
     {
         string packedRecordExpected = "v1/blittable{int,enum:short}";
         Assert.Equal(PackedRecordView.ShapeTag, packedRecordExpected);
@@ -30,7 +30,7 @@ public class ShapeTagAndHashTests
     }
 
     [Fact]
-    public void PackedContainerViewTest()
+    public void BlittablePackedContainerEmitsExpectedShapeTagAndHash()
     {
         string packedContainerExpected = "v1/{blittable{int,enum:short},blittable{int,enum:short}?,blittable{int,enum:short}[]}";
         Assert.Equal(PackedContainerView.ShapeTag, packedContainerExpected);
@@ -38,7 +38,7 @@ public class ShapeTagAndHashTests
     }
 
     [Fact]
-    public void EnumClassViewTest()
+    public void EnumClassEmitsExpectedShapeTagAndHash()
     {
         string enumClassExpected = "v1/{enum:byte,enum:short,enum:int,enum:int?}";
         Assert.Equal(EnumClassView.ShapeTag, enumClassExpected);
@@ -46,7 +46,7 @@ public class ShapeTagAndHashTests
     }
 
     [Fact]
-    public void SchemaSignatureTestsModelViewTest()
+    public void SchemaSignatureModelEmitsExpectedShapeTagAndHash()
     {
         string schemaSignatureExpected = "v1/{blittable{int,enum:short},{int,enum:byte},blittable{int,enum:short}[],{},blittable{},{enum:byte,enum:short}?,enum:byte[],enum:ulong[],int?,bool?}";
         Assert.Equal(SchemaSignatureTestsModelView.ShapeTag, schemaSignatureExpected);

@@ -15,7 +15,7 @@ namespace ZeroSerializer.Tests
     public sealed class UnityCompatibilityTests
     {
         [Fact]
-        public void RunUnityCompatibilityTest()
+        public void UnityCompatibilityAssemblyExecutesSuccessfully()
         {
             // Retrieve the UnityCompatibility assembly
             Assembly unityAssembly = typeof(UnityCompatibility::FixedPacket).Assembly;
@@ -38,7 +38,7 @@ namespace ZeroSerializer.Tests
         }
 
         [Fact]
-        public void VerifyAlwaysFailThrowsException()
+        public void AlwaysFailHelperThrowsExpectedException()
         {
             // Verify that calling UnityCompatibilityHelper.AlwaysFail() throws the expected exception
             var exception = Assert.Throws<InvalidOperationException>(() => UnityCompatibility::UnityCompatibilityHelper.AlwaysFail());
@@ -46,7 +46,7 @@ namespace ZeroSerializer.Tests
         }
 
         [Fact]
-        public void VerifyUnityCompatibilityAssemblyTargetFrameworkIsNetStandard21()
+        public void UnityCompatibilityAssemblyTargetsNetStandard21()
         {
             // Retrieve the UnityCompatibility assembly
             Assembly unityAssembly = typeof(UnityCompatibility::FixedPacket).Assembly;
