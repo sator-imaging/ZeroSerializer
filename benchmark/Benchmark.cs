@@ -83,13 +83,13 @@ namespace ZeroSerializer.Benchmarks
                 Integers = integers,
                 Longs = longs,
                 PackedValues = packedValues,
-                Nested = new NestedPayload
+                StructTyped = new StructTypedPayload
                 {
                     Version = random.Next(),
                     Label = CreateRandomString(random, 128),
                     Summary = packedValues[0],
                 },
-                NestedStruct = new NestedStructPayload(
+                StructTypedStruct = new StructTypedStructPayload(
                     random.Next(),
                     CreateRandomInt64(random),
                     CreateRandomString(random, 128)),
@@ -126,14 +126,14 @@ namespace ZeroSerializer.Benchmarks
             ReadOnlySpan<int> integers = view.Integers;
             ReadOnlySpan<long> longs = view.Longs;
             ReadOnlySpan<PackedBenchmarkValue> packedValues = view.PackedValues;
-            NestedPayloadView? nested = view.Nested;
-            int nestedVersion = nested!.Value.Version;
-            ReadOnlySpan<char> nestedLabel = nested!.Value.Label;
-            PackedBenchmarkValueView nestedSummary = nested!.Value.Summary;
-            NestedStructPayloadView nestedStruct = view.NestedStruct;
-            int nestedStructCode = nestedStruct.Code;
-            long nestedStructAmount = nestedStruct.Amount;
-            ReadOnlySpan<char> nestedStructLabel = nestedStruct.Label;
+            StructTypedPayloadView? structTyped = view.StructTyped;
+            int structTypedVersion = structTyped!.Value.Version;
+            ReadOnlySpan<char> structTypedLabel = structTyped!.Value.Label;
+            PackedBenchmarkValueView structTypedSummary = structTyped!.Value.Summary;
+            StructTypedStructPayloadView structTypedStruct = view.StructTypedStruct;
+            int structTypedStructCode = structTypedStruct.Code;
+            long structTypedStructAmount = structTypedStruct.Amount;
+            ReadOnlySpan<char> structTypedStructLabel = structTypedStruct.Label;
 
             // Consume getter results without traversing or validating collection contents.
             unchecked
@@ -149,13 +149,13 @@ namespace ZeroSerializer.Benchmarks
                 consumedValue = (consumedValue * 31) + integers.Length;
                 consumedValue = (consumedValue * 31) + longs.Length;
                 consumedValue = (consumedValue * 31) + packedValues.Length;
-                consumedValue = (consumedValue * 31) + nestedVersion;
-                consumedValue = (consumedValue * 31) + nestedLabel.Length;
-                consumedValue = (consumedValue * 31) + nestedSummary.Number;
-                consumedValue = (consumedValue * 31) + nestedSummary.Amount.GetHashCode();
-                consumedValue = (consumedValue * 31) + nestedStructCode;
-                consumedValue = (consumedValue * 31) + nestedStructAmount.GetHashCode();
-                consumedValue = (consumedValue * 31) + nestedStructLabel.Length;
+                consumedValue = (consumedValue * 31) + structTypedVersion;
+                consumedValue = (consumedValue * 31) + structTypedLabel.Length;
+                consumedValue = (consumedValue * 31) + structTypedSummary.Number;
+                consumedValue = (consumedValue * 31) + structTypedSummary.Amount.GetHashCode();
+                consumedValue = (consumedValue * 31) + structTypedStructCode;
+                consumedValue = (consumedValue * 31) + structTypedStructAmount.GetHashCode();
+                consumedValue = (consumedValue * 31) + structTypedStructLabel.Length;
                 return consumedValue;
             }
         }
@@ -288,13 +288,13 @@ namespace ZeroSerializer.Benchmarks
 
         public PackedBenchmarkValue[] PackedValues { get; init; } = Array.Empty<PackedBenchmarkValue>();
 
-        public NestedPayload Nested { get; init; } = new();
+        public StructTypedPayload StructTyped { get; init; } = new();
 
-        public NestedStructPayload NestedStruct { get; init; }
+        public StructTypedStructPayload StructTypedStruct { get; init; }
     }
 
     [ZeroSerializerAttribute]
-    public sealed class NestedPayload
+    public sealed class StructTypedPayload
     {
         public int Version { get; init; }
 
@@ -304,9 +304,9 @@ namespace ZeroSerializer.Benchmarks
     }
 
     [ZeroSerializerAttribute]
-    public readonly struct NestedStructPayload
+    public readonly struct StructTypedStructPayload
     {
-        public NestedStructPayload(int code, long amount, string label)
+        public StructTypedStructPayload(int code, long amount, string label)
         {
             Code = code;
             Amount = amount;

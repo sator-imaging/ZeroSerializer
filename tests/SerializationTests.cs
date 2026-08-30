@@ -117,7 +117,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NestedNullableAndArrayBlittableStructsSerializeAndDeserializeCorrectly()
+    public void StructTypedNullableAndArrayBlittableStructsSerializeAndDeserializeCorrectly()
     {
         var first = new PackedRecord { Number = 10, State = SignedState.Negative };
         var second = new PackedRecord { Number = 20, State = SignedState.Positive };
@@ -355,22 +355,22 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void ZeroLengthNestedStructSharesOffsetWithNextProperty()
+    public void ZeroLengthStructTypedSharesOffsetWithNextProperty()
     {
-        var source = new ZeroLengthNestedStructContainer
+        var source = new ZeroLengthStructTypedContainer
         {
             Before = 123,
             Empty = new EmptyStruct(),
             After = 456,
         };
-        var buffer = new byte[ZeroLengthNestedStructContainerView.RequiredByteLength];
+        var buffer = new byte[ZeroLengthStructTypedContainerView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new ZeroLengthNestedStructContainerView(buffer);
+        var view = new ZeroLengthStructTypedContainerView(buffer);
         EmptyStructView emptyView = view.Empty;
 
-        // A zero-byte nested payload and its following property intentionally share one offset.
-        TestAssert.Equal(20, ZeroLengthNestedStructContainerView.RequiredByteLength, nameof(ZeroLengthNestedStructContainerView.RequiredByteLength));
+        // A zero-byte struct-typed payload and its following property intentionally share one offset.
+        TestAssert.Equal(20, ZeroLengthStructTypedContainerView.RequiredByteLength, nameof(ZeroLengthStructTypedContainerView.RequiredByteLength));
         TestAssert.Equal(20, writtenBytes, nameof(writtenBytes));
         TestAssert.Equal(12, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Before offset");
         TestAssert.Equal(16, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4)), "Empty offset");
@@ -765,9 +765,9 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NestedSerializableTypePropertiesReturnViewStructInstances()
+    public void StructTypedSerializablePropertiesReturnViewStructInstances()
     {
-        // 1. Assert that nested blittable type returns view
+        // 1. Assert that struct-typed blittable property returns view
         PropertyInfo? valueProperty = typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value));
         Assert.NotNull(valueProperty);
         Assert.Equal(typeof(PackedRecordView), valueProperty!.PropertyType);
@@ -776,7 +776,7 @@ public sealed class SerializationTests
         Assert.NotNull(optionalValueProperty);
         Assert.Equal(typeof(Nullable<PackedRecordView>), optionalValueProperty!.PropertyType);
 
-        // 2. Assert that nested non-blittable type returns view
+        // 2. Assert that struct-typed non-blittable property returns view
         PropertyInfo? childProperty = typeof(VariableRecordView).GetProperty(nameof(VariableRecordView.Child));
         Assert.NotNull(childProperty);
         Assert.Equal(typeof(FixedClassView?), childProperty!.PropertyType);
@@ -1047,7 +1047,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void GetByteLengthCalculatesTotalSizeWhenNestedBlittableStructIsLastField()
+    public void GetByteLengthCalculatesTotalSizeWhenStructTypedBlittableStructIsLastProperty()
     {
         var source = new VariableStructWithBlittableStructAtEnd { Text = "hello", Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
         var buffer = new byte[64];
@@ -1177,7 +1177,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NestedBlittableRecordStructsReturnViewStructs()
+    public void StructTypedBlittableRecordStructsReturnViewStructs()
     {
         // 1. Verify view property types via reflection
         PropertyInfo? valueProperty = typeof(BlittableRecordStructContainerView).GetProperty(nameof(BlittableRecordStructContainerView.Value));
@@ -1288,16 +1288,16 @@ public sealed class SerializationTests
     [Fact]
     public void SharedReferenceTypeInstancesAreSerializedSequentially()
     {
-        var sharedNested = new SharedClassNested { NestedValue = 42 };
-        var sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
-        var distinctItemWithSharedNested = new SharedClassItem { Value = 200, Nested = sharedNested };
+        var sharedStructTyped = new SharedClassStructTyped { StructTypedValue = 42 };
+        var sharedItem = new SharedClassItem { Value = 100, StructTyped = sharedStructTyped };
+        var distinctItemWithSharedStructTyped = new SharedClassItem { Value = 200, StructTyped = sharedStructTyped };
 
-        // Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassNested instance
+        // Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassStructTyped instance
         var container = new DuplicateInstanceContainer
         {
             Foo = sharedItem,
             Bar = sharedItem,
-            Baz = distinctItemWithSharedNested,
+            Baz = distinctItemWithSharedStructTyped,
         };
 
         var buffer = new byte[256];
@@ -1308,9 +1308,9 @@ public sealed class SerializationTests
         TestAssert.Equal(100, view.Bar?.Value, nameof(container.Bar.Value));
         TestAssert.Equal(200, view.Baz?.Value, nameof(container.Baz.Value));
 
-        TestAssert.Equal(42, view.Foo?.Nested?.NestedValue, nameof(container.Foo.Nested.NestedValue));
-        TestAssert.Equal(42, view.Bar?.Nested?.NestedValue, nameof(container.Bar.Nested.NestedValue));
-        TestAssert.Equal(42, view.Baz?.Nested?.NestedValue, nameof(container.Baz.Nested.NestedValue));
+        TestAssert.Equal(42, view.Foo?.StructTyped?.StructTypedValue, nameof(container.Foo.StructTyped.StructTypedValue));
+        TestAssert.Equal(42, view.Bar?.StructTyped?.StructTypedValue, nameof(container.Bar.StructTyped.StructTypedValue));
+        TestAssert.Equal(42, view.Baz?.StructTyped?.StructTypedValue, nameof(container.Baz.StructTyped.StructTypedValue));
 
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }

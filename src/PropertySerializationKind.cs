@@ -11,6 +11,6 @@ internal enum PropertySerializationKind
     String,
     BlittableStruct,
     Array,
-    Nested,
+    StructTyped,
     InvalidArray,
 }

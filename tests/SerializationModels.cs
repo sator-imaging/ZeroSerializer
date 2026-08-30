@@ -204,7 +204,7 @@ public struct EmptyStruct
 }
 
 [ZeroSerializer]
-public sealed class ZeroLengthNestedStructContainer
+public sealed class ZeroLengthStructTypedContainer
 {
     public int Before { get; init; }
 
@@ -347,13 +347,13 @@ public class DuplicateInstanceContainer
 public class SharedClassItem
 {
     public int Value { get; set; }
-    public SharedClassNested? Nested { get; set; }
+    public SharedClassStructTyped? StructTyped { get; set; }
 }
 
 [ZeroSerializer]
-public class SharedClassNested
+public class SharedClassStructTyped
 {
-    public int NestedValue { get; set; }
+    public int StructTypedValue { get; set; }
 }
 
 [ZeroSerializer]
@@ -439,9 +439,9 @@ public sealed class SequentialPackOneClass
 [ZeroSerializer(EmitShapeTag = true)]
 public sealed class SchemaSignatureTestsModel
 {
-    // 1. blittable and non-blittable nested type combo
-    public PackedRecord BlittableNested { get; init; }
-    public FixedClass NonBlittableNested { get; init; }
+    // 1. blittable and non-blittable struct-typed property combo
+    public PackedRecord BlittableStructTyped { get; init; }
+    public FixedClass NonBlittableStructTyped { get; init; }
 
     // 2. blittable struct array
     public PackedRecord[] BlittableStructArray { get; init; }

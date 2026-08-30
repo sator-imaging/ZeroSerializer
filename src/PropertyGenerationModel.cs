@@ -14,7 +14,7 @@ internal sealed class PropertyGenerationModel
         PropertySerializationKind kind,
         int elementByteCount,
         ITypeSymbol? arrayElementType,
-        INamedTypeSymbol? nestedSerializableType,
+        INamedTypeSymbol? structTypedSerializableType,
         ITypeSymbol? nullableUnderlyingType = null,
         bool isNullableType = false)
     {
@@ -22,7 +22,7 @@ internal sealed class PropertyGenerationModel
         Kind = kind;
         ElementByteCount = elementByteCount;
         ArrayElementType = arrayElementType;
-        NestedSerializableType = nestedSerializableType;
+        StructTypedSerializableType = structTypedSerializableType;
         NullableUnderlyingType = nullableUnderlyingType;
         IsNullableType = isNullableType;
     }
@@ -37,7 +37,7 @@ internal sealed class PropertyGenerationModel
 
     internal ITypeSymbol? ArrayElementType { get; }
 
-    internal INamedTypeSymbol? NestedSerializableType { get; }
+    internal INamedTypeSymbol? StructTypedSerializableType { get; }
 
     internal ITypeSymbol? NullableUnderlyingType { get; }
 

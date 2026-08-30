@@ -94,7 +94,7 @@ Transform original = view.Materialize();
 - Primitives and enums
 - Nullable values
 - `string` stored as UTF-16 (UTF-8 can be stored as byte[] by hand)
-- Nested `[ZeroSerializer]` types
+- Struct-typed `[ZeroSerializer]` properties
 - Blittable structs with `[StructLayout(LayoutKind.Sequential, Pack = 1)]`
 - One-dimensional arrays of blittable values or structs
 
@@ -130,4 +130,4 @@ Blittable structs are stored directly as raw struct bytes without an offset tabl
 - The wire format requires a little-endian runtime.
 - View structs expose a compile-time constant `IsBlittable`, indicating whether the underlying serialized type is a blittable struct.
 - You can use `.AsMemory()` extension method (returns `ReadOnlyMemory<byte>`) or `.Materialize()` extension method (for views of blittable structs to convert them back to the original struct).
-- Nested classes and structs must be marked with `[ZeroSerializer]`; otherwise the generator reports an unsupported property diagnostic.
+- Struct-typed properties must be marked with `[ZeroSerializer]`; otherwise the generator reports an unsupported property diagnostic.
