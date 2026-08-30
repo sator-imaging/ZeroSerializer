@@ -52,7 +52,7 @@ public class ShapeTagEmissionTests
     }
 
     [Fact]
-    public void InjectedAttributeExposesObsoleteEmitShapeTagProperty()
+    public void InjectedAttributeExposesObsoleteEmitShapeTagField()
     {
         GeneratorDriverRunResult result = RunGenerator("public class Record { }");
         string generatedAttribute = result.Results[0].GeneratedSources

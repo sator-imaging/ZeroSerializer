@@ -382,7 +382,7 @@ public sealed class SerializationTests
     }
 
     [Fact]
-    public void NonSerializablePropertiesAreIgnored()
+    public void PublicFieldsAreIgnored()
     {
         var source = new FieldsOnlyClass { NonSerializedField = 123 };
 
