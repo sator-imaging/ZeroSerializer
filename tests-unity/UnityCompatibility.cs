@@ -12,7 +12,7 @@ using ZeroSerializer;
 #pragma warning disable CEK005  // Collection expressions must be empty
 
 // This project compiles every successful public wire shape against netstandard2.1; diagnostic failures remain test-project cases because they intentionally prevent compilation.
-var fixedPacket = new FixedPacket
+FixedPacket fixedPacket = new FixedPacket
 {
     BooleanValue = true,
     ByteValue = 0xAB,
@@ -29,9 +29,9 @@ var fixedPacket = new FixedPacket
     State = PacketState.Ready,
     Position = new PackedPosition { X = 10, Y = 20 },
 };
-var fixedBuffer = new byte[FixedPacketView.RequiredByteLength];
+byte[] fixedBuffer = new byte[FixedPacketView.RequiredByteLength];
 int fixedWrittenByteCount = fixedPacket.Serialize(fixedBuffer);
-var fixedView = new FixedPacketView(fixedBuffer);
+FixedPacketView fixedView = new FixedPacketView(fixedBuffer);
 
 RequireCondition(
     fixedWrittenByteCount == FixedPacketView.RequiredByteLength
@@ -59,14 +59,14 @@ RequireCondition(
     && fixedSerializedMemory.Length == FixedPacketView.RequiredByteLength,
     "Fixed-size View conversion did not expose its exact serialized region.");
 
-var packedPacket = new PackedPacket
+PackedPacket packedPacket = new PackedPacket
 {
     Identifier = 42,
     Position = new PackedPosition { X = -10, Y = 20 },
 };
-var packedBuffer = new byte[PackedPacketView.RequiredByteLength];
+byte[] packedBuffer = new byte[PackedPacketView.RequiredByteLength];
 int packedWrittenByteCount = packedPacket.Serialize(packedBuffer);
-var packedView = new PackedPacketView(packedBuffer);
+PackedPacketView packedView = new PackedPacketView(packedBuffer);
 RequireCondition(
     packedWrittenByteCount == PackedPacketView.RequiredByteLength
     && packedView.Identifier == packedPacket.Identifier
@@ -74,7 +74,7 @@ RequireCondition(
     && packedView.Position.Y == packedPacket.Position.Y,
     "Root Blittable Struct did not match its source.");
 
-var variablePacket = new VariablePacket
+VariablePacket variablePacket = new VariablePacket
 {
     Name = "unity",
     EmptyName = string.Empty,
@@ -98,9 +98,9 @@ var variablePacket = new VariablePacket
     FloatValues = [1.5f, 2.5f, 3.5f],
     DoubleValues = [1.25, 2.25, 3.25],
 };
-var variableBuffer = new byte[1024];
+byte[] variableBuffer = new byte[1024];
 int variableWrittenByteCount = variablePacket.Serialize(variableBuffer);
-var variableView = new VariablePacketView(variableBuffer.AsMemory(0, variableWrittenByteCount));
+VariablePacketView variableView = new VariablePacketView(variableBuffer.AsMemory(0, variableWrittenByteCount));
 
 RequireCondition(
     VariablePacketView.RequiredByteLength < 0
@@ -151,26 +151,26 @@ RequireCondition(
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(18 * sizeof(int), sizeof(int))) == 0,
     "Null payloads were not represented by zero property offsets.");
 
-var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
-var ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
-ignoredMembersPacket.Serialize(ignoredMembersBuffer);
-var ignoredMembersView = new IgnoredMembersPacketView(ignoredMembersBuffer);
+IgnoredMembersPacket ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
+byte[] ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
+int ignoredMembersWritten = ignoredMembersPacket.Serialize(ignoredMembersBuffer);
+IgnoredMembersPacketView ignoredMembersView = new IgnoredMembersPacketView(ignoredMembersBuffer);
 RequireCondition(
-    ignoredMembersView.Included == 7
+    ignoredMembersWritten == 16 && ignoredMembersView.Included == 7
     && ignoredMembersView.PrivateSetter == 8
     && typeof(IgnoredMembersPacketView).GetProperties().Length == 2
     && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.Included)) is not null
     && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.PrivateSetter)) is not null,
     "Ignored properties, indexers, setters, or non-public getters changed the generated View.");
 
-var namespacedPacket = new UnityCompatibilityModels.NamespacedPacket { Identifier = 11 };
-var namespacedBuffer = new byte[UnityCompatibilityModels.NamespacedPacketView.RequiredByteLength];
-namespacedPacket.Serialize(namespacedBuffer);
-var namespacedView = new UnityCompatibilityModels.NamespacedPacketView(namespacedBuffer);
-RequireCondition(namespacedView.Identifier == namespacedPacket.Identifier, "Namespace-local generation failed.");
+UnityCompatibilityModels.NamespacedPacket namespacedPacket = new UnityCompatibilityModels.NamespacedPacket { Identifier = 11 };
+byte[] namespacedBuffer = new byte[UnityCompatibilityModels.NamespacedPacketView.RequiredByteLength];
+int namespacedWritten = namespacedPacket.Serialize(namespacedBuffer);
+UnityCompatibilityModels.NamespacedPacketView namespacedView = new UnityCompatibilityModels.NamespacedPacketView(namespacedBuffer);
+RequireCondition(namespacedWritten == 8 && namespacedView.Identifier == namespacedPacket.Identifier, "Namespace-local generation failed.");
 
-var emptyClassBuffer = Span<byte>.Empty;
-var emptyStructBuffer = Span<byte>.Empty;
+Span<byte> emptyClassBuffer = Span<byte>.Empty;
+Span<byte> emptyStructBuffer = Span<byte>.Empty;
 RequireCondition(
     new EmptyClassPacket().Serialize(emptyClassBuffer) == 0
     && new EmptyStructPacket().Serialize(emptyStructBuffer) == 0
@@ -179,32 +179,34 @@ RequireCondition(
     "Empty serializable types did not remain zero length.");
 
 // Record class roundtrip verification
-var recordObj = new UnitySimpleCsharpRecord { IntValue = 55, DoubleValue = 99.9 };
-var recordBuffer = new byte[128];
+UnitySimpleCsharpRecord recordObj = new UnitySimpleCsharpRecord { IntValue = 55, DoubleValue = 99.9 };
+byte[] recordBuffer = new byte[128];
 int recordWritten = recordObj.Serialize(recordBuffer);
-var recordView = new UnitySimpleCsharpRecordView(recordBuffer);
+UnitySimpleCsharpRecordView recordView = new UnitySimpleCsharpRecordView(recordBuffer);
 RequireCondition(
-    recordView.IntValue == 55
+    recordWritten == 20
+    && recordView.IntValue == 55
     && recordView.DoubleValue == 99.9
     && !UnitySimpleCsharpRecordView.IsBlittable,
     "UnitySimpleCsharpRecord did not match its source or IsBlittable was incorrect.");
 
 // Record struct roundtrip verification
-var recordStructObj = new UnitySimpleRecordStruct { IntValue = 66, DoubleValue = 88.8 };
-var recordStructBuffer = new byte[128];
+UnitySimpleRecordStruct recordStructObj = new UnitySimpleRecordStruct { IntValue = 66, DoubleValue = 88.8 };
+byte[] recordStructBuffer = new byte[128];
 int recordStructWritten = recordStructObj.Serialize(recordStructBuffer);
-var recordStructView = new UnitySimpleRecordStructView(recordStructBuffer);
+UnitySimpleRecordStructView recordStructView = new UnitySimpleRecordStructView(recordStructBuffer);
 RequireCondition(
-    recordStructView.IntValue == 66
+    recordStructWritten == 20
+    && recordStructView.IntValue == 66
     && recordStructView.DoubleValue == 88.8
     && !UnitySimpleRecordStructView.IsBlittable,
     "UnitySimpleRecordStruct did not match its source or IsBlittable was incorrect.");
 
 // Blittable record struct layout verification
-var blittableRecordStructObj = new UnitySimpleBlittableRecordStruct { IntValue = 77, DoubleValue = 77.7 };
-var blittableRecordStructBuffer = new byte[UnitySimpleBlittableRecordStructView.RequiredByteLength];
+UnitySimpleBlittableRecordStruct blittableRecordStructObj = new UnitySimpleBlittableRecordStruct { IntValue = 77, DoubleValue = 77.7 };
+byte[] blittableRecordStructBuffer = new byte[UnitySimpleBlittableRecordStructView.RequiredByteLength];
 int blittableRecordStructWritten = blittableRecordStructObj.Serialize(blittableRecordStructBuffer);
-var blittableRecordStructView = new UnitySimpleBlittableRecordStructView(blittableRecordStructBuffer);
+UnitySimpleBlittableRecordStructView blittableRecordStructView = new UnitySimpleBlittableRecordStructView(blittableRecordStructBuffer);
 RequireCondition(
     blittableRecordStructView.IntValue == 77
     && blittableRecordStructView.DoubleValue == 77.7
@@ -214,19 +216,20 @@ RequireCondition(
     "UnitySimpleBlittableRecordStruct did not match its source or IsBlittable was incorrect.");
 
 // Nested blittable record struct container verification
-var firstRecord = new UnitySimpleBlittableRecordStruct { IntValue = 88, DoubleValue = 88.88 };
-var secondRecord = new UnitySimpleBlittableRecordStruct { IntValue = 99, DoubleValue = 99.99 };
-var nestedBlittableRecordContainer = new UnityBlittableRecordStructContainer
+UnitySimpleBlittableRecordStruct firstRecord = new UnitySimpleBlittableRecordStruct { IntValue = 88, DoubleValue = 88.88 };
+UnitySimpleBlittableRecordStruct secondRecord = new UnitySimpleBlittableRecordStruct { IntValue = 99, DoubleValue = 99.99 };
+UnityBlittableRecordStructContainer nestedBlittableRecordContainer = new UnityBlittableRecordStructContainer
 {
     Value = firstRecord,
     OptionalValue = secondRecord,
     Values = [firstRecord, secondRecord],
 };
-var nestedBlittableRecordBuffer = new byte[256];
+byte[] nestedBlittableRecordBuffer = new byte[256];
 int nestedBlittableRecordWritten = nestedBlittableRecordContainer.Serialize(nestedBlittableRecordBuffer);
-var nestedBlittableRecordView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordWritten));
+UnityBlittableRecordStructContainerView nestedBlittableRecordView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordWritten));
 RequireCondition(
-    nestedBlittableRecordView.Value.IntValue == 88
+    nestedBlittableRecordWritten == 64
+    && nestedBlittableRecordView.Value.IntValue == 88
     && nestedBlittableRecordView.Value.DoubleValue == 88.88
     && nestedBlittableRecordView.OptionalValue!.Value.IntValue == 99
     && nestedBlittableRecordView.OptionalValue!.Value.DoubleValue == 99.99
@@ -238,16 +241,17 @@ RequireCondition(
     && nestedBlittableRecordView.GetByteLength() == nestedBlittableRecordWritten,
     "UnityBlittableRecordStructContainer non-null roundtrip failed.");
 
-var nestedBlittableRecordNullsContainer = new UnityBlittableRecordStructContainer
+UnityBlittableRecordStructContainer nestedBlittableRecordNullsContainer = new UnityBlittableRecordStructContainer
 {
     Value = firstRecord,
     OptionalValue = null,
     Values = null,
 };
 int nestedBlittableRecordNullsWritten = nestedBlittableRecordNullsContainer.Serialize(nestedBlittableRecordBuffer);
-var nestedBlittableRecordNullsView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordNullsWritten));
+UnityBlittableRecordStructContainerView nestedBlittableRecordNullsView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordNullsWritten));
 RequireCondition(
-    nestedBlittableRecordNullsView.Value.IntValue == 88
+    nestedBlittableRecordNullsWritten == 24
+    && nestedBlittableRecordNullsView.Value.IntValue == 88
     && nestedBlittableRecordNullsView.Value.DoubleValue == 88.88
     && nestedBlittableRecordNullsView.OptionalValue is null
     && nestedBlittableRecordNullsView.Values.IsEmpty

@@ -21,7 +21,7 @@ public sealed class SerializationTests
     [Fact]
     public void PrimitiveTypesSerializeAndDeserializeCorrectly()
     {
-        var source = new PrimitiveRecord
+        PrimitiveRecord source = new PrimitiveRecord
         {
             Boolean = true,
             Byte = 0xAB,
@@ -36,10 +36,10 @@ public sealed class SerializationTests
             Single = 1.25f,
             Double = -123.5,
         };
-        var buffer = new byte[PrimitiveRecordView.RequiredByteLength];
+        byte[] buffer = new byte[PrimitiveRecordView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new PrimitiveRecordView(buffer);
+        PrimitiveRecordView view = new PrimitiveRecordView(buffer);
 
         TestAssert.Equal(PrimitiveRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
         TestAssert.Equal(source.Boolean, view.Boolean, nameof(view.Boolean));
@@ -59,16 +59,16 @@ public sealed class SerializationTests
     [Fact]
     public void EnumPropertiesSerializeAndDeserializeCorrectly()
     {
-        var classSource = new EnumClass
+        EnumClass classSource = new EnumClass
         {
             ByteState = ByteState.Ready,
             SignedState = SignedState.Negative,
             DefaultState = DefaultState.Ready,
             NullableDefaultState = DefaultState.Ready
         };
-        var classBuffer = new byte[1024];
+        byte[] classBuffer = new byte[1024];
         int classWritten = classSource.Serialize(classBuffer);
-        var classView = new EnumClassView(classBuffer.AsMemory(0, classWritten));
+        EnumClassView classView = new EnumClassView(classBuffer.AsMemory(0, classWritten));
 
         TestAssert.Equal(ByteState.Ready, classView.ByteState, nameof(classView.ByteState));
         TestAssert.Equal(SignedState.Negative, classView.SignedState, nameof(classView.SignedState));
@@ -76,26 +76,26 @@ public sealed class SerializationTests
         TestAssert.Equal(DefaultState.Ready, classView.NullableDefaultState, nameof(classView.NullableDefaultState));
 
         // Test with NullableDefaultState as null
-        var classSourceNull = new EnumClass
+        EnumClass classSourceNull = new EnumClass
         {
             ByteState = ByteState.None,
             SignedState = SignedState.Positive,
             DefaultState = DefaultState.None,
             NullableDefaultState = null
         };
-        var classBufferNull = new byte[1024];
+        byte[] classBufferNull = new byte[1024];
         int classWrittenNull = classSourceNull.Serialize(classBufferNull);
-        var classViewNull = new EnumClassView(classBufferNull.AsMemory(0, classWrittenNull));
+        EnumClassView classViewNull = new EnumClassView(classBufferNull.AsMemory(0, classWrittenNull));
 
         TestAssert.Equal(ByteState.None, classViewNull.ByteState, nameof(classViewNull.ByteState));
         TestAssert.Equal(SignedState.Positive, classViewNull.SignedState, nameof(classViewNull.SignedState));
         TestAssert.Equal(DefaultState.None, classViewNull.DefaultState, nameof(classViewNull.DefaultState));
         Assert.Null(classViewNull.NullableDefaultState);
 
-        var structSource = new EnumStruct(ByteState.Ready, SignedState.Positive);
-        var structBuffer = new byte[EnumStructView.RequiredByteLength];
+        EnumStruct structSource = new EnumStruct(ByteState.Ready, SignedState.Positive);
+        byte[] structBuffer = new byte[EnumStructView.RequiredByteLength];
         structSource.Serialize(structBuffer);
-        var structView = new EnumStructView(structBuffer);
+        EnumStructView structView = new EnumStructView(structBuffer);
 
         TestAssert.Equal(ByteState.Ready, structView.ByteState, nameof(structView.ByteState));
         TestAssert.Equal(SignedState.Positive, structView.SignedState, nameof(structView.SignedState));
@@ -104,11 +104,11 @@ public sealed class SerializationTests
     [Fact]
     public void BlittableStructSerializesAndDeserializesCorrectly()
     {
-        var source = new PackedRecord { Number = 123456, State = SignedState.Negative };
-        var buffer = new byte[PackedRecordView.RequiredByteLength];
+        PackedRecord source = new PackedRecord { Number = 123456, State = SignedState.Negative };
+        byte[] buffer = new byte[PackedRecordView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new PackedRecordView(buffer);
+        PackedRecordView view = new PackedRecordView(buffer);
 
         TestAssert.Equal(6, PackedRecordView.RequiredByteLength, nameof(PackedRecordView.RequiredByteLength));
         TestAssert.Equal(PackedRecordView.RequiredByteLength, writtenBytes, nameof(writtenBytes));
@@ -119,18 +119,18 @@ public sealed class SerializationTests
     [Fact]
     public void NestedNullableAndArrayBlittableStructsSerializeAndDeserializeCorrectly()
     {
-        var first = new PackedRecord { Number = 10, State = SignedState.Negative };
-        var second = new PackedRecord { Number = 20, State = SignedState.Positive };
-        var source = new PackedContainer
+        PackedRecord first = new PackedRecord { Number = 10, State = SignedState.Negative };
+        PackedRecord second = new PackedRecord { Number = 20, State = SignedState.Positive };
+        PackedContainer source = new PackedContainer
         {
             Value = first,
             OptionalValue = second,
             Values = new[] { first, second },
         };
-        var buffer = new byte[128];
+        byte[] buffer = new byte[128];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
+        PackedContainerView view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(first.Number, view.Value.Number, nameof(view.Value));
         TestAssert.Equal(second.Number, view.OptionalValue!.Value.Number, nameof(view.OptionalValue));
@@ -146,23 +146,23 @@ public sealed class SerializationTests
         const int elementCount = 1013;
 
         // A fixed seed keeps failures reproducible while every serialized element still receives a random value.
-        var random = new Random(0x51A7C0DE);
-        var firstCharacters = new char[elementCount];
-        var secondCharacters = new char[elementCount];
+        Random random = new Random(0x51A7C0DE);
+        char[] firstCharacters = new char[elementCount];
+        char[] secondCharacters = new char[elementCount];
         for (int elementIndex = 0; elementIndex < elementCount; elementIndex++)
         {
             firstCharacters[elementIndex] = (char)random.Next(char.MaxValue + 1);
             secondCharacters[elementIndex] = (char)random.Next(char.MaxValue + 1);
         }
 
-        var bytes = new byte[elementCount];
-        var integers = new int[elementCount];
-        var longs = new long[elementCount];
+        byte[] bytes = new byte[elementCount];
+        int[] integers = new int[elementCount];
+        long[] longs = new long[elementCount];
         random.NextBytes(bytes);
         random.NextBytes(MemoryMarshal.AsBytes(integers.AsSpan()));
         random.NextBytes(MemoryMarshal.AsBytes(longs.AsSpan()));
 
-        var packedRecords = new PackedRecord[elementCount];
+        PackedRecord[] packedRecords = new PackedRecord[elementCount];
         for (int elementIndex = 0; elementIndex < elementCount; elementIndex++)
         {
             packedRecords[elementIndex] = new PackedRecord
@@ -172,7 +172,7 @@ public sealed class SerializationTests
             };
         }
 
-        var source = new LargeRandomRecord
+        LargeRandomRecord source = new LargeRandomRecord
         {
             FirstText = new string(firstCharacters),
             SecondText = new string(secondCharacters),
@@ -181,10 +181,10 @@ public sealed class SerializationTests
             Longs = longs,
             PackedRecords = packedRecords,
         };
-        var buffer = new byte[64 * 1024];
+        byte[] buffer = new byte[64 * 1024];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new LargeRandomRecordView(buffer.AsMemory(0, writtenBytes));
+        LargeRandomRecordView view = new LargeRandomRecordView(buffer.AsMemory(0, writtenBytes));
 
         int expectedWrittenBytes = (6 * sizeof(int))
             + (2 * (sizeof(int) + (elementCount * sizeof(char))))
@@ -215,8 +215,8 @@ public sealed class SerializationTests
     [Fact]
     public void FixedClassSerializesOffsetTableAndPayloadAtExpectedPositions()
     {
-        var source = new FixedClass { Identifier = 0x10203040, State = ByteState.Ready };
-        var buffer = new byte[FixedClassView.RequiredByteLength];
+        FixedClass source = new FixedClass { Identifier = 0x10203040, State = ByteState.Ready };
+        byte[] buffer = new byte[FixedClassView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
 
@@ -231,7 +231,7 @@ public sealed class SerializationTests
     [Fact]
     public void VariableLengthRecordPreservesDataAndEmitsCorrectOffsetHeader()
     {
-        var source = new VariableRecord
+        VariableRecord source = new VariableRecord
         {
             Text = "日本語",
             Values = new[] { 1, -2, 3 },
@@ -239,10 +239,10 @@ public sealed class SerializationTests
             Child = new FixedClass { Identifier = 99, State = ByteState.Ready },
             Tail = -7,
         };
-        var buffer = new byte[256];
+        byte[] buffer = new byte[256];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
+        VariableRecordView view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
 
         int expectedRequiredByteLength = -(24 + (4 * IntPtr.Size));
         TestAssert.Equal(expectedRequiredByteLength, VariableRecordView.RequiredByteLength, nameof(VariableRecordView.RequiredByteLength));
@@ -266,7 +266,7 @@ public sealed class SerializationTests
     public void VariableViewOnlyRequiresCorrectSerializedStart()
     {
         const int serializedDataStartOffset = 17;
-        var source = new VariableRecord
+        VariableRecord source = new VariableRecord
         {
             Text = "trailing buffer",
             Values = new[] { 1, -2, 3 },
@@ -274,11 +274,11 @@ public sealed class SerializationTests
             Child = new FixedClass { Identifier = 99, State = ByteState.Ready },
             Tail = -7,
         };
-        var containingBuffer = new byte[256];
+        byte[] containingBuffer = new byte[256];
 
         int writtenBytes = source.Serialize(containingBuffer.AsSpan(serializedDataStartOffset));
         ReadOnlyMemory<byte> serializedMemoryWithTrailingBytes = containingBuffer.AsMemory(serializedDataStartOffset);
-        var view = new VariableRecordView(serializedMemoryWithTrailingBytes);
+        VariableRecordView view = new VariableRecordView(serializedMemoryWithTrailingBytes);
 
         // Variable layouts use relative offsets, so the correct start and sufficient backing bytes are enough for View access.
         TestAssert.Equal(source.Text, view.Text.ToString(), nameof(view.Text));
@@ -296,7 +296,7 @@ public sealed class SerializationTests
     [Fact]
     public void NullReferenceAndNullablePropertiesSerializeZeroOffsets()
     {
-        var source = new VariableRecord
+        VariableRecord source = new VariableRecord
         {
             Text = null,
             Values = null,
@@ -304,10 +304,10 @@ public sealed class SerializationTests
             Child = null,
             Tail = 5,
         };
-        var buffer = new byte[64];
+        byte[] buffer = new byte[64];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
+        VariableRecordView view = new VariableRecordView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(0, 4)), "Null string offset");
         TestAssert.Equal(0, BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(4, 4)), "Null array offset");
@@ -326,11 +326,11 @@ public sealed class SerializationTests
     [Fact]
     public void NegativeStringLengthThrowsStandardRangeException()
     {
-        var buffer = new byte[8];
+        byte[] buffer = new byte[8];
         BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(0, 4), 4);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(4, 4), -100);
 
-        var view = new StringOnlyRecordView(buffer);
+        StringOnlyRecordView view = new StringOnlyRecordView(buffer);
 
         TestAssert.Equal(-(4 + IntPtr.Size), StringOnlyRecordView.RequiredByteLength, nameof(StringOnlyRecordView.RequiredByteLength));
         // Negative payload lengths are corrupt data and must reach Span.Slice without normalization.
@@ -340,8 +340,8 @@ public sealed class SerializationTests
     [Fact]
     public void EmptyClassAndStructSerializeZeroBytesWithoutErrors()
     {
-        var emptyClassBuffer = Span<byte>.Empty;
-        var emptyStructBuffer = Span<byte>.Empty;
+        Span<byte> emptyClassBuffer = Span<byte>.Empty;
+        Span<byte> emptyStructBuffer = Span<byte>.Empty;
 
         int emptyClassWrittenBytes = new EmptyClass().Serialize(emptyClassBuffer);
         int emptyStructWrittenBytes = new EmptyStruct().Serialize(emptyStructBuffer);
@@ -357,16 +357,16 @@ public sealed class SerializationTests
     [Fact]
     public void ZeroLengthNestedStructSharesOffsetWithNextProperty()
     {
-        var source = new ZeroLengthNestedStructContainer
+        ZeroLengthNestedStructContainer source = new ZeroLengthNestedStructContainer
         {
             Before = 123,
             Empty = new EmptyStruct(),
             After = 456,
         };
-        var buffer = new byte[ZeroLengthNestedStructContainerView.RequiredByteLength];
+        byte[] buffer = new byte[ZeroLengthNestedStructContainerView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new ZeroLengthNestedStructContainerView(buffer);
+        ZeroLengthNestedStructContainerView view = new ZeroLengthNestedStructContainerView(buffer);
         EmptyStructView emptyView = view.Empty;
 
         // A zero-byte nested payload and its following property intentionally share one offset.
@@ -384,7 +384,7 @@ public sealed class SerializationTests
     [Fact]
     public void FieldDeclarationsAreExcludedFromSerializationAndViewGeneration()
     {
-        var source = new FieldsOnlyClass { NonSerializedField = 123 };
+        FieldsOnlyClass source = new FieldsOnlyClass { NonSerializedField = 123 };
 
         int writtenBytes = source.Serialize(Span<byte>.Empty);
 
@@ -396,11 +396,11 @@ public sealed class SerializationTests
     [Fact]
     public void PropertyAccessModifiersControlInclusionInGeneratedView()
     {
-        var source = new PropertyVariants(11, 22, 33);
-        var buffer = new byte[PropertyVariantsView.RequiredByteLength];
+        PropertyVariants source = new PropertyVariants(11, 22, 33);
+        byte[] buffer = new byte[PropertyVariantsView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
-        var view = new PropertyVariantsView(buffer);
+        PropertyVariantsView view = new PropertyVariantsView(buffer);
 
         TestAssert.Equal(16, PropertyVariantsView.RequiredByteLength, nameof(PropertyVariantsView.RequiredByteLength));
         TestAssert.Equal(16, writtenBytes, nameof(writtenBytes));
@@ -412,32 +412,32 @@ public sealed class SerializationTests
     [Fact]
     public void EveryInsufficientWriteBufferThrowsStandardBoundsException()
     {
-        var fixedSource = new FixedClass { Identifier = 1, State = ByteState.Ready };
+        FixedClass fixedSource = new FixedClass { Identifier = 1, State = ByteState.Ready };
         AssertEveryInsufficientWriteBufferThrows(
             FixedClassView.RequiredByteLength,
             destination => _ = fixedSource.Serialize(destination),
             nameof(FixedClass));
 
-        var packedValue = new PackedRecord { Number = 10, State = SignedState.Positive };
+        PackedRecord packedValue = new PackedRecord { Number = 10, State = SignedState.Positive };
         AssertEveryInsufficientWriteBufferThrows(
             PackedRecordView.RequiredByteLength,
             destination => _ = packedValue.Serialize(destination),
             nameof(PackedRecord));
 
-        var packedContainerSource = new PackedContainer
+        PackedContainer packedContainerSource = new PackedContainer
         {
             Value = packedValue,
             OptionalValue = packedValue,
             Values = new[] { packedValue, packedValue },
         };
-        var packedContainerBuffer = new byte[128];
+        byte[] packedContainerBuffer = new byte[128];
         int packedContainerSerializedByteLength = packedContainerSource.Serialize(packedContainerBuffer);
         AssertEveryInsufficientWriteBufferThrows(
             packedContainerSerializedByteLength,
             destination => _ = packedContainerSource.Serialize(destination),
             nameof(PackedContainer));
 
-        var variableSource = new VariableRecord
+        VariableRecord variableSource = new VariableRecord
         {
             Text = "buffer coverage",
             Values = new[] { 1, 2, 3 },
@@ -445,7 +445,7 @@ public sealed class SerializationTests
             Child = fixedSource,
             Tail = -7,
         };
-        var variableBuffer = new byte[256];
+        byte[] variableBuffer = new byte[256];
         int variableSerializedByteLength = variableSource.Serialize(variableBuffer);
         AssertEveryInsufficientWriteBufferThrows(
             variableSerializedByteLength,
@@ -456,55 +456,55 @@ public sealed class SerializationTests
     [Fact]
     public void EveryTruncatedSerializedBufferThrowsStandardBoundsExceptionWhenRead()
     {
-        var fixedSource = new FixedClass { Identifier = 1, State = ByteState.Ready };
-        var fixedBuffer = new byte[FixedClassView.RequiredByteLength];
+        FixedClass fixedSource = new FixedClass { Identifier = 1, State = ByteState.Ready };
+        byte[] fixedBuffer = new byte[FixedClassView.RequiredByteLength];
         int fixedSerializedByteLength = fixedSource.Serialize(fixedBuffer);
         AssertEveryTruncatedReadBufferThrows(
             fixedBuffer,
             fixedSerializedByteLength,
             serializedMemory =>
             {
-                var view = new FixedClassView(serializedMemory);
+                FixedClassView view = new FixedClassView(serializedMemory);
                 _ = view.Identifier;
                 _ = view.State;
             },
             nameof(FixedClass));
 
-        var packedValue = new PackedRecord { Number = 10, State = SignedState.Positive };
-        var packedValueBuffer = new byte[PackedRecordView.RequiredByteLength];
+        PackedRecord packedValue = new PackedRecord { Number = 10, State = SignedState.Positive };
+        byte[] packedValueBuffer = new byte[PackedRecordView.RequiredByteLength];
         int packedValueSerializedByteLength = packedValue.Serialize(packedValueBuffer);
         AssertEveryTruncatedReadBufferThrows(
             packedValueBuffer,
             packedValueSerializedByteLength,
             serializedMemory =>
             {
-                var view = new PackedRecordView(serializedMemory);
+                PackedRecordView view = new PackedRecordView(serializedMemory);
                 _ = view.Number;
                 _ = view.State;
             },
             nameof(PackedRecord));
 
-        var packedContainerSource = new PackedContainer
+        PackedContainer packedContainerSource = new PackedContainer
         {
             Value = packedValue,
             OptionalValue = packedValue,
             Values = new[] { packedValue, packedValue },
         };
-        var packedContainerBuffer = new byte[128];
+        byte[] packedContainerBuffer = new byte[128];
         int packedContainerSerializedByteLength = packedContainerSource.Serialize(packedContainerBuffer);
         AssertEveryTruncatedReadBufferThrows(
             packedContainerBuffer,
             packedContainerSerializedByteLength,
             serializedMemory =>
             {
-                var view = new PackedContainerView(serializedMemory);
+                PackedContainerView view = new PackedContainerView(serializedMemory);
                 _ = view.Value.Number;
                 _ = view.OptionalValue!.Value.Number;
                 _ = view.Values.Length;
             },
             nameof(PackedContainer));
 
-        var variableSource = new VariableRecord
+        VariableRecord variableSource = new VariableRecord
         {
             Text = "buffer coverage",
             Values = new[] { 1, 2, 3 },
@@ -512,14 +512,14 @@ public sealed class SerializationTests
             Child = fixedSource,
             Tail = -7,
         };
-        var variableBuffer = new byte[256];
+        byte[] variableBuffer = new byte[256];
         int variableSerializedByteLength = variableSource.Serialize(variableBuffer);
         AssertEveryTruncatedReadBufferThrows(
             variableBuffer,
             variableSerializedByteLength,
             serializedMemory =>
             {
-                var view = new VariableRecordView(serializedMemory);
+                VariableRecordView view = new VariableRecordView(serializedMemory);
                 _ = view.Text.Length;
                 _ = view.Values.Length;
                 _ = view.OptionalNumber;
@@ -535,7 +535,7 @@ public sealed class SerializationTests
     public void FixedViewConversionsRejectInsufficientMemory()
     {
         ReadOnlyMemory<byte> insufficientMemory = new byte[FixedClassView.RequiredByteLength - 1];
-        var view = new FixedClassView(insufficientMemory);
+        FixedClassView view = new FixedClassView(insufficientMemory);
 
         // Fixed View conversions alone know the complete required region and therefore Slice it at conversion time.
         TestAssert.ThrowsStandardBoundsException(
@@ -562,7 +562,7 @@ public sealed class SerializationTests
         // A new destination for every length isolates buffer capacity from partial writes made before the native failure.
         for (int availableByteLength = 0; availableByteLength < serializedByteLength; availableByteLength++)
         {
-            var insufficientBuffer = new byte[availableByteLength];
+            byte[] insufficientBuffer = new byte[availableByteLength];
             TestAssert.ThrowsStandardBoundsException(
                 () => serialize(insufficientBuffer),
                 $"{modelName} write with {availableByteLength} of {serializedByteLength} bytes");
@@ -613,13 +613,13 @@ public sealed class SerializationTests
     [Fact]
     public void ByteArrayPropertySerializesAndDeserializesCorrectly()
     {
-        var source = new ByteArrayRecord
+        ByteArrayRecord source = new ByteArrayRecord
         {
             Payload = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }
         };
-        var buffer = new byte[256];
+        byte[] buffer = new byte[256];
         int writtenBytes = source.Serialize(buffer);
-        var view = new ByteArrayRecordView(buffer.AsMemory(0, writtenBytes));
+        ByteArrayRecordView view = new ByteArrayRecordView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(source.Payload.Length, view.Payload.Length, "Payload length");
         TestAssert.SequenceEqual<byte>(source.Payload, view.Payload, "Payload content");
@@ -645,14 +645,14 @@ public sealed class SerializationTests
         byte[] utf8Bytes = Encoding.UTF8.GetBytes(originalString);
 
         // 3. Set byte array to payload
-        var source = new Utf8Payload(utf8Bytes);
+        Utf8Payload source = new Utf8Payload(utf8Bytes);
 
         // 4. Serialize
-        var buffer = new byte[256];
+        byte[] buffer = new byte[256];
         int writtenBytes = source.Serialize(buffer);
 
         // 5. Deserialize
-        var view = new Utf8PayloadView(buffer.AsMemory(0, writtenBytes));
+        Utf8PayloadView view = new Utf8PayloadView(buffer.AsMemory(0, writtenBytes));
 
         // 6. Decode deserialized byte[] as string
         ReadOnlySpan<byte> decodedBytes = view.Utf8;
@@ -667,23 +667,23 @@ public sealed class SerializationTests
     {
         // Avoid computer-loving number for the size that **might** accidentally satisfy the test condition.
         const int length = 31;
-        var random = new Random(42);
+        Random random = new Random(42);
 
-        var booleans = new bool[length];
-        var bytes = new byte[length];
-        var signedBytes = new sbyte[length];
-        var characters = new char[length];
-        var int16s = new short[length];
-        var uint16s = new ushort[length];
-        var int32s = new int[length];
-        var uint32s = new uint[length];
-        var int64s = new long[length];
-        var uint64s = new ulong[length];
-        var singles = new float[length];
-        var doubles = new double[length];
-        var byteStates = new ByteState[length];
-        var signedStates = new SignedState[length];
-        var packedRecords = new PackedRecord[length];
+        bool[] booleans = new bool[length];
+        byte[] bytes = new byte[length];
+        sbyte[] signedBytes = new sbyte[length];
+        char[] characters = new char[length];
+        short[] int16s = new short[length];
+        ushort[] uint16s = new ushort[length];
+        int[] int32s = new int[length];
+        uint[] uint32s = new uint[length];
+        long[] int64s = new long[length];
+        ulong[] uint64s = new ulong[length];
+        float[] singles = new float[length];
+        double[] doubles = new double[length];
+        ByteState[] byteStates = new ByteState[length];
+        SignedState[] signedStates = new SignedState[length];
+        PackedRecord[] packedRecords = new PackedRecord[length];
 
         for (int i = 0; i < length; i++)
         {
@@ -708,7 +708,7 @@ public sealed class SerializationTests
             };
         }
 
-        var source = new ArrayRoundTripRecord
+        ArrayRoundTripRecord source = new ArrayRoundTripRecord
         {
             Booleans = booleans,
             Bytes = bytes,
@@ -727,10 +727,10 @@ public sealed class SerializationTests
             PackedRecords = packedRecords,
         };
 
-        var buffer = new byte[100 * 1024];
+        byte[] buffer = new byte[100 * 1024];
         int writtenBytes = source.Serialize(buffer);
 
-        var view = new ArrayRoundTripRecordView(buffer.AsMemory(0, writtenBytes));
+        ArrayRoundTripRecordView view = new ArrayRoundTripRecordView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.SequenceEqual<bool>(source.Booleans, view.Booleans, nameof(view.Booleans));
         TestAssert.SequenceEqual<byte>(source.Bytes, view.Bytes, nameof(view.Bytes));
@@ -787,8 +787,8 @@ public sealed class SerializationTests
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
         // It must have NO offset table (is serialized directly as raw bytes, checking the serialized size).
-        var strictObj = new StrictBlittableStruct { Value = 42 };
-        var strictBuffer = new byte[16];
+        StrictBlittableStruct strictObj = new StrictBlittableStruct { Value = 42 };
+        byte[] strictBuffer = new byte[16];
         int strictWrittenBytes = strictObj.Serialize(strictBuffer);
         // Size should be exactly 4 bytes (sizeof(int)) because it has no offset table.
         TestAssert.Equal(4, strictWrittenBytes, nameof(strictWrittenBytes));
@@ -796,8 +796,8 @@ public sealed class SerializationTests
 
         // SequentialPackOneWithCharSetStruct has Sequential, Pack=1, AND CharSet=CharSet.Ansi.
         // It must have an offset table (is serialized with property offset table, checking that its serialized size is larger).
-        var charSetObj = new SequentialPackOneWithCharSetStruct { Value = 42 };
-        var charSetBuffer = new byte[16];
+        SequentialPackOneWithCharSetStruct charSetObj = new SequentialPackOneWithCharSetStruct { Value = 42 };
+        byte[] charSetBuffer = new byte[16];
         int charSetWrittenBytes = charSetObj.Serialize(charSetBuffer);
         // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
         TestAssert.Equal(8, charSetWrittenBytes, nameof(charSetWrittenBytes));
@@ -806,8 +806,8 @@ public sealed class SerializationTests
 
         // SequentialPackOneWithSizeStruct has Sequential, Pack=1, AND Size=7.
         // It must have an offset table.
-        var sizeObj = new SequentialPackOneWithSizeStruct { Value = 42 };
-        var sizeBuffer = new byte[16];
+        SequentialPackOneWithSizeStruct sizeObj = new SequentialPackOneWithSizeStruct { Value = 42 };
+        byte[] sizeBuffer = new byte[16];
         int sizeWrittenBytes = sizeObj.Serialize(sizeBuffer);
         // Size should be 8 bytes (4 bytes offset table + 4 bytes payload).
         TestAssert.Equal(8, sizeWrittenBytes, nameof(sizeWrittenBytes));
@@ -818,8 +818,8 @@ public sealed class SerializationTests
     [Fact]
     public void SequentialPackOneClassIsNotBlittable()
     {
-        var source = new SequentialPackOneClass { Value = 42 };
-        var buffer = new byte[SequentialPackOneClassView.RequiredByteLength];
+        SequentialPackOneClass source = new SequentialPackOneClass { Value = 42 };
+        byte[] buffer = new byte[SequentialPackOneClassView.RequiredByteLength];
 
         int writtenBytes = source.Serialize(buffer);
 
@@ -834,55 +834,55 @@ public sealed class SerializationTests
     {
         // 1. [ZeroSerializer]
         {
-            var source = new AttributeSyntaxType1 { Value = 101 };
-            var buffer = new byte[AttributeSyntaxType1View.RequiredByteLength];
+            AttributeSyntaxType1 source = new AttributeSyntaxType1 { Value = 101 };
+            byte[] buffer = new byte[AttributeSyntaxType1View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType1View(buffer);
+            AttributeSyntaxType1View view = new AttributeSyntaxType1View(buffer);
             TestAssert.Equal(101, view.Value, "AttributeSyntaxType1");
         }
 
         // 2. [ZeroSerializerAttribute]
         {
-            var source = new AttributeSyntaxType2 { Value = 102 };
-            var buffer = new byte[AttributeSyntaxType2View.RequiredByteLength];
+            AttributeSyntaxType2 source = new AttributeSyntaxType2 { Value = 102 };
+            byte[] buffer = new byte[AttributeSyntaxType2View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType2View(buffer);
+            AttributeSyntaxType2View view = new AttributeSyntaxType2View(buffer);
             TestAssert.Equal(102, view.Value, "AttributeSyntaxType2");
         }
 
         // 3. [ZeroSerializer.ZeroSerializer]
         {
-            var source = new AttributeSyntaxType3 { Value = 103 };
-            var buffer = new byte[AttributeSyntaxType3View.RequiredByteLength];
+            AttributeSyntaxType3 source = new AttributeSyntaxType3 { Value = 103 };
+            byte[] buffer = new byte[AttributeSyntaxType3View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType3View(buffer);
+            AttributeSyntaxType3View view = new AttributeSyntaxType3View(buffer);
             TestAssert.Equal(103, view.Value, "AttributeSyntaxType3");
         }
 
         // 4. [ZeroSerializer.ZeroSerializerAttribute]
         {
-            var source = new AttributeSyntaxType4 { Value = 104 };
-            var buffer = new byte[AttributeSyntaxType4View.RequiredByteLength];
+            AttributeSyntaxType4 source = new AttributeSyntaxType4 { Value = 104 };
+            byte[] buffer = new byte[AttributeSyntaxType4View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType4View(buffer);
+            AttributeSyntaxType4View view = new AttributeSyntaxType4View(buffer);
             TestAssert.Equal(104, view.Value, "AttributeSyntaxType4");
         }
 
         // 5. [global::ZeroSerializer.ZeroSerializer]
         {
-            var source = new AttributeSyntaxType5 { Value = 105 };
-            var buffer = new byte[AttributeSyntaxType5View.RequiredByteLength];
+            AttributeSyntaxType5 source = new AttributeSyntaxType5 { Value = 105 };
+            byte[] buffer = new byte[AttributeSyntaxType5View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType5View(buffer);
+            AttributeSyntaxType5View view = new AttributeSyntaxType5View(buffer);
             TestAssert.Equal(105, view.Value, "AttributeSyntaxType5");
         }
 
         // 6. [global::ZeroSerializer.ZeroSerializerAttribute]
         {
-            var source = new AttributeSyntaxType6 { Value = 106 };
-            var buffer = new byte[AttributeSyntaxType6View.RequiredByteLength];
+            AttributeSyntaxType6 source = new AttributeSyntaxType6 { Value = 106 };
+            byte[] buffer = new byte[AttributeSyntaxType6View.RequiredByteLength];
             source.Serialize(buffer);
-            var view = new AttributeSyntaxType6View(buffer);
+            AttributeSyntaxType6View view = new AttributeSyntaxType6View(buffer);
             TestAssert.Equal(106, view.Value, "AttributeSyntaxType6");
         }
     }
@@ -903,10 +903,10 @@ public sealed class SerializationTests
         TestAssert.True(SmallFixedStructView.RequiredByteLength >= 0, "SmallFixedStructView has RequiredByteLength >= 0");
 
         // 2. Check AsMemory() extension method (syntactic sugar)
-        var source = new PackedRecord { Number = 999, State = SignedState.Positive };
-        var buffer = new byte[PackedRecordView.RequiredByteLength];
+        PackedRecord source = new PackedRecord { Number = 999, State = SignedState.Positive };
+        byte[] buffer = new byte[PackedRecordView.RequiredByteLength];
         source.Serialize(buffer);
-        var view = new PackedRecordView(buffer);
+        PackedRecordView view = new PackedRecordView(buffer);
 
         ReadOnlyMemory<byte> memory = view.AsMemory();
         TestAssert.Equal(PackedRecordView.RequiredByteLength, memory.Length, "AsMemory returns correct memory length");
@@ -918,8 +918,8 @@ public sealed class SerializationTests
 
         // Check non-blittable views do not have a Materialize extension method
         // (we verify this at compile time as we don't have it on non-blittable views, and check with Reflection)
-        var serializeExtensionsType = typeof(ZeroSerializerExtensions);
-        var materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+        Type serializeExtensionsType = typeof(ZeroSerializerExtensions);
+        System.Collections.Generic.List<MethodInfo> materializeMethods = serializeExtensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(m => m.Name == "Materialize")
             .ToList();
 
@@ -940,7 +940,7 @@ public sealed class SerializationTests
         // - sbyte array roundtrip
         // - sbyte backed enum array roundtrip
 
-        var source = new SByteTestRecord
+        SByteTestRecord source = new SByteTestRecord
         {
             SByteValue = sbyte.MinValue,
             NullableSByteValue = sbyte.MinValue,
@@ -950,10 +950,10 @@ public sealed class SerializationTests
             SByteBackedEnumArray = new SByteEnum[] { SByteEnum.Min, SByteEnum.Zero, SByteEnum.Max }
         };
 
-        var buffer = new byte[1024];
+        byte[] buffer = new byte[1024];
         int writtenBytes = source.Serialize(buffer);
 
-        var view = new SByteTestRecordView(buffer.AsMemory(0, writtenBytes));
+        SByteTestRecordView view = new SByteTestRecordView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(sbyte.MinValue, view.SByteValue, nameof(view.SByteValue));
         TestAssert.Equal((sbyte?)sbyte.MinValue, view.NullableSByteValue, nameof(view.NullableSByteValue));
@@ -969,7 +969,7 @@ public sealed class SerializationTests
         }
 
         // Also test Nullables with nulls (using max values)
-        var sourceWithNulls = new SByteTestRecord
+        SByteTestRecord sourceWithNulls = new SByteTestRecord
         {
             SByteValue = sbyte.MaxValue,
             NullableSByteValue = null,
@@ -979,10 +979,10 @@ public sealed class SerializationTests
             SByteBackedEnumArray = Array.Empty<SByteEnum>()
         };
 
-        var bufferWithNulls = new byte[1024];
+        byte[] bufferWithNulls = new byte[1024];
         int writtenBytesWithNulls = sourceWithNulls.Serialize(bufferWithNulls);
 
-        var viewWithNulls = new SByteTestRecordView(bufferWithNulls.AsMemory(0, writtenBytesWithNulls));
+        SByteTestRecordView viewWithNulls = new SByteTestRecordView(bufferWithNulls.AsMemory(0, writtenBytesWithNulls));
 
         TestAssert.Equal(sbyte.MaxValue, viewWithNulls.SByteValue, nameof(viewWithNulls.SByteValue));
         Assert.Null(viewWithNulls.NullableSByteValue);
@@ -995,10 +995,10 @@ public sealed class SerializationTests
     [Fact]
     public void GetByteLengthReturnsExactPayloadSizeForBlittableStruct()
     {
-        var source = new StrictBlittableStruct { Value = 12345 };
-        var buffer = new byte[16];
+        StrictBlittableStruct source = new StrictBlittableStruct { Value = 12345 };
+        byte[] buffer = new byte[16];
         int writtenBytes = source.Serialize(buffer);
-        var view = new StrictBlittableStructView(buffer);
+        StrictBlittableStructView view = new StrictBlittableStructView(buffer);
         TestAssert.Equal(4, view.GetByteLength(), "StrictBlittableStructView.GetByteLength");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "StrictBlittableStructView.GetByteLength matches writtenBytes");
     }
@@ -1006,10 +1006,10 @@ public sealed class SerializationTests
     [Fact]
     public void GetByteLengthReturnsHeaderAndPayloadSizeForFixedNonBlittableClass()
     {
-        var source = new FixedClass { Identifier = 9876, State = ByteState.Ready };
-        var buffer = new byte[32];
+        FixedClass source = new FixedClass { Identifier = 9876, State = ByteState.Ready };
+        byte[] buffer = new byte[32];
         int writtenBytes = source.Serialize(buffer);
-        var view = new FixedClassView(buffer);
+        FixedClassView view = new FixedClassView(buffer);
         TestAssert.Equal(13, view.GetByteLength(), "FixedClassView.GetByteLength");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "FixedClassView.GetByteLength matches writtenBytes");
     }
@@ -1017,64 +1017,64 @@ public sealed class SerializationTests
     [Fact]
     public void GetByteLengthCalculatesTotalSizeWhenArrayIsLastField()
     {
-        var source = new VariableStructWithArrayAtEnd { ID = 1, Values = new int[] { 10, 20, 30 } };
-        var buffer = new byte[64];
+        VariableStructWithArrayAtEnd source = new VariableStructWithArrayAtEnd { ID = 1, Values = new int[] { 10, 20, 30 } };
+        byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableStructWithArrayAtEndView(buffer);
+        VariableStructWithArrayAtEndView view = new VariableStructWithArrayAtEndView(buffer);
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength");
 
         // with null values (array is null, last property with non-null value is ID)
-        var sourceNull = new VariableStructWithArrayAtEnd { ID = 42, Values = null };
+        VariableStructWithArrayAtEnd sourceNull = new VariableStructWithArrayAtEnd { ID = 42, Values = null };
         int writtenBytesNull = sourceNull.Serialize(buffer);
-        var viewNull = new VariableStructWithArrayAtEndView(buffer);
+        VariableStructWithArrayAtEndView viewNull = new VariableStructWithArrayAtEndView(buffer);
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithArrayAtEndView.GetByteLength with null values");
     }
 
     [Fact]
     public void GetByteLengthCalculatesTotalSizeWhenStringIsLastField()
     {
-        var source = new VariableStructWithStringAtEnd { ID = 2, Text = "hello" };
-        var buffer = new byte[64];
+        VariableStructWithStringAtEnd source = new VariableStructWithStringAtEnd { ID = 2, Text = "hello" };
+        byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableStructWithStringAtEndView(buffer);
+        VariableStructWithStringAtEndView view = new VariableStructWithStringAtEndView(buffer);
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength");
 
         // with null text
-        var sourceNull = new VariableStructWithStringAtEnd { ID = 12, Text = null };
+        VariableStructWithStringAtEnd sourceNull = new VariableStructWithStringAtEnd { ID = 12, Text = null };
         int writtenBytesNull = sourceNull.Serialize(buffer);
-        var viewNull = new VariableStructWithStringAtEndView(buffer);
+        VariableStructWithStringAtEndView viewNull = new VariableStructWithStringAtEndView(buffer);
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithStringAtEndView.GetByteLength with null text");
     }
 
     [Fact]
     public void GetByteLengthCalculatesTotalSizeWhenNestedBlittableStructIsLastField()
     {
-        var source = new VariableStructWithBlittableStructAtEnd { Text = "hello", Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
-        var buffer = new byte[64];
+        VariableStructWithBlittableStructAtEnd source = new VariableStructWithBlittableStructAtEnd { Text = "hello", Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
+        byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableStructWithBlittableStructAtEndView(buffer);
+        VariableStructWithBlittableStructAtEndView view = new VariableStructWithBlittableStructAtEndView(buffer);
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength");
 
         // with null text
-        var sourceNull = new VariableStructWithBlittableStructAtEnd { Text = null, Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
+        VariableStructWithBlittableStructAtEnd sourceNull = new VariableStructWithBlittableStructAtEnd { Text = null, Blittable = new PackedRecord { Number = 5, State = SignedState.Positive } };
         int writtenBytesNull = sourceNull.Serialize(buffer);
-        var viewNull = new VariableStructWithBlittableStructAtEndView(buffer);
+        VariableStructWithBlittableStructAtEndView viewNull = new VariableStructWithBlittableStructAtEndView(buffer);
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithBlittableStructAtEndView.GetByteLength with null text");
     }
 
     [Fact]
     public void GetByteLengthCalculatesTotalSizeWhenPrimitiveIsLastField()
     {
-        var source = new VariableStructWithPrimitiveAtEnd { Text = "world", Value = 100 };
-        var buffer = new byte[64];
+        VariableStructWithPrimitiveAtEnd source = new VariableStructWithPrimitiveAtEnd { Text = "world", Value = 100 };
+        byte[] buffer = new byte[64];
         int writtenBytes = source.Serialize(buffer);
-        var view = new VariableStructWithPrimitiveAtEndView(buffer);
+        VariableStructWithPrimitiveAtEndView view = new VariableStructWithPrimitiveAtEndView(buffer);
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength");
 
         // with null text
-        var sourceNull = new VariableStructWithPrimitiveAtEnd { Text = null, Value = 100 };
+        VariableStructWithPrimitiveAtEnd sourceNull = new VariableStructWithPrimitiveAtEnd { Text = null, Value = 100 };
         int writtenBytesNull = sourceNull.Serialize(buffer);
-        var viewNull = new VariableStructWithPrimitiveAtEndView(buffer);
+        VariableStructWithPrimitiveAtEndView viewNull = new VariableStructWithPrimitiveAtEndView(buffer);
         TestAssert.Equal(writtenBytesNull, viewNull.GetByteLength(), "VariableStructWithPrimitiveAtEndView.GetByteLength with null text");
     }
 
@@ -1083,24 +1083,24 @@ public sealed class SerializationTests
     {
         // 1. One nullable property with null (propertyCount = 1)
         {
-            var source = new StringOnlyRecord { Text = null };
-            var buffer = new byte[16];
+            StringOnlyRecord source = new StringOnlyRecord { Text = null };
+            byte[] buffer = new byte[16];
             int writtenBytes = source.Serialize(buffer);
-            var view = new StringOnlyRecordView(buffer);
+            StringOnlyRecordView view = new StringOnlyRecordView(buffer);
             TestAssert.Equal(4, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null");
             TestAssert.Equal(writtenBytes, view.GetByteLength(), "StringOnlyRecordView.GetByteLength with null matches writtenBytes");
         }
 
         // 2. Multiple nullable properties all null (propertyCount > 1)
         {
-            var source = new VariableStructWithAllNullableProperties
+            VariableStructWithAllNullableProperties source = new VariableStructWithAllNullableProperties
             {
                 Text = null,
                 Values = null
             };
-            var buffer = new byte[16];
+            byte[] buffer = new byte[16];
             int writtenBytes = source.Serialize(buffer);
-            var view = new VariableStructWithAllNullablePropertiesView(buffer);
+            VariableStructWithAllNullablePropertiesView view = new VariableStructWithAllNullablePropertiesView(buffer);
             TestAssert.Equal(8, view.GetByteLength(), "VariableStructWithAllNullablePropertiesView.GetByteLength with all nulls");
             TestAssert.Equal(writtenBytes, view.GetByteLength(), "VariableStructWithAllNullablePropertiesView.GetByteLength with all nulls matches writtenBytes");
         }
@@ -1126,14 +1126,14 @@ public sealed class SerializationTests
     [Fact]
     public void CsharpRecordClassSerializesAndDeserializesCorrectly()
     {
-        var source = new SimpleCsharpRecord
+        SimpleCsharpRecord source = new SimpleCsharpRecord
         {
             IntValue = 123,
             DoubleValue = 456.78
         };
-        var buffer = new byte[128];
+        byte[] buffer = new byte[128];
         int writtenBytes = source.Serialize(buffer);
-        var view = new SimpleCsharpRecordView(buffer);
+        SimpleCsharpRecordView view = new SimpleCsharpRecordView(buffer);
 
         TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
         TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
@@ -1143,14 +1143,14 @@ public sealed class SerializationTests
     [Fact]
     public void CsharpRecordStructSerializesAndDeserializesCorrectly()
     {
-        var source = new SimpleRecordStruct
+        SimpleRecordStruct source = new SimpleRecordStruct
         {
             IntValue = 789,
             DoubleValue = 1011.12
         };
-        var buffer = new byte[128];
+        byte[] buffer = new byte[128];
         int writtenBytes = source.Serialize(buffer);
-        var view = new SimpleRecordStructView(buffer);
+        SimpleRecordStructView view = new SimpleRecordStructView(buffer);
 
         TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
         TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
@@ -1160,14 +1160,14 @@ public sealed class SerializationTests
     [Fact]
     public void BlittableRecordStructSerializesAsRawPayload()
     {
-        var source = new SimpleBlittableRecordStruct
+        SimpleBlittableRecordStruct source = new SimpleBlittableRecordStruct
         {
             IntValue = 1314,
             DoubleValue = 1516.17
         };
-        var buffer = new byte[128];
+        byte[] buffer = new byte[128];
         int writtenBytes = source.Serialize(buffer);
-        var view = new SimpleBlittableRecordStructView(buffer);
+        SimpleBlittableRecordStructView view = new SimpleBlittableRecordStructView(buffer);
 
         TestAssert.Equal(source.IntValue, view.IntValue, nameof(view.IntValue));
         TestAssert.Equal(source.DoubleValue, view.DoubleValue, nameof(view.DoubleValue));
@@ -1189,17 +1189,17 @@ public sealed class SerializationTests
         Assert.Equal(typeof(Nullable<SimpleBlittableRecordStructView>), optionalValueProperty!.PropertyType);
 
         // 2. Non-null roundtrip
-        var first = new SimpleBlittableRecordStruct { IntValue = 100, DoubleValue = 200.5 };
-        var second = new SimpleBlittableRecordStruct { IntValue = 300, DoubleValue = 400.25 };
-        var source = new BlittableRecordStructContainer
+        SimpleBlittableRecordStruct first = new SimpleBlittableRecordStruct { IntValue = 100, DoubleValue = 200.5 };
+        SimpleBlittableRecordStruct second = new SimpleBlittableRecordStruct { IntValue = 300, DoubleValue = 400.25 };
+        BlittableRecordStructContainer source = new BlittableRecordStructContainer
         {
             Value = first,
             OptionalValue = second,
             Values = new[] { first, second }
         };
-        var buffer = new byte[256];
+        byte[] buffer = new byte[256];
         int writtenBytes = source.Serialize(buffer);
-        var view = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytes));
+        BlittableRecordStructContainerView view = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(first.IntValue, view.Value.IntValue, nameof(view.Value.IntValue));
         TestAssert.Equal(first.DoubleValue, view.Value.DoubleValue, nameof(view.Value.DoubleValue));
@@ -1217,14 +1217,14 @@ public sealed class SerializationTests
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "Non-null GetByteLength");
 
         // 3. Null optional & array roundtrip
-        var sourceNulls = new BlittableRecordStructContainer
+        BlittableRecordStructContainer sourceNulls = new BlittableRecordStructContainer
         {
             Value = first,
             OptionalValue = null,
             Values = null
         };
         int writtenBytesNulls = sourceNulls.Serialize(buffer);
-        var viewNulls = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytesNulls));
+        BlittableRecordStructContainerView viewNulls = new BlittableRecordStructContainerView(buffer.AsMemory(0, writtenBytesNulls));
 
         TestAssert.Equal(first.IntValue, viewNulls.Value.IntValue, nameof(viewNulls.Value.IntValue));
         Assert.Null(viewNulls.OptionalValue);
@@ -1238,7 +1238,7 @@ public sealed class SerializationTests
         TestAssert.Equal(3, BadlyAlignedStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedStructWithPackOneView.RequiredByteLength));
         TestAssert.Equal(31, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, nameof(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
 
-        var foo = new BadlyAlignedContainerStructWithPackOne
+        BadlyAlignedContainerStructWithPackOne foo = new BadlyAlignedContainerStructWithPackOne
         {
             A = 0x12,
             B = 0x123456789ABCDEF0,
@@ -1251,25 +1251,25 @@ public sealed class SerializationTests
             I = new BadlyAlignedStructWithPackOne { A = 0xCD, B = -4321 }
         };
 
-        var array = new BadlyAlignedContainerArrayStruct();
+        BadlyAlignedContainerArrayStruct array = new BadlyAlignedContainerArrayStruct();
         array.Values = new[] { default, foo, default };
 
-        var arrayBuffer = new byte[1024];
+        byte[] arrayBuffer = new byte[1024];
         int arrayWrittenBytes = array.Serialize(arrayBuffer);
         TestAssert.Equal(101, arrayWrittenBytes, nameof(arrayWrittenBytes));
 
-        var arrayView = new BadlyAlignedContainerArrayStructView(arrayBuffer);
+        BadlyAlignedContainerArrayStructView arrayView = new BadlyAlignedContainerArrayStructView(arrayBuffer);
         TestAssert.True(arrayView.Values[0] == default, "1st item");
         TestAssert.True(arrayView.Values[1] == foo, "2nd item");
         TestAssert.True(arrayView.Values[2] == default, "3rd item");
 
-        var buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength * 3];
+        byte[] buffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength * 3];
         int writtenBytes = foo.Serialize(buffer.AsSpan(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength));
 
         TestAssert.Equal(31, writtenBytes, nameof(writtenBytes));
 
-        var second = buffer.AsMemory().Slice(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength);
-        var view = new BadlyAlignedContainerStructWithPackOneView(second);
+        ReadOnlyMemory<byte> second = buffer.AsMemory().Slice(BadlyAlignedContainerStructWithPackOneView.RequiredByteLength, BadlyAlignedContainerStructWithPackOneView.RequiredByteLength);
+        BadlyAlignedContainerStructWithPackOneView view = new BadlyAlignedContainerStructWithPackOneView(second);
 
         TestAssert.Equal(foo.A, view.A, nameof(view.A));
         TestAssert.Equal(foo.B, view.B, nameof(view.B));
@@ -1288,21 +1288,21 @@ public sealed class SerializationTests
     [Fact]
     public void SharedReferenceTypeInstancesAreSerializedSequentially()
     {
-        var sharedNested = new SharedClassNested { NestedValue = 42 };
-        var sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
-        var distinctItemWithSharedNested = new SharedClassItem { Value = 200, Nested = sharedNested };
+        SharedClassNested sharedNested = new SharedClassNested { NestedValue = 42 };
+        SharedClassItem sharedItem = new SharedClassItem { Value = 100, Nested = sharedNested };
+        SharedClassItem distinctItemWithSharedNested = new SharedClassItem { Value = 200, Nested = sharedNested };
 
         // Foo and Bar share SharedClassItem instance; Baz has a distinct SharedClassItem instance but shares the same SharedClassNested instance
-        var container = new DuplicateInstanceContainer
+        DuplicateInstanceContainer container = new DuplicateInstanceContainer
         {
             Foo = sharedItem,
             Bar = sharedItem,
             Baz = distinctItemWithSharedNested,
         };
 
-        var buffer = new byte[256];
+        byte[] buffer = new byte[256];
         int writtenBytes = container.Serialize(buffer);
-        var view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
+        DuplicateInstanceContainerView view = new DuplicateInstanceContainerView(buffer.AsMemory(0, writtenBytes));
 
         TestAssert.Equal(100, view.Foo?.Value, nameof(container.Foo.Value));
         TestAssert.Equal(100, view.Bar?.Value, nameof(container.Bar.Value));

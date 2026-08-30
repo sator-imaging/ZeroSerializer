@@ -17,7 +17,7 @@ public static class CSharpSourceGeneratorVerifier<TGenerator>
 {
     public static async Task VerifySourceGeneratorAsync(string source, params DiagnosticResult[] expected)
     {
-        var test = new Test
+        Test test = new Test
         {
             TestState =
             {
