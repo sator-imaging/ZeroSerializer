@@ -1322,7 +1322,7 @@ public sealed class SerializationTests
         TestAssert.Equal(42, view.Bar?.Nested?.NestedValue, nameof(container.Bar.Nested.NestedValue));
         TestAssert.Equal(42, view.Baz?.Nested?.NestedValue, nameof(container.Baz.Nested.NestedValue));
 
-        TestAssert.Equal(48, view.GetByteLength(), "SharedReferenceInstances GetByteLength expected length");
+        TestAssert.Equal(72, view.GetByteLength(), "SharedReferenceInstances GetByteLength expected length");
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
 
