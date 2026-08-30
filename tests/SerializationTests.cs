@@ -1314,4 +1314,70 @@ public sealed class SerializationTests
 
         TestAssert.Equal(writtenBytes, view.GetByteLength(), "SharedReferenceInstances GetByteLength");
     }
+
+    [Fact]
+    public void BlittableStructPropertiesExposeAsValueGettersThatReturnRawStructValues()
+    {
+        var first = new PackedRecord { Number = 123, State = SignedState.Positive };
+        var second = new PackedRecord { Number = 456, State = SignedState.Negative };
+        var container = new PackedContainer
+        {
+            Value = first,
+            OptionalValue = second,
+            Values = new[] { first, second }
+        };
+
+        var buffer = new byte[256];
+        int writtenBytes = container.Serialize(buffer);
+        var view = new PackedContainerView(buffer.AsMemory(0, writtenBytes));
+
+        // 1. Non-blittable containing class property returning View struct vs AsValue returning raw struct
+        TestAssert.Equal(typeof(PackedRecordView), typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value))!.PropertyType, "Value property type");
+        TestAssert.Equal(typeof(PackedRecord), typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.Value_AsValue))!.PropertyType, "Value_AsValue property type");
+
+        TestAssert.Equal(first.Number, view.Value.Number, nameof(view.Value.Number));
+        TestAssert.Equal(first.Number, view.Value_AsValue.Number, nameof(view.Value_AsValue.Number));
+        TestAssert.Equal(first.State, view.Value_AsValue.State, nameof(view.Value_AsValue.State));
+
+        // 2. Nullable blittable struct property returning Nullable<View> vs AsValue returning Nullable<RawStruct>
+        TestAssert.Equal(typeof(PackedRecordView?), typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.OptionalValue))!.PropertyType, "OptionalValue property type");
+        TestAssert.Equal(typeof(PackedRecord?), typeof(PackedContainerView).GetProperty(nameof(PackedContainerView.OptionalValue_AsValue))!.PropertyType, "OptionalValue_AsValue property type");
+
+        TestAssert.Equal(second.Number, view.OptionalValue!.Value.Number, nameof(view.OptionalValue.Value.Number));
+        Assert.NotNull(view.OptionalValue_AsValue);
+        TestAssert.Equal(second.Number, view.OptionalValue_AsValue!.Value.Number, nameof(view.OptionalValue_AsValue.Value.Number));
+        TestAssert.Equal(second.State, view.OptionalValue_AsValue!.Value.State, nameof(view.OptionalValue_AsValue.Value.State));
+
+        // 3. Nullable blittable struct property when null
+        var containerNulls = new PackedContainer
+        {
+            Value = first,
+            OptionalValue = null,
+            Values = Array.Empty<PackedRecord>()
+        };
+        int nullWrittenBytes = containerNulls.Serialize(buffer);
+        var viewNulls = new PackedContainerView(buffer.AsMemory(0, nullWrittenBytes));
+
+        Assert.Null(viewNulls.OptionalValue);
+        Assert.Null(viewNulls.OptionalValue_AsValue);
+
+        // 4. Blittable containing struct with nested blittable struct property
+        var nestedBlittable = new BadlyAlignedStructWithPackOne { A = 0x12, B = 0x3456 };
+        var blittableContainer = new BadlyAlignedContainerStructWithPackOne
+        {
+            A = 1, B = 2, C = 3, D = 4, E = 5, F = 6.0, G = 7,
+            H = nestedBlittable,
+            I = nestedBlittable
+        };
+        var blittableBuffer = new byte[BadlyAlignedContainerStructWithPackOneView.RequiredByteLength];
+        blittableContainer.Serialize(blittableBuffer);
+        var blittableContainerView = new BadlyAlignedContainerStructWithPackOneView(blittableBuffer);
+
+        TestAssert.Equal(typeof(BadlyAlignedStructWithPackOneView), typeof(BadlyAlignedContainerStructWithPackOneView).GetProperty(nameof(BadlyAlignedContainerStructWithPackOneView.H))!.PropertyType, "H property type");
+        TestAssert.Equal(typeof(BadlyAlignedStructWithPackOne), typeof(BadlyAlignedContainerStructWithPackOneView).GetProperty(nameof(BadlyAlignedContainerStructWithPackOneView.H_AsValue))!.PropertyType, "H_AsValue property type");
+
+        TestAssert.Equal(nestedBlittable.A, blittableContainerView.H.A, nameof(blittableContainerView.H.A));
+        TestAssert.Equal(nestedBlittable.A, blittableContainerView.H_AsValue.A, nameof(blittableContainerView.H_AsValue.A));
+        TestAssert.Equal(nestedBlittable.B, blittableContainerView.H_AsValue.B, nameof(blittableContainerView.H_AsValue.B));
+    }
 }

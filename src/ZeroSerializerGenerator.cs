@@ -1299,6 +1299,21 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
+
+            if (property.Kind == PropertySerializationKind.BlittableStruct)
+            {
+                string rawType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                string asValueReturnType = property.IsNullableType ? rawType + "?" : rawType;
+                sourceBuilder.AppendLine();
+                sourceBuilder.AppendLine($"{propertyAccessibility} {asValueReturnType} {EscapeIdentifier(property.Symbol.Name + "_AsValue")}");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("get");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{rawType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+                sourceBuilder.CloseBlock();
+                sourceBuilder.CloseBlock();
+            }
+
             return;
         }
 
@@ -1330,7 +1345,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 }
                 else
                 {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
+                    sourceBuilder.AppendLine("// Unreachable branch. Included for completeness.");
                     sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 }
                 break;
@@ -1358,6 +1373,29 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+
+        if (property.Kind == PropertySerializationKind.BlittableStruct)
+        {
+            string rawType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            string asValueReturnType = property.IsNullableType ? rawType + "?" : rawType;
+            sourceBuilder.AppendLine();
+            sourceBuilder.AppendLine($"{propertyAccessibility} {asValueReturnType} {EscapeIdentifier(property.Symbol.Name + "_AsValue")}");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("get");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+            sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
+            if (IsNullRepresentedByZeroPropertyOffset(property))
+            {
+                sourceBuilder.AppendLine("if (propertyDataOffset == 0)");
+                sourceBuilder.OpenBlock();
+                sourceBuilder.AppendLine("return default;");
+                sourceBuilder.CloseBlock();
+            }
+            sourceBuilder.AppendLine($"return MemoryMarshal.Read<{rawType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+        }
     }
 
     private static void EmitViewCollectionHeader(
