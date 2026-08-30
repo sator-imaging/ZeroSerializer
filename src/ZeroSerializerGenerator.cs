@@ -1139,12 +1139,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             sourceBuilder.AppendLine();
             EmitViewProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex, modelLookup);
-            if (generationModel.Properties[propertyIndex].Kind == PropertySerializationKind.BlittableStruct
-                && generationModel.Properties[propertyIndex].NestedSerializableType is not null)
-            {
-                sourceBuilder.AppendLine();
-                EmitBlittableValueProperty(sourceBuilder, generationModel, generationModel.Properties[propertyIndex], propertyIndex);
-            }
         }
         sourceBuilder.CloseBlock();
     }
@@ -1297,6 +1291,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
+            EmitBlittableValuePropertyIfApplicable(sourceBuilder, containingModel, property, propertyIndex);
             return;
         }
 
@@ -1356,23 +1351,22 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+        EmitBlittableValuePropertyIfApplicable(sourceBuilder, containingModel, property, propertyIndex);
     }
 
-    private static void EmitViewCollectionHeader(
-        GeneratedSourceBuilder sourceBuilder,
-        string serializedDataName,
-        string propertyDataOffsetName)
-    {
-        // Null is handled by the property offset before this point; invalid negative lengths must reach Span.Slice unchanged.
-        sourceBuilder.AppendLine($"int propertyPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({propertyDataOffsetName}, 4));");
-    }
-
-    private static void EmitBlittableValueProperty(
+    private static void EmitBlittableValuePropertyIfApplicable(
         GeneratedSourceBuilder sourceBuilder,
         TypeGenerationModel containingModel,
         PropertyGenerationModel property,
         int propertyIndex)
     {
+        if (property.Kind != PropertySerializationKind.BlittableStruct
+            || property.NestedSerializableType is null)
+        {
+            return;
+        }
+
+        sourceBuilder.AppendLine();
         string propertyAccessibility = IsEffectivelyPublic(property.Symbol.Type) ? "public" : "internal";
         string propertyType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         string serializedPropertyType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -1401,6 +1395,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+    }
+
+    private static void EmitViewCollectionHeader(
+        GeneratedSourceBuilder sourceBuilder,
+        string serializedDataName,
+        string propertyDataOffsetName)
+    {
+        // Null is handled by the property offset before this point; invalid negative lengths must reach Span.Slice unchanged.
+        sourceBuilder.AppendLine($"int propertyPayloadByteCount = BinaryPrimitives.ReadInt32LittleEndian({serializedDataName}.Slice({propertyDataOffsetName}, 4));");
     }
 
     private static void EmitExtensionClass(
