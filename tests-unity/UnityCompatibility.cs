@@ -50,7 +50,7 @@ RequireCondition(
     && fixedView.State == fixedPacket.State
     && fixedView.Position.X == fixedPacket.Position.X
     && fixedView.Position.Y == fixedPacket.Position.Y,
-    "Fixed-size primitive, enum, or nested Blittable value did not match its source.");
+    "Fixed-size primitive, enum, or struct-typed Blittable value did not match its source.");
 
 ReadOnlySpan<byte> fixedSerializedSpan = fixedView;
 ReadOnlyMemory<byte> fixedSerializedMemory = fixedView;
@@ -131,7 +131,7 @@ RequireCondition(
     && variableView.FloatValues[1] == 2.5f
     && variableView.DoubleValues.Length == 3
     && variableView.DoubleValues[2] == 3.25,
-    "Runtime-sized, nullable, array, string, or nested View value did not match its source.");
+    "Runtime-sized, nullable, array, string, or struct-typed View value did not match its source.");
 
 ReadOnlySpan<byte> variableSerializedSpan = variableView;
 ReadOnlyMemory<byte> variableSerializedMemory = variableView;
@@ -213,45 +213,45 @@ RequireCondition(
     && blittableRecordStructWritten == 12,
     "UnitySimpleBlittableRecordStruct did not match its source or IsBlittable was incorrect.");
 
-// Nested blittable record struct container verification
+// Struct-typed blittable record struct container verification
 var firstRecord = new UnitySimpleBlittableRecordStruct { IntValue = 88, DoubleValue = 88.88 };
 var secondRecord = new UnitySimpleBlittableRecordStruct { IntValue = 99, DoubleValue = 99.99 };
-var nestedBlittableRecordContainer = new UnityBlittableRecordStructContainer
+var structTypedBlittableRecordContainer = new UnityBlittableRecordStructContainer
 {
     Value = firstRecord,
     OptionalValue = secondRecord,
     Values = [firstRecord, secondRecord],
 };
-var nestedBlittableRecordBuffer = new byte[256];
-int nestedBlittableRecordWritten = nestedBlittableRecordContainer.Serialize(nestedBlittableRecordBuffer);
-var nestedBlittableRecordView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordWritten));
+var structTypedBlittableRecordBuffer = new byte[256];
+int structTypedBlittableRecordWritten = structTypedBlittableRecordContainer.Serialize(structTypedBlittableRecordBuffer);
+var structTypedBlittableRecordView = new UnityBlittableRecordStructContainerView(structTypedBlittableRecordBuffer.AsMemory(0, structTypedBlittableRecordWritten));
 RequireCondition(
-    nestedBlittableRecordView.Value.IntValue == 88
-    && nestedBlittableRecordView.Value.DoubleValue == 88.88
-    && nestedBlittableRecordView.OptionalValue!.Value.IntValue == 99
-    && nestedBlittableRecordView.OptionalValue!.Value.DoubleValue == 99.99
-    && nestedBlittableRecordView.Values.Length == 2
-    && nestedBlittableRecordView.Values[0].IntValue == 88
-    && nestedBlittableRecordView.Values[0].DoubleValue == 88.88
-    && nestedBlittableRecordView.Values[1].IntValue == 99
-    && nestedBlittableRecordView.Values[1].DoubleValue == 99.99
-    && nestedBlittableRecordView.GetByteLength() == nestedBlittableRecordWritten,
+    structTypedBlittableRecordView.Value.IntValue == 88
+    && structTypedBlittableRecordView.Value.DoubleValue == 88.88
+    && structTypedBlittableRecordView.OptionalValue!.Value.IntValue == 99
+    && structTypedBlittableRecordView.OptionalValue!.Value.DoubleValue == 99.99
+    && structTypedBlittableRecordView.Values.Length == 2
+    && structTypedBlittableRecordView.Values[0].IntValue == 88
+    && structTypedBlittableRecordView.Values[0].DoubleValue == 88.88
+    && structTypedBlittableRecordView.Values[1].IntValue == 99
+    && structTypedBlittableRecordView.Values[1].DoubleValue == 99.99
+    && structTypedBlittableRecordView.GetByteLength() == structTypedBlittableRecordWritten,
     "UnityBlittableRecordStructContainer non-null roundtrip failed.");
 
-var nestedBlittableRecordNullsContainer = new UnityBlittableRecordStructContainer
+var structTypedBlittableRecordNullsContainer = new UnityBlittableRecordStructContainer
 {
     Value = firstRecord,
     OptionalValue = null,
     Values = null,
 };
-int nestedBlittableRecordNullsWritten = nestedBlittableRecordNullsContainer.Serialize(nestedBlittableRecordBuffer);
-var nestedBlittableRecordNullsView = new UnityBlittableRecordStructContainerView(nestedBlittableRecordBuffer.AsMemory(0, nestedBlittableRecordNullsWritten));
+int structTypedBlittableRecordNullsWritten = structTypedBlittableRecordNullsContainer.Serialize(structTypedBlittableRecordBuffer);
+var structTypedBlittableRecordNullsView = new UnityBlittableRecordStructContainerView(structTypedBlittableRecordBuffer.AsMemory(0, structTypedBlittableRecordNullsWritten));
 RequireCondition(
-    nestedBlittableRecordNullsView.Value.IntValue == 88
-    && nestedBlittableRecordNullsView.Value.DoubleValue == 88.88
-    && nestedBlittableRecordNullsView.OptionalValue is null
-    && nestedBlittableRecordNullsView.Values.IsEmpty
-    && nestedBlittableRecordNullsView.GetByteLength() == nestedBlittableRecordNullsWritten,
+    structTypedBlittableRecordNullsView.Value.IntValue == 88
+    && structTypedBlittableRecordNullsView.Value.DoubleValue == 88.88
+    && structTypedBlittableRecordNullsView.OptionalValue is null
+    && structTypedBlittableRecordNullsView.Values.IsEmpty
+    && structTypedBlittableRecordNullsView.GetByteLength() == structTypedBlittableRecordNullsWritten,
     "UnityBlittableRecordStructContainer nulls roundtrip failed.");
 
 Console.WriteLine("ZeroSerializer Unity compatibility tests passed.");

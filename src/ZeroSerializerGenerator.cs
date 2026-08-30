@@ -62,7 +62,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static readonly DiagnosticDescriptor InvalidSerializableDependency = new(
         "ZEROS004",
-        "Invalid nested serializable type",
+        "Invalid struct-typed serializable type",
         "Property '{0}' refers to serializable type '{1}', but that type contains errors",
         SerializerName,
         DiagnosticSeverity.Error,
@@ -213,20 +213,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     continue;
                 }
 
-                PropertyGenerationModel? invalidNestedProperty = null;
-                foreach (PropertyGenerationModel nestedPropertyCandidate in generationModel.Properties)
+                PropertyGenerationModel? invalidStructTypedProperty = null;
+                foreach (PropertyGenerationModel structTypedPropertyCandidate in generationModel.Properties)
                 {
-                    if (nestedPropertyCandidate.NestedSerializableType is not null
+                    if (structTypedPropertyCandidate.StructTypedSerializableType is not null
                         && generationModels.TryGetValue(
-                            nestedPropertyCandidate.NestedSerializableType,
-                            out TypeGenerationModel? nestedModel)
-                        && !nestedModel.IsValid)
+                            structTypedPropertyCandidate.StructTypedSerializableType,
+                            out TypeGenerationModel? structTypedModel)
+                        && !structTypedModel.IsValid)
                     {
-                        invalidNestedProperty = nestedPropertyCandidate;
+                        invalidStructTypedProperty = structTypedPropertyCandidate;
                         break;
                     }
                 }
-                if (invalidNestedProperty is null)
+                if (invalidStructTypedProperty is null)
                 {
                     continue;
                 }
@@ -235,11 +235,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 invalidDependencyFound = true;
                 executionContext.ReportDiagnostic(Diagnostic.Create(
                     InvalidSerializableDependency,
-                    invalidNestedProperty.Symbol.Locations.IsDefaultOrEmpty
+                    invalidStructTypedProperty.Symbol.Locations.IsDefaultOrEmpty
                         ? null
-                        : invalidNestedProperty.Symbol.Locations[0],
-                    invalidNestedProperty.Symbol.Name,
-                    invalidNestedProperty.NestedSerializableType!.ToDisplayString()));
+                        : invalidStructTypedProperty.Symbol.Locations[0],
+                    invalidStructTypedProperty.Symbol.Name,
+                    invalidStructTypedProperty.StructTypedSerializableType!.ToDisplayString()));
             }
         }
         while (invalidDependencyFound);
@@ -502,7 +502,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 return new PropertyGenerationModel(
                     serializableProperty,
-                    PropertySerializationKind.Nested,
+                    PropertySerializationKind.StructTyped,
                     0,
                     null,
                     namedNullableUnderlyingType,
@@ -572,7 +572,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             return new PropertyGenerationModel(
                 serializableProperty,
-                PropertySerializationKind.Nested,
+                PropertySerializationKind.StructTyped,
                 0,
                 null,
                 namedPropertyType,
@@ -615,12 +615,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         int accumulatedByteCount = 0;
         foreach (ISymbol declaredMember in structType.GetMembers())
         {
-            if (declaredMember is not IFieldSymbol nestedField || nestedField.IsStatic)
+            if (declaredMember is not IFieldSymbol field || field.IsStatic)
             {
                 continue;
             }
 
-            if (!TryGetFixedTypeByteCount(nestedField.Type, typesBeingInspected, out int nestedFieldByteCount))
+            if (!TryGetFixedTypeByteCount(field.Type, typesBeingInspected, out int fieldByteCount))
             {
                 typesBeingInspected.Remove(candidateType);
                 byteCount = 0;
@@ -629,7 +629,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
             try
             {
-                accumulatedByteCount = checked(accumulatedByteCount + nestedFieldByteCount);
+                accumulatedByteCount = checked(accumulatedByteCount + fieldByteCount);
             }
             // Ignore exception: an overflowing property total means the struct cannot have a supported fixed byte count.
             catch (OverflowException)
@@ -772,7 +772,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             return false;
         }
 
-        // Ignore only the candidate's own layout; every nested struct must already be a valid Blittable Struct.
+        // Ignore only the candidate's own layout; every struct-typed property must already be a valid Blittable Struct.
         var typesBeingInspected = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default)
         {
             candidateStruct,
@@ -1004,24 +1004,24 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.AppendLine($"{CreateLocalName(localNamePrefix, "Payload")}.CopyTo(destination.Slice(writtenBytes));");
                 sourceBuilder.AppendLine($"writtenBytes += {CreateLocalName(localNamePrefix, "Payload")}.Length;");
                 break;
-            case PropertySerializationKind.Nested:
-                string nestedSourceExpression;
-                if (property.NestedSerializableType!.TypeKind == TypeKind.Struct
+            case PropertySerializationKind.StructTyped:
+                string structTypedSourceExpression;
+                if (property.StructTypedSerializableType!.TypeKind == TypeKind.Struct
                     && property.NullableUnderlyingType is not null)
                 {
                     string nullableStructValueName = CreateLocalName(localNamePrefix, "NullableStructValue");
                     sourceBuilder.AppendLine($"var {nullableStructValueName} = {serializationValueExpression};");
-                    nestedSourceExpression = nullableStructValueName;
+                    structTypedSourceExpression = nullableStructValueName;
                 }
                 else
                 {
-                    nestedSourceExpression = serializationValueExpression;
+                    structTypedSourceExpression = serializationValueExpression;
                 }
                 EmitWriteBody(
                     sourceBuilder,
-                    modelLookup[property.NestedSerializableType],
+                    modelLookup[property.StructTypedSerializableType],
                     modelLookup,
-                    nestedSourceExpression,
+                    structTypedSourceExpression,
                     localNamePrefix);
                 break;
         }
@@ -1053,12 +1053,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
         string shapeTagPrefix = generationModel.EmitShapeTag ? string.Empty : "//";
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// <summary>");
-        sourceBuilder.AppendLine($"{shapeTagPrefix}/// A structural signature that describes the layout of the serialized type and any nested structures.");
+        sourceBuilder.AppendLine($"{shapeTagPrefix}/// A structural signature that describes the layout of the serialized type and any struct-typed properties.");
         sourceBuilder.AppendLine($"{shapeTagPrefix}/// </summary>");
         sourceBuilder.AppendLine($"{shapeTagPrefix}public const string ShapeTag = \"{shapeTag}\";");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("/// <summary>");
-        sourceBuilder.AppendLine("/// A hash of the structural signature that describes the layout of the serialized type and any nested structures.");
+        sourceBuilder.AppendLine("/// A hash of the structural signature that describes the layout of the serialized type and any struct-typed properties.");
         sourceBuilder.AppendLine("/// </summary>");
         sourceBuilder.AppendLine($"public const uint ShapeHash = {shapeHash}U;");
         sourceBuilder.AppendLine();
@@ -1069,7 +1069,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.AppendLine($"public const int RequiredByteLength = {requiredByteLength};");
         sourceBuilder.AppendLine($"public const bool IsBlittable = {generationModel.IsBlittableStruct.ToString().ToLowerInvariant()};");
         sourceBuilder.AppendLine();
-        // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and nested View structs without allocation.
+        // ReadOnlyMemory keeps the borrowed byte array reusable by ordinary and struct-typed View structs without allocation.
         sourceBuilder.AppendLine("private readonly ReadOnlyMemory<byte> serializedMemory;");
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine($"public {generationModel.ViewTypeName}(ReadOnlyMemory<byte> containingSerializedMemory)");
@@ -1191,18 +1191,18 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 propertyBytesLength = propertyModel.ElementByteCount;
             }
-            else if (propertyModel.Kind == PropertySerializationKind.Nested
-                && propertyModel.NestedSerializableType is not null
-                && modelLookup.TryGetValue(propertyModel.NestedSerializableType, out TypeGenerationModel? nestedGenerationModel))
+            else if (propertyModel.Kind == PropertySerializationKind.StructTyped
+                && propertyModel.StructTypedSerializableType is not null
+                && modelLookup.TryGetValue(propertyModel.StructTypedSerializableType, out TypeGenerationModel? structTypedGenerationModel))
             {
-                bool isNestedSizePredictable = TryCalculatePredictableRequiredByteLength(
-                    nestedGenerationModel,
+                bool isStructTypedSizePredictable = TryCalculatePredictableRequiredByteLength(
+                    structTypedGenerationModel,
                     modelLookup,
                     typesBeingInspected,
-                    out int nestedBytesLength);
-                if (isNestedSizePredictable)
+                    out int structTypedBytesLength);
+                if (isStructTypedSizePredictable)
                 {
-                    propertyBytesLength = nestedBytesLength;
+                    propertyBytesLength = structTypedBytesLength;
                 }
                 else
                 {
@@ -1251,15 +1251,15 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         {
             propertyType = $"ReadOnlySpan<{property.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
         }
-        else if (property.Kind == PropertySerializationKind.Nested)
+        else if (property.Kind == PropertySerializationKind.StructTyped)
         {
-            propertyType = GetQualifiedViewName(property.NestedSerializableType!);
+            propertyType = GetQualifiedViewName(property.StructTypedSerializableType!);
         }
         else if (property.Kind == PropertySerializationKind.BlittableStruct
                  && !containingModel.IsBlittableStruct
-                 && property.NestedSerializableType is not null)
+                 && property.StructTypedSerializableType is not null)
         {
-            string viewName = GetQualifiedViewName(property.NestedSerializableType);
+            string viewName = GetQualifiedViewName(property.StructTypedSerializableType);
             propertyType = property.IsNullableType ? viewName + "?" : viewName;
         }
         else
@@ -1268,10 +1268,10 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         }
 
         var propertyReturnType
-            = property.Kind is PropertySerializationKind.BlittableStruct or PropertySerializationKind.Nested
+            = property.Kind is PropertySerializationKind.BlittableStruct or PropertySerializationKind.StructTyped
             ? (property.NullableUnderlyingType is not null || property.Symbol.Type.TypeKind is TypeKind.Class)
-                ? GetQualifiedViewName(property.NestedSerializableType!) + "?"
-                : GetQualifiedViewName(property.NestedSerializableType!)
+                ? GetQualifiedViewName(property.StructTypedSerializableType!) + "?"
+                : GetQualifiedViewName(property.StructTypedSerializableType!)
             : propertyType;
         sourceBuilder.AppendLine($"{propertyAccessibility} {propertyReturnType} {EscapeIdentifier(property.Symbol.Name)}");
         sourceBuilder.OpenBlock();
@@ -1280,9 +1280,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         if (containingModel.IsBlittableStruct)
         {
             if (property.Kind == PropertySerializationKind.BlittableStruct
-                && property.NestedSerializableType is not null)
+                && property.StructTypedSerializableType is not null)
             {
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.StructTypedSerializableType)}(serializedMemory.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
             }
             else
             {
@@ -1316,9 +1316,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "propertyDataOffset");
                 break;
             case PropertySerializationKind.BlittableStruct:
-                if (property.NestedSerializableType is not null)
+                if (property.StructTypedSerializableType is not null)
                 {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
+                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.StructTypedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 }
                 else
                 {
@@ -1342,9 +1342,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     sourceBuilder.AppendLine($"return MemoryMarshal.Cast<byte, {property.ArrayElementType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset + 4, propertyPayloadByteCount));");
                 }
                 break;
-            case PropertySerializationKind.Nested:
-                // Nested views receive an already-positioned memory region; their constructor has no offset semantics.
-                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType!)}(serializedMemory.Slice(propertyDataOffset));");
+            case PropertySerializationKind.StructTyped:
+                // Struct-typed views receive an already-positioned memory region; their constructor has no offset semantics.
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.StructTypedSerializableType!)}(serializedMemory.Slice(propertyDataOffset));");
                 break;
         }
 
@@ -1463,9 +1463,9 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             case PropertySerializationKind.String:
             case PropertySerializationKind.Array:
                 return $"4 + BinaryPrimitives.ReadInt32LittleEndian({spanVarName}.Slice({offsetVarName}, 4))";
-            case PropertySerializationKind.Nested:
-                string nestedViewTypeName = GetQualifiedViewName(property.NestedSerializableType!);
-                return $"new {nestedViewTypeName}({memoryVarName}.Slice({offsetVarName})).GetByteLength()";
+            case PropertySerializationKind.StructTyped:
+                string structTypedViewTypeName = GetQualifiedViewName(property.StructTypedSerializableType!);
+                return $"new {structTypedViewTypeName}({memoryVarName}.Slice({offsetVarName})).GetByteLength()";
             default:
                 throw new InvalidOperationException("Unknown property kind");
         }

@@ -319,7 +319,7 @@ public partial struct MyPartialStruct
     }
 
     [Fact]
-    public async Task ZEROS002_Violation_UnmarkedBlittableNestedStruct()
+    public async Task ZEROS002_Violation_UnmarkedBlittableStructProperty()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -351,7 +351,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS002_Violation_UnmarkedNestedClass()
+    public async Task ZEROS002_Violation_UnmarkedStructTypedClass()
     {
         string source = @"
 using ZeroSerializer;
@@ -377,7 +377,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS002_Compliant_MarkedBlittableNestedStruct()
+    public async Task ZEROS002_Compliant_MarkedBlittableStructProperty()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -458,7 +458,7 @@ public class Container
     }
 
     [Fact]
-    public async Task ZEROS004_Violation_InvalidNestedSerializableType()
+    public async Task ZEROS004_Violation_InvalidStructTypedSerializableType()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -479,7 +479,7 @@ public class InvalidType
 [ZeroSerializer]
 public class Container
 {
-    public InvalidType {|#1:NestedValue|} { get; set; }
+    public InvalidType {|#1:StructTypedValue|} { get; set; }
 }
 ";
 
@@ -490,12 +490,12 @@ public class Container
                 .WithArguments("Value", "PackedValue"),
             new DiagnosticResult("ZEROS004", DiagnosticSeverity.Error)
                 .WithLocation(1)
-                .WithArguments("NestedValue", "InvalidType")
+                .WithArguments("StructTypedValue", "InvalidType")
         );
     }
 
     [Fact]
-    public async Task ZEROS004_Compliant_ValidNestedSerializableType()
+    public async Task ZEROS004_Compliant_ValidStructTypedSerializableType()
     {
         string source = @"
 using System.Runtime.InteropServices;
@@ -517,7 +517,7 @@ public class ValidType
 [ZeroSerializer]
 public class Container
 {
-    public ValidType NestedValue { get; set; }
+    public ValidType StructTypedValue { get; set; }
 }
 ";
 

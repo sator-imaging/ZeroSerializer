@@ -63,19 +63,19 @@ property offset は型の先頭からの相対位置で、`0` は null を表し
 - `[ZeroSerializer]` と `[StructLayout(LayoutKind.Sequential, Pack = 1)]` を再帰的に満たす Blittable Struct。
 - `string`。
 - 一次元配列。要素は Blittable primitive、enum、または Blittable Struct に限定されます。
-- `[ZeroSerializer]` を付けたネスト型。非 Blittable Struct はネストした View として公開されます。
+- `[ZeroSerializer]` を付けた構造体型プロパティー。非 Blittable Struct は View として公開されます。
 
 Blittable Struct は全ケースで offset table を持たない raw payload として扱います。
 
-- 単体とネストプロパティーは `MemoryMarshal.Write/Read`。
+- 単体と構造体型プロパティーは `MemoryMarshal.Write/Read`。
 - 配列は `MemoryMarshal.AsBytes/Cast`。
 - nullable は property offset `0` で null を表し、非 null の場合だけ raw payload。
 
-`[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の property offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
+`[ZeroSerializer]` が付いていても Blittable Struct は View 化しません。親が非 Blittable 型なら親の property offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
 
 全プロパティー型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。
 
-ネストした class/struct にも `[ZeroSerializer]` が必要です。未修飾の型は `ZEROS003` error になります。
+構造体型プロパティーの class/struct にも `[ZeroSerializer]` が必要です。未修飾の型は `ZEROS003` error になります。
 
 ## null と可変長データ
 
@@ -108,7 +108,7 @@ null は property offset `0` で表し、length header と payload を格納し�
 
 ## View と長さ
 
-生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、ネストした非 Blittable 型も property offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
+生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、構造体型プロパティーの非 Blittable 型も property offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
 
 View は `ReadOnlySpan<byte>` と `ReadOnlyMemory<byte>` へ暗黙変換でき、どちらもコピーや再シリアライズを行いません。`RequiredByteLength >= 0` の固定長 View は先頭から `RequiredByteLength` までを返します。負値になる可変長 View は総バイト長を wire format から復元できないため、コンストラクターへ渡した借用領域全体を返します。可変長データのハッシュや検証では、未使用のバッファ末尾を含めないよう `writtenBytes` で Memory を切り詰めてから View を作成します。
 
@@ -146,8 +146,8 @@ ReadOnlyMemory<byte> directMemory = view.AsMemory();
 2. **可変長データ型のプロパティー**
    - `string`
    - 一次元配列（例: `int[]` など）
-3. **サイズ予測不可能なネスト型のプロパティー**
-   - `[ZeroSerializer]` が付与されたネスト型であって、その内部に上記の Nullable 型、参照型、可変長データ型、またはその他のサイズ予測不可能なプロパティーを含んでいるもの
+3. **サイズ予測不可能な構造体型プロパティー**
+   - `[ZeroSerializer]` が付与された構造体型プロパティーであって、その内部に上記の Nullable 型、参照型、可変長データ型、またはその他のサイズ予測不可能なプロパティーを含んでいるもの
 4. **再帰・循環参照構造**
    - 自分自身や他の型を相互に参照し合うなどして、依存関係が再帰・循環している場合
 5. **サイズ計算時の算術オーバーフロー**
@@ -157,6 +157,6 @@ Blittable Struct は property offset table を持たないため、`RequiredByte
 
 `RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも property offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
 
-`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数（offset table を含む）を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
+`Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数（offset table を含む）を `int` で返します。構造体型プロパティーの書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
 
 string と Blittable payload は native memory image を利用するため、Serializer と View はリトルエンディアン環境だけを受け付けます。
