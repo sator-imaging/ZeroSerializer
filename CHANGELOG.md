@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.1.0-rc.4](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.4) (2026-08-30)
+
+### 📣 Breaking Changes ⚠
+* fix!: remove unauthorized spec by [@sator-imaging](https://github.com/sator-imaging) in [#92](https://github.com/sator-imaging/ZeroSerializer/pull/92)
+* fix!: ShapeTag generation for nullable non-blittable types by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#99](https://github.com/sator-imaging/ZeroSerializer/pull/99)
+### 🚀 Features
+* Add ZEROS009 diagnostic for StructLayout attribute on non-struct types by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#88](https://github.com/sator-imaging/ZeroSerializer/pull/88)
+### 📖 Documentation
+* docs: update README usage section with serialize sample and blittable structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#89](https://github.com/sator-imaging/ZeroSerializer/pull/89)
+### 📚 Other Changes
+* refactor(test): chore by [@sator-imaging](https://github.com/sator-imaging) in [#73](https://github.com/sator-imaging/ZeroSerializer/pull/73)
+* test: chore by [@sator-imaging](https://github.com/sator-imaging) in [#74](https://github.com/sator-imaging/ZeroSerializer/pull/74)
+* Optimize GetByteLength Generated Code by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#71](https://github.com/sator-imaging/ZeroSerializer/pull/71)
+* Add record and record struct tests to both tests and tests-unity by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#75](https://github.com/sator-imaging/ZeroSerializer/pull/75)
+* Update Blittable Detection and ZEROS002 Diagnostic by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#79](https://github.com/sator-imaging/ZeroSerializer/pull/79)
+* test: add diagnostic test for ZEROS003 with unmarked nested class by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#81](https://github.com/sator-imaging/ZeroSerializer/pull/81)
+* Report ZEROS003 and ZEROS004 on property type location by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#84](https://github.com/sator-imaging/ZeroSerializer/pull/84)
+* Disallow partial struct declarations for blittable structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#82](https://github.com/sator-imaging/ZeroSerializer/pull/82)
+* Add unit tests for shared reference instance serialization by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#86](https://github.com/sator-imaging/ZeroSerializer/pull/86)
+* Add roundtrip test for Foo and Bar structs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#87](https://github.com/sator-imaging/ZeroSerializer/pull/87)
+* Update ZEROS007 diagnostic to recommend flags enum for bool properties by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#85](https://github.com/sator-imaging/ZeroSerializer/pull/85)
+* Add fallback detection to generated source preview action by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#94](https://github.com/sator-imaging/ZeroSerializer/pull/94)
+* Update Diagnostic Rule IDs and diagnostic test assertions by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#95](https://github.com/sator-imaging/ZeroSerializer/pull/95)
+* Wording update: change field to property across codebase, tests, and docs by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#97](https://github.com/sator-imaging/ZeroSerializer/pull/97)
+* Rename test methods to explain target behavior and add test guidelines by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#98](https://github.com/sator-imaging/ZeroSerializer/pull/98)
+* Use MemoryMarshal.Write for blittable struct property serialization by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#101](https://github.com/sator-imaging/ZeroSerializer/pull/101)
+* Add nullable view support tests and UnityCompatibilityTests by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#102](https://github.com/sator-imaging/ZeroSerializer/pull/102)
+* Update test suite with explicit types and hardcoded byte length assertions by [@google-labs-jules](https://github.com/google-labs-jules)[bot] in [#103](https://github.com/sator-imaging/ZeroSerializer/pull/103)
+* Add explicit expected GetByteLength assertions to tests by [@sator-imaging](https://github.com/sator-imaging) in [#105](https://github.com/sator-imaging/ZeroSerializer/pull/105)
+
+
+**Full Changelog**: https://github.com/sator-imaging/ZeroSerializer/compare/v1.1.0-rc.3...v1.1.0-rc.4
+
+
 ## [1.1.0-rc.3](https://github.com/sator-imaging/ZeroSerializer/releases/tag/v1.1.0-rc.3) (2026-08-13)
 
 ### 📣 Breaking Changes ⚠
