@@ -174,7 +174,7 @@ RequireCondition(
     && EmptyStructPacketView.RequiredByteLength == 0,
     "Empty serializable types did not remain zero length.");
 
-// Record test (class)
+// Record class roundtrip verification
 var recordObj = new UnitySimpleCsharpRecord { IntValue = 55, DoubleValue = 99.9 };
 var recordBuffer = new byte[128];
 int recordWritten = recordObj.Serialize(recordBuffer);
@@ -185,7 +185,7 @@ RequireCondition(
     && !UnitySimpleCsharpRecordView.IsBlittable,
     "UnitySimpleCsharpRecord did not match its source or IsBlittable was incorrect.");
 
-// Record struct test
+// Record struct roundtrip verification
 var recordStructObj = new UnitySimpleRecordStruct { IntValue = 66, DoubleValue = 88.8 };
 var recordStructBuffer = new byte[128];
 int recordStructWritten = recordStructObj.Serialize(recordStructBuffer);
@@ -196,7 +196,7 @@ RequireCondition(
     && !UnitySimpleRecordStructView.IsBlittable,
     "UnitySimpleRecordStruct did not match its source or IsBlittable was incorrect.");
 
-// Record struct with blittable layout test
+// Blittable record struct layout verification
 var blittableRecordStructObj = new UnitySimpleBlittableRecordStruct { IntValue = 77, DoubleValue = 77.7 };
 var blittableRecordStructBuffer = new byte[UnitySimpleBlittableRecordStructView.RequiredByteLength];
 int blittableRecordStructWritten = blittableRecordStructObj.Serialize(blittableRecordStructBuffer);
@@ -209,7 +209,7 @@ RequireCondition(
     && blittableRecordStructWritten == 12,
     "UnitySimpleBlittableRecordStruct did not match its source or IsBlittable was incorrect.");
 
-// Nested blittable record struct container test
+// Nested blittable record struct container verification
 var firstRecord = new UnitySimpleBlittableRecordStruct { IntValue = 88, DoubleValue = 88.88 };
 var secondRecord = new UnitySimpleBlittableRecordStruct { IntValue = 99, DoubleValue = 99.99 };
 var nestedBlittableRecordContainer = new UnityBlittableRecordStructContainer
