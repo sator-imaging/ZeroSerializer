@@ -1,5 +1,3 @@
-# Agent Instructions
+# Guidelines for Tests
 
-## Guidelines for Tests
-
-When writing, modifying, or working on tests in the `tests/` directory, refer to [tests/README.md](tests/README.md) for test naming rules and declaration order requirements.
+When writing, modifying, or working on tests in the `tests/` or `tests-*/` directory, refer to [tests/README.md](tests/README.md).
