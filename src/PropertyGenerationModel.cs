@@ -7,11 +7,11 @@ using Microsoft.CodeAnalysis;
 
 namespace ZeroSerializer.Generator;
 
-internal sealed class FieldGenerationModel
+internal sealed class PropertyGenerationModel
 {
-    internal FieldGenerationModel(
+    internal PropertyGenerationModel(
         IPropertySymbol symbol,
-        FieldSerializationKind kind,
+        PropertySerializationKind kind,
         int elementByteCount,
         ITypeSymbol? arrayElementType,
         INamedTypeSymbol? nestedSerializableType,
@@ -29,7 +29,7 @@ internal sealed class FieldGenerationModel
 
     internal IPropertySymbol Symbol { get; }
 
-    internal FieldSerializationKind Kind { get; }
+    internal PropertySerializationKind Kind { get; }
 
     internal int ElementByteCount { get; }
 

@@ -43,15 +43,15 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 ```
 
-## Field offset table
+## Property offset table
 
 非 Blittable 型の先頭には、プロパティー数と同じ数の `int` を配置します。Blittable Struct は例外で、offset table を持たず struct 全体を raw payload として扱います。
 
 ```text
-[ int fieldOffset × propertyCount ][ property payloads... ]
+[ int propertyOffset × propertyCount ][ property payloads... ]
 ```
 
-field offset は型の先頭からの相対位置で、`0` は null を表します。非 null の string・配列では length header、それ以外では payload の先頭を指します。Serialize は最初に table 領域だけを予約し、各プロパティーの offset を table に1回書いてから payload を宣言順に直列書き込みします。View は対応する table entry を直接読むため、先行プロパティーを走査しません。
+property offset は型の先頭からの相対位置で、`0` は null を表します。非 null の string・配列では length header、それ以外では payload の先頭を指します。Serialize は最初に table 領域だけを予約し、各プロパティーの offset を table に1回書いてから payload を宣言順に直列書き込みします。View は対応する table entry を直接読むため、先行プロパティーを走査しません。
 
 ## シリアライズ対象
 
@@ -69,11 +69,11 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 - 単体とネストプロパティーは `MemoryMarshal.Write/Read`。
 - 配列は `MemoryMarshal.AsBytes/Cast`。
-- nullable は field offset `0` で null を表し、非 null の場合だけ raw payload。
+- nullable は property offset `0` で null を表し、非 null の場合だけ raw payload。
 
-`[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の field offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
+`[ZeroSerializer]` が付いていても Blittable Struct はネスト View 化しません。親が非 Blittable 型なら親の property offset table は存在しますが、Blittable Struct payload 内部には table を生成しません。
 
-全フィールド型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。
+全プロパティー型が Blittable 対応済みで、自身の `StructLayout(LayoutKind.Sequential, Pack = 1)` だけが不足する `[ZeroSerializer]` struct には、型名 identifier へ `ZEROS006` warning を出します。
 
 ネストした class/struct にも `[ZeroSerializer]` が必要です。未修飾の型は `ZEROS003` error になります。
 
@@ -81,11 +81,11 @@ Blittable Struct は全ケースで offset table を持たない raw payload と
 
 string を除く参照型と `Nullable<T>` は NullableType です。C# の nullable annotation にかかわらず参照型は同じ分類になり、値型では `int` と `int?` のように分類が分かれます。
 
-NullableType と string・配列の null は field offset table だけで表現します。
+NullableType と string・配列の null は property offset table だけで表現します。
 
 ```text
-null:      fieldOffset = 0
-non-null:  fieldOffset = payload の相対位置
+null:      propertyOffset = 0
+non-null:  propertyOffset = payload の相対位置
 ```
 
 参照型と `Nullable<T>` の1 byte marker は使用しません。null の場合は payload を格納しないため、NullableType を含む型は可変長です。
@@ -96,19 +96,19 @@ string は NullableType の例外で、次の配置を使用します。
 [ int payloadByteLength ][ UTF-16 payload ]
 ```
 
-null は field offset `0` で表し、length header と payload を格納しません。非 null では空文字列も含めて `int payloadByteLength` を必ず保持し、空文字列の length は `0` です。length は文字数ではなく payload のバイト長です。View は文字列を生成せず、payload を `MemoryMarshal.Cast<byte, char>` した `ReadOnlySpan<char>` を返します。`ReadOnlySpan<char>` 自体は null を表現できないため、View プロパティーでは null と空文字列がどちらも空 Span になります。
+null は property offset `0` で表し、length header と payload を格納しません。非 null では空文字列も含めて `int payloadByteLength` を必ず保持し、空文字列の length は `0` です。length は文字数ではなく payload のバイト長です。View は文字列を生成せず、payload を `MemoryMarshal.Cast<byte, char>` した `ReadOnlySpan<char>` を返します。`ReadOnlySpan<char>` 自体は null を表現できないため、View プロパティーでは null と空文字列がどちらも空 Span になります。
 
-非 null 配列の payload は次の配置です。field offset は length header を指します。
+非 null 配列の payload は次の配置です。property offset は length header を指します。
 
 ```text
 [ int payloadByteLength ][ blittable payload ]
 ```
 
-配列の length も要素数ではなく payload のバイト長です。null は field offset `0` で表し、length header と payload を格納しません。非 null では空配列も含めて length header を必ず保持します。payload は `MemoryMarshal.AsBytes` で書き込み、View は `MemoryMarshal.Cast` した `ReadOnlySpan<T>` を返します。null 配列の View プロパティーは空 Span です。
+配列の length も要素数ではなく payload のバイト長です。null は property offset `0` で表し、length header と payload を格納しません。非 null では空配列も含めて length header を必ず保持します。payload は `MemoryMarshal.AsBytes` で書き込み、View は `MemoryMarshal.Cast` した `ReadOnlySpan<T>` を返します。null 配列の View プロパティーは空 Span です。
 
 ## View と長さ
 
-生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、ネストした非 Blittable 型も field offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
+生成 View は `ReadOnlyMemory<byte>` を保持する通常の `readonly struct` です。コンストラクターはデータ先頭が揃った `ReadOnlyMemory<byte>` だけを受け取り、offset は受け取りません。呼び出し側が必要な位置で `Slice` し、ネストした非 Blittable 型も property offset で `Slice` した Memory から View を生成します。固定長・可変長ともにコンストラクターでは長さを検証せず、プロパティーアクセス時の Memory・Span・index・`BinaryPrimitives`・`MemoryMarshal` の標準例外に範囲検証を任せます。
 
 View は `ReadOnlySpan<byte>` と `ReadOnlyMemory<byte>` へ暗黙変換でき、どちらもコピーや再シリアライズを行いません。`RequiredByteLength >= 0` の固定長 View は先頭から `RequiredByteLength` までを返します。負値になる可変長 View は総バイト長を wire format から復元できないため、コンストラクターへ渡した借用領域全体を返します。可変長データのハッシュや検証では、未使用のバッファ末尾を含めないよう `writtenBytes` で Memory を切り詰めてから View を作成します。
 
@@ -134,7 +134,7 @@ Foo original = view.Materialize();
 ReadOnlyMemory<byte> directMemory = view.AsMemory();
 ```
 
-`public const int RequiredByteLength` は、field offset table と予測可能なプロパティーのバイト数を合計します。サイズを予測できないプロパティーは一つにつき native pointer サイズ（`IntPtr.Size`、64 bit CPU では8 byte）として加算し、一つでも含まれる場合は最終合計を負数にします。全て予測可能なら正数です。
+`public const int RequiredByteLength` は、property offset table と予測可能なプロパティーのバイト数を合計します。サイズを予測できないプロパティーは一つにつき native pointer サイズ（`IntPtr.Size`、64 bit CPU では8 byte）として加算し、一つでも含まれる場合は最終合計を負数にします。全て予測可能なら正数です。
 
 #### `RequiredByteLength` が負数になる条件
 
@@ -153,9 +153,9 @@ ReadOnlyMemory<byte> directMemory = view.AsMemory();
 5. **サイズ計算時の算術オーバーフロー**
    - プロパティーのバイトサイズの計算・加算処理において算術オーバーフローが発生した場合
 
-Blittable Struct は field offset table を持たないため、`RequiredByteLength` は table を含めず struct 全体の raw byte サイズになります。
+Blittable Struct は property offset table を持たないため、`RequiredByteLength` は table を含めず struct 全体の raw byte サイズになります。
 
-`RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも field offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
+`RequiredByteLength >= 0` は固定長であることだけを表し、Blittable 判定とは独立しています。class と非 Blittable struct は固定長でも property offset table から各プロパティーを読みます。struct 全体を `MemoryMarshal.Read` するのは Blittable Struct だけです。
 
 `Serialize` は呼び出し側が渡した `Span<byte>` に直接書き込み、書き込んだ総バイト数（offset table を含む）を `int` で返します。ネスト型の書き込みは生成時にルート `Serialize` の本体へ展開され、実行時に別の `Serialize` を再帰呼び出ししません。`MemoryMarshal.Write` が読み取り専用の `in T` を受け取る .NET 8 以降では、参照型と `RequiredByteLength` の絶対値が `16` 以下の構造体は通常の `this`、`16` を超える構造体は `this in T source` で宣言します。書き込み可能な `ref T` を受け取る .NET 7 以前では、構造体を通常の `this` で受け取り、Blittable Struct のルート値を `ref source` で直接書き込みます。`in` は宣言側だけに付き、呼び出しは常に `source.Serialize(buffer)` です。固定長・可変長ともに独自の長さ検証を生成せず、範囲外を index・Span・`BinaryPrimitives`・`MemoryMarshal` の標準例外に任せます。
 

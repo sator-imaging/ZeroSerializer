@@ -145,7 +145,7 @@ RequireCondition(
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(12 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(14 * sizeof(int), sizeof(int))) == 0
     && BinaryPrimitives.ReadInt32LittleEndian(variableSerializedData.Slice(17 * sizeof(int), sizeof(int))) == 0,
-    "Null payloads were not represented by zero field offsets.");
+    "Null payloads were not represented by zero property offsets.");
 
 var ignoredMembersPacket = new IgnoredMembersPacket(7, 8, 9) { IgnoredField = 10 };
 var ignoredMembersBuffer = new byte[IgnoredMembersPacketView.RequiredByteLength];
@@ -157,7 +157,7 @@ RequireCondition(
     && typeof(IgnoredMembersPacketView).GetProperties().Length == 2
     && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.Included)) is not null
     && typeof(IgnoredMembersPacketView).GetProperty(nameof(IgnoredMembersPacket.PrivateSetter)) is not null,
-    "Ignored fields, indexers, setters, or non-public getters changed the generated View.");
+    "Ignored properties, indexers, setters, or non-public getters changed the generated View.");
 
 var namespacedPacket = new UnityCompatibilityModels.NamespacedPacket { Identifier = 11 };
 var namespacedBuffer = new byte[UnityCompatibilityModels.NamespacedPacketView.RequiredByteLength];
