@@ -791,6 +791,16 @@ public sealed class SerializationTests
     }
 
     [Fact]
+    public void NonBlittableStructPropertiesDoNotExposeAsValueAccessors()
+    {
+        PropertyInfo? valueProperty = typeof(NullableStructContainerModelView).GetProperty("NonBlittableStruct_AsValue");
+        PropertyInfo? nullableValueProperty = typeof(NullableStructContainerModelView).GetProperty("NullableNonBlittableStruct_AsValue");
+
+        Assert.Null(valueProperty);
+        Assert.Null(nullableValueProperty);
+    }
+
+    [Fact]
     public void StrictBlittableStructWithoutOffsetTableSerializesAsRawPayload()
     {
         // StrictBlittableStruct has Sequential, Pack=1 and nothing else.
