@@ -1387,4 +1387,50 @@ public sealed class SerializationTests
         TestAssert.Equal(ByteState.Ready, viewNull.NonBlittableStruct.ByteState, "NonBlittableStruct.ByteState");
         Assert.Null(viewNull.NullableNonBlittableStruct);
     }
+
+    [Fact]
+    public void ViewStructProvidesAsValuePropertyOnlyForBlittableStructProperties()
+    {
+        Type viewType = typeof(NullableStructContainerModelView);
+
+        // Verify BlittableStruct has _AsValue property
+        PropertyInfo? blittableAsValueProp = viewType.GetProperty("BlittableStruct_AsValue");
+        Assert.NotNull(blittableAsValueProp);
+        TestAssert.Equal(typeof(PackedRecord), blittableAsValueProp.PropertyType, "BlittableStruct_AsValue PropertyType");
+
+        // Verify NullableBlittableStruct has _AsValue property
+        PropertyInfo? nullableBlittableAsValueProp = viewType.GetProperty("NullableBlittableStruct_AsValue");
+        Assert.NotNull(nullableBlittableAsValueProp);
+        TestAssert.Equal(typeof(PackedRecord?), nullableBlittableAsValueProp.PropertyType, "NullableBlittableStruct_AsValue PropertyType");
+
+        // Verify NonBlittableStruct does NOT have _AsValue property
+        PropertyInfo? nonBlittableAsValueProp = viewType.GetProperty("NonBlittableStruct_AsValue");
+        Assert.Null(nonBlittableAsValueProp);
+
+        // Verify NullableNonBlittableStruct does NOT have _AsValue property
+        PropertyInfo? nullableNonBlittableAsValueProp = viewType.GetProperty("NullableNonBlittableStruct_AsValue");
+        Assert.Null(nullableNonBlittableAsValueProp);
+
+        // Verify behavior on serialized instance
+        NullableStructContainerModel source = new NullableStructContainerModel
+        {
+            BlittableStruct = new PackedRecord { Number = 100, State = SignedState.Positive },
+            NullableBlittableStruct = new PackedRecord { Number = 200, State = SignedState.Negative },
+            NonBlittableStruct = new EnumStruct(ByteState.Ready, SignedState.Positive),
+            NullableNonBlittableStruct = null
+        };
+
+        byte[] buffer = new byte[256];
+        int written = source.Serialize(buffer);
+        NullableStructContainerModelView view = new NullableStructContainerModelView(buffer.AsMemory(0, written));
+
+        PackedRecord blittableValue = view.BlittableStruct_AsValue;
+        TestAssert.Equal(100, blittableValue.Number, "BlittableStruct_AsValue.Number");
+        TestAssert.Equal(SignedState.Positive, blittableValue.State, "BlittableStruct_AsValue.State");
+
+        PackedRecord? nullableBlittableValue = view.NullableBlittableStruct_AsValue;
+        Assert.NotNull(nullableBlittableValue);
+        TestAssert.Equal(200, nullableBlittableValue!.Value.Number, "NullableBlittableStruct_AsValue.Number");
+        TestAssert.Equal(SignedState.Negative, nullableBlittableValue!.Value.State, "NullableBlittableStruct_AsValue.State");
+    }
 }
