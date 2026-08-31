@@ -40,7 +40,6 @@
                       ../tests/**/*.cs"
              Exclude="../tests/UnityCompatibilityTests.cs;
                       ../tests/Diagnostics/**/*.cs;
-                      ../tests/XXHash32Tests.cs;
                       ../tests/ShapeTagEmissionTests.cs;
                       ../tests/bin/**/*.cs;
                       ../tests/obj/**/*.cs"
