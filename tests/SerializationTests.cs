@@ -1398,10 +1398,9 @@ public sealed class SerializationTests
         Assert.NotNull(blittableAsValueProp);
         TestAssert.Equal(typeof(PackedRecord), blittableAsValueProp.PropertyType, "BlittableStruct_AsValue PropertyType");
 
-        // Verify NullableBlittableStruct has _AsValue property
+        // Verify NullableBlittableStruct does NOT have _AsValue property
         PropertyInfo? nullableBlittableAsValueProp = viewType.GetProperty("NullableBlittableStruct_AsValue");
-        Assert.NotNull(nullableBlittableAsValueProp);
-        TestAssert.Equal(typeof(PackedRecord?), nullableBlittableAsValueProp.PropertyType, "NullableBlittableStruct_AsValue PropertyType");
+        Assert.Null(nullableBlittableAsValueProp);
 
         // Verify NonBlittableStruct does NOT have _AsValue property
         PropertyInfo? nonBlittableAsValueProp = viewType.GetProperty("NonBlittableStruct_AsValue");
@@ -1428,9 +1427,5 @@ public sealed class SerializationTests
         TestAssert.Equal(100, blittableValue.Number, "BlittableStruct_AsValue.Number");
         TestAssert.Equal(SignedState.Positive, blittableValue.State, "BlittableStruct_AsValue.State");
 
-        PackedRecord? nullableBlittableValue = view.NullableBlittableStruct_AsValue;
-        Assert.NotNull(nullableBlittableValue);
-        TestAssert.Equal(200, nullableBlittableValue!.Value.Number, "NullableBlittableStruct_AsValue.Number");
-        TestAssert.Equal(SignedState.Negative, nullableBlittableValue!.Value.State, "NullableBlittableStruct_AsValue.State");
     }
 }

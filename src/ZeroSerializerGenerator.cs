@@ -1351,31 +1351,23 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
 
-        if (property.Kind == PropertySerializationKind.BlittableStruct)
+        if (property.Kind == PropertySerializationKind.BlittableStruct && !property.IsNullableType)
         {
             sourceBuilder.AppendLine();
-            string returnType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            string readType = GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            sourceBuilder.AppendLine($"{propertyAccessibility} {returnType} {EscapeIdentifier(property.Symbol.Name)}_AsValue");
+            string valueType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            sourceBuilder.AppendLine($"{propertyAccessibility} {valueType} {EscapeIdentifier(property.Symbol.Name)}_AsValue");
             sourceBuilder.OpenBlock();
             sourceBuilder.AppendLine("get");
             sourceBuilder.OpenBlock();
             if (containingModel.IsBlittableStruct)
             {
-                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{readType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{valueType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
             }
             else
             {
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
                 sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
-                if (IsNullRepresentedByZeroPropertyOffset(property))
-                {
-                    sourceBuilder.AppendLine("if (propertyDataOffset == 0)");
-                    sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine("return default;");
-                    sourceBuilder.CloseBlock();
-                }
-                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{readType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{valueType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
             }
             sourceBuilder.CloseBlock();
             sourceBuilder.CloseBlock();
