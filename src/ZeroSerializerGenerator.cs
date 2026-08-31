@@ -1316,15 +1316,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                     "propertyDataOffset");
                 break;
             case PropertySerializationKind.BlittableStruct:
-                if (property.NestedSerializableType is not null)
-                {
-                    sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine("// Fallback generated unexpectedly. According to the specification, this fallback should not be reached (the view always returns the view in any case).");
-                    sourceBuilder.AppendLine($"return MemoryMarshal.Read<{GetSerializedPropertyType(property).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
-                }
+                sourceBuilder.AppendLine($"return new {GetQualifiedViewName(property.NestedSerializableType!)}(serializedMemory.Slice(propertyDataOffset, {property.ElementByteCount}));");
                 break;
             case PropertySerializationKind.String:
                 EmitViewCollectionHeader(sourceBuilder, "serializedData", "propertyDataOffset");
@@ -1350,6 +1342,28 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         sourceBuilder.CloseBlock();
         sourceBuilder.CloseBlock();
+
+        if (property.Kind == PropertySerializationKind.BlittableStruct && !property.IsNullableType)
+        {
+            sourceBuilder.AppendLine();
+            string valueType = property.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            sourceBuilder.AppendLine($"{propertyAccessibility} {valueType} {EscapeIdentifier(property.Symbol.Name)}_AsValue");
+            sourceBuilder.OpenBlock();
+            sourceBuilder.AppendLine("get");
+            sourceBuilder.OpenBlock();
+            if (containingModel.IsBlittableStruct)
+            {
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{valueType}>(serializedMemory.Span.Slice({property.BlittableByteOffset}, {property.ElementByteCount}));");
+            }
+            else
+            {
+                sourceBuilder.AppendLine("ReadOnlySpan<byte> serializedData = serializedMemory.Span;");
+                sourceBuilder.AppendLine($"int propertyDataOffset = BinaryPrimitives.ReadInt32LittleEndian(serializedData.Slice({propertyIndex * 4}, 4));");
+                sourceBuilder.AppendLine($"return MemoryMarshal.Read<{valueType}>(serializedData.Slice(propertyDataOffset, {property.ElementByteCount}));");
+            }
+            sourceBuilder.CloseBlock();
+            sourceBuilder.CloseBlock();
+        }
     }
 
     private static void EmitViewCollectionHeader(
