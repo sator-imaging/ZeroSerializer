@@ -715,6 +715,11 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool IsEligibleForBlittable(INamedTypeSymbol structType)
     {
+        if (structType.TypeKind != TypeKind.Struct || structType.IsRefLikeType)
+        {
+            return false;
+        }
+
         foreach (SyntaxReference syntaxReference in structType.DeclaringSyntaxReferences)
         {
             if (syntaxReference.GetSyntax() is TypeDeclarationSyntax declaration)
@@ -735,7 +740,12 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 if (!fieldSymbol.IsStatic)
                 {
-                    if (fieldSymbol.AssociatedSymbol is not IPropertySymbol)
+                    if (fieldSymbol.AssociatedSymbol is not IPropertySymbol assocProp
+                        || assocProp.IsStatic
+                        || assocProp.IsIndexer
+                        || assocProp.DeclaredAccessibility != Accessibility.Public
+                        || assocProp.GetMethod == null
+                        || assocProp.GetMethod.DeclaredAccessibility != Accessibility.Public)
                     {
                         return false;
                     }
@@ -745,10 +755,20 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
             {
                 if (!property.IsStatic)
                 {
-                    if (property.GetMethod == null || property.GetMethod.DeclaredAccessibility != Accessibility.Public)
+                    if (property.IsIndexer
+                        || property.DeclaredAccessibility != Accessibility.Public
+                        || property.GetMethod == null
+                        || property.GetMethod.DeclaredAccessibility != Accessibility.Public)
                     {
                         return false;
                     }
+                }
+            }
+            else if (member is IEventSymbol eventSymbol)
+            {
+                if (!eventSymbol.IsStatic)
+                {
+                    return false;
                 }
             }
         }

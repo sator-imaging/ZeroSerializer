@@ -319,6 +319,55 @@ public partial struct MyPartialStruct
     }
 
     [Fact]
+    public async Task ZEROS101_Violation_IndexerPropertyInStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithIndexer
+{
+    public int Value { get; set; }
+    public int this[int index] => index;
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithIndexer")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_InstanceEventInStructWithLayout()
+    {
+        string source = @"
+using System;
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithInstanceEvent
+{
+    public int Value { get; set; }
+    public event Action? OnChanged;
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithInstanceEvent")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS002_Violation_UnmarkedBlittableNestedStruct()
     {
         string source = @"
