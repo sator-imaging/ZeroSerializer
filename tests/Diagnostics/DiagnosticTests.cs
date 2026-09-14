@@ -63,6 +63,27 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS001_Violation_RefStruct()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public ref struct {|#0:MyRefStruct|}
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS001", DiagnosticSeverity.Error)
+                .WithLocation(0)
+                .WithArguments("MyRefStruct")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS103_Violation_ClassWithStructLayout()
     {
         string source = @"
@@ -315,6 +336,55 @@ public partial struct MyPartialStruct
             new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
                 .WithLocation(0)
                 .WithArguments("MyPartialStruct")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_IndexerPropertyInStructWithLayout()
+    {
+        string source = @"
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithIndexer
+{
+    public int Value { get; set; }
+    public int this[int index] => index;
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithIndexer")
+        );
+    }
+
+    [Fact]
+    public async Task ZEROS101_Violation_InstanceEventInStructWithLayout()
+    {
+        string source = @"
+using System;
+using System.Runtime.InteropServices;
+using ZeroSerializer;
+
+[{|#0:StructLayout(LayoutKind.Sequential, Pack = 1)|}]
+[ZeroSerializer]
+public struct StructWithInstanceEvent
+{
+    public int Value { get; set; }
+    public event Action? OnChanged;
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS101", DiagnosticSeverity.Warning)
+                .WithLocation(0)
+                .WithArguments("StructWithInstanceEvent")
         );
     }
 
