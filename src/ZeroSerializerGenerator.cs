@@ -306,6 +306,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         bool hasUnsupportedShape = serializableType.ContainingType is not null
             || (serializableType.TypeKind != TypeKind.Class && serializableType.TypeKind != TypeKind.Struct)
+            || serializableType.IsRefLikeType
             || (serializableType.TypeKind == TypeKind.Class
                 && serializableType.BaseType is not null
                 && serializableType.BaseType.SpecialType != SpecialType.System_Object);
@@ -603,7 +604,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (candidateType is not INamedTypeSymbol structType
             || structType.TypeKind != TypeKind.Struct
-            || structType.IsRefLikeType
             || !HasSequentialPackOneLayout(structType)
             || !IsEligibleForBlittable(structType)
             || !typesBeingInspected.Add(candidateType))
@@ -715,7 +715,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool IsEligibleForBlittable(INamedTypeSymbol structType)
     {
-        if (structType.TypeKind != TypeKind.Struct || structType.IsRefLikeType)
+        if (structType.TypeKind != TypeKind.Struct)
         {
             return false;
         }
@@ -736,42 +736,30 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         foreach (ISymbol member in structType.GetMembers())
         {
-            if (member is IFieldSymbol fieldSymbol)
+            if (member.IsStatic
+                || member.IsImplicitlyDeclared
+                || member is IMethodSymbol
+                || member is ITypeSymbol
+                || (member is IFieldSymbol field && field.IsConst))
             {
-                if (!fieldSymbol.IsStatic)
-                {
-                    if (fieldSymbol.AssociatedSymbol is not IPropertySymbol assocProp
-                        || assocProp.IsStatic
-                        || assocProp.IsIndexer
-                        || assocProp.DeclaredAccessibility != Accessibility.Public
-                        || assocProp.GetMethod == null
-                        || assocProp.GetMethod.DeclaredAccessibility != Accessibility.Public)
-                    {
-                        return false;
-                    }
-                }
+                continue;
             }
-            else if (member is IPropertySymbol property)
+
+            if (member is IPropertySymbol property)
             {
-                if (!property.IsStatic)
-                {
-                    if (property.IsIndexer
-                        || property.DeclaredAccessibility != Accessibility.Public
-                        || property.GetMethod == null
-                        || property.GetMethod.DeclaredAccessibility != Accessibility.Public)
-                    {
-                        return false;
-                    }
-                }
-            }
-            else if (member is IEventSymbol eventSymbol)
-            {
-                if (!eventSymbol.IsStatic)
+                if (property.IsIndexer
+                    || property.DeclaredAccessibility != Accessibility.Public
+                    || property.GetMethod == null
+                    || property.GetMethod.DeclaredAccessibility != Accessibility.Public)
                 {
                     return false;
                 }
+                continue;
             }
+
+            return false;
         }
+
         return true;
     }
 
@@ -782,7 +770,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool HasBlittableCompatiblePropertyShape(INamedTypeSymbol candidateStruct)
     {
-        if (candidateStruct.TypeKind != TypeKind.Struct || candidateStruct.IsRefLikeType)
+        if (candidateStruct.TypeKind != TypeKind.Struct)
         {
             return false;
         }

@@ -63,6 +63,27 @@ public class TopLevelInner
     }
 
     [Fact]
+    public async Task ZEROS001_Violation_RefStruct()
+    {
+        string source = @"
+using ZeroSerializer;
+
+[ZeroSerializer]
+public ref struct {|#0:MyRefStruct|}
+{
+    public int Value { get; set; }
+}
+";
+
+        await CSharpSourceGeneratorVerifier<ZeroSerializerGenerator>.VerifySourceGeneratorAsync(
+            source,
+            new DiagnosticResult("ZEROS001", DiagnosticSeverity.Error)
+                .WithLocation(0)
+                .WithArguments("MyRefStruct")
+        );
+    }
+
+    [Fact]
     public async Task ZEROS103_Violation_ClassWithStructLayout()
     {
         string source = @"
