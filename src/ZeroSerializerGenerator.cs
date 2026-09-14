@@ -515,7 +515,13 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
         if (serializableProperty.Type.SpecialType == SpecialType.System_String)
         {
-            return new PropertyGenerationModel(serializableProperty, PropertySerializationKind.String, 2, null, null);
+            return new PropertyGenerationModel(
+                serializableProperty,
+                PropertySerializationKind.String,
+                2,
+                null,
+                null,
+                isNullableType: true);
         }
 
         if (serializableProperty.Type is IArrayTypeSymbol arrayType)
@@ -577,7 +583,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 null,
                 namedPropertyType,
                 null,
-                isNullableType: namedPropertyType.IsReferenceType);
+                isNullableType: IsNullableType(namedPropertyType));
         }
 
         return null;
@@ -1117,16 +1123,29 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
                 sourceBuilder.OpenBlock();
                 sourceBuilder.AppendLine("ReadOnlySpan<byte> s = memory.Span;");
                 sourceBuilder.AppendLine("int fallbackOffset;");
+                bool hasGuaranteedFallback = false;
                 for (int i = propertyCount - 2; i >= 0; i--)
                 {
                     var property = generationModel.Properties[i];
                     sourceBuilder.AppendLine($"fallbackOffset = BinaryPrimitives.ReadInt32LittleEndian(s.Slice({i * 4}, 4));");
-                    sourceBuilder.AppendLine("if (fallbackOffset > 0)");
-                    sourceBuilder.OpenBlock();
-                    sourceBuilder.AppendLine($"return fallbackOffset + {GetPropertyLengthExpression(property, "fallbackOffset", "s", "memory")};");
-                    sourceBuilder.CloseBlock();
+                    if (property.IsNullableType)
+                    {
+                        sourceBuilder.AppendLine("if (fallbackOffset > 0)");
+                        sourceBuilder.OpenBlock();
+                        sourceBuilder.AppendLine($"return fallbackOffset + {GetPropertyLengthExpression(property, "fallbackOffset", "s", "memory")};");
+                        sourceBuilder.CloseBlock();
+                    }
+                    else
+                    {
+                        sourceBuilder.AppendLine($"return fallbackOffset + {GetPropertyLengthExpression(property, "fallbackOffset", "s", "memory")};");
+                        hasGuaranteedFallback = true;
+                        break;
+                    }
                 }
-                sourceBuilder.AppendLine($"return {propertyCount * 4};");
+                if (!hasGuaranteedFallback)
+                {
+                    sourceBuilder.AppendLine($"return {propertyCount * 4};");
+                }
                 sourceBuilder.CloseBlock();
             }
             else
@@ -1178,9 +1197,7 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         foreach (PropertyGenerationModel propertyModel in generationModel.Properties)
         {
             int propertyBytesLength;
-            if (propertyModel.IsNullableType
-                || propertyModel.Kind == PropertySerializationKind.String
-                || propertyModel.Kind == PropertySerializationKind.Array)
+            if (propertyModel.IsNullableType)
             {
                 // Runtime-sized properties contribute one native pointer so RequiredByteLength retains a CPU-sized estimate.
                 propertyBytesLength = IntPtr.Size;
@@ -1446,7 +1463,19 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
 
     private static bool IsNullRepresentedByZeroPropertyOffset(PropertyGenerationModel propertyModel)
     {
-        return propertyModel.IsNullableType || propertyModel.Kind == PropertySerializationKind.String;
+        return propertyModel.IsNullableType;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsNullableType(ITypeSymbol typeSymbol)
+    {
+        if (typeSymbol.IsReferenceType || typeSymbol is IArrayTypeSymbol)
+        {
+            return true;
+        }
+
+        return typeSymbol is INamedTypeSymbol namedType
+            && namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
     }
 
     private static string GetPropertyLengthExpression(
