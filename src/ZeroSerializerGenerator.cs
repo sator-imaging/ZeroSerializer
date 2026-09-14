@@ -1466,7 +1466,6 @@ public sealed class ZeroSerializerGenerator : ISourceGenerator
         return propertyModel.IsNullableType;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsNullableType(ITypeSymbol typeSymbol)
     {
         if (typeSymbol.IsReferenceType || typeSymbol is IArrayTypeSymbol)
